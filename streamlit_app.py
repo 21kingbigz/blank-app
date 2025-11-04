@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-import json # Import for file handling
+import json 
 from google import genai
 from PIL import Image
 from io import BytesIO
@@ -254,7 +254,7 @@ def render_utility_hub():
     if selected_feature != "Select a Feature to Use":
         feature_code = selected_feature.split(".")[0]
         
-        # --- NEW BUTTON LAYOUT ---
+        # --- CALENDAR BUTTON LAYOUT ---
         col1, col2 = st.columns([0.7, 0.3])
         
         with col1:
@@ -264,12 +264,12 @@ def render_utility_hub():
         last_schedule = load_last_schedule()
         if is_calendar_creator and last_schedule:
             with col2:
-                # The small, rectangular button separate from the popover
+                # The separate button that acts as the popover trigger
                 with st.popover("📅 Last Planner"):
                     st.markdown("### Saved Calendar/Schedule")
                     st.caption("This schedule is saved to disk and persists across sessions.")
                     st.code(last_schedule, language='markdown')
-        # --- END NEW BUTTON LAYOUT ---
+        # --- END CALENDAR BUTTON LAYOUT ---
 
 
         if image_needed:
@@ -338,18 +338,12 @@ def render_teacher_aid():
     st.title(f"🎓 {WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
     st.caption("Use this mode to plan and manage entire units, lessons, and resources. All resources are saved to disk.")
 
-    # Data is guaranteed to be in st.session_state['teacher_db'] thanks to the initialization block above.
-
     st.header("Unit Planning & Resource Generation")
 
-    # Mapped resource names for display and the specific tag to send to the AI
     RESOURCE_MAP = {
-        "Unit Overview": "Unit Overview",
-        "Lesson Plan": "Lesson Plan",
-        "Vocabulary List": "Vocabulary List",
-        "Worksheet": "Worksheet",
-        "Quiz": "Quiz",
-        "Test": "Test"
+        "Unit Overview": "Unit Overview", "Lesson Plan": "Lesson Plan",
+        "Vocabulary List": "Vocabulary List", "Worksheet": "Worksheet",
+        "Quiz": "Quiz", "Test": "Test"
     }
 
     tab_titles = list(RESOURCE_MAP.keys())
@@ -378,14 +372,44 @@ def render_teacher_aid():
                         # CRITICAL: Save the entire data structure to the JSON file
                         save_teacher_data(st.session_state['teacher_db'])
                         st.success(f"{tab_name} Generated and Saved Permanently!")
+                        # Rerun to update the saved list immediately
+                        st.rerun()
 
             st.markdown("---")
             st.subheader(f"Saved {tab_name}")
-            # Retrieve data directly from the persistent session state dictionary
+            
+            # --- DISPLAY AND DELETE LOGIC ---
             if st.session_state['teacher_db'][db_key]:
-                for i, resource in enumerate(st.session_state['teacher_db'][db_key]):
-                    with st.expander(f"{tab_name} {i+1}"):
+                # Iterate in reverse so most recent is on top
+                for i in range(len(st.session_state['teacher_db'][db_key]) - 1, -1, -1):
+                    resource = st.session_state['teacher_db'][db_key][i]
+                    
+                    # Use a unique key for the expander
+                    expander_key = f"{db_key}_exp_{i}"
+                    
+                    # Create two columns inside the expander header area
+                    exp_col1, exp_col2 = st.columns([0.9, 0.1])
+                    
+                    with exp_col1:
+                        # Display resource title in the expander header
+                        st.markdown(f"**{tab_name} #{len(st.session_state['teacher_db'][db_key]) - i}**", unsafe_allow_html=True)
+                    
+                    with exp_col2:
+                        # DELETE BUTTON
+                        if st.button("🗑️ Delete", key=f"delete_{db_key}_{i}"):
+                            # Remove the item at index i
+                            del st.session_state['teacher_db'][db_key][i]
+                            # Save the updated data to the JSON file
+                            save_teacher_data(st.session_state['teacher_db'])
+                            st.toast(f"🗑️ {tab_name} deleted.")
+                            # Rerun the app to update the list
+                            st.rerun()
+                            
+                    # Display the content inside the expander body
+                    with st.expander(f"View Resource Details", expanded=False):
                         st.code(resource, language='markdown')
+                        st.markdown("---")
+                        
             else:
                 st.info(f"No {tab_name.lower()} saved yet.")
 
