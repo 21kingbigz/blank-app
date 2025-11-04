@@ -7,7 +7,7 @@ from io import BytesIO
 from google.genai.errors import APIError
 
 # --- CONFIGURATION AND PERSISTENCE FILE PATHS ---
-WEBSITE_TITLE = "Artorius"
+WEBSITE_TITLE = "Artorius" # This remains "Artorius"
 MODEL = 'gemini-2.5-flash' 
 # File names for permanent storage
 TEACHER_DATA_FILE = "teacher_data.json"
@@ -17,14 +17,14 @@ TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [],
 
 # --- LOGO & ICON CONFIGURATION ---
 # IMPORTANT: This must match the filename you saved in the project directory.
-LOGO_FILENAME = "image (13).png" 
+LOGO_FILENAME = "image (13).jpg" # Using the JPEG file provided
 # Checks if the logo file exists to use it as the page_icon, otherwise defaults to an emoji.
 ICON_SETTING = LOGO_FILENAME if os.path.exists(LOGO_FILENAME) else "🛠️" 
 
 # Set browser tab title, favicon, and layout. 
 st.set_page_config(
-    page_title=f"{WEBSITE_TITLE} - Dual Mode", 
-    page_icon=ICON_SETTING, # USES THE IMAGE FILE FOR THE TAB ICON
+    page_title=WEBSITE_TITLE, # CHANGED: Now only displays "Artorius" in the tab
+    page_icon=ICON_SETTING, # LOGO REMAINS HERE (TAB ICON)
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -230,14 +230,7 @@ CATEGORIES_FEATURES = {
 def render_utility_hub():
     """Renders the single-page 28-in-1 application."""
     
-    # Check if the local logo file exists and display it
-    if os.path.exists(LOGO_FILENAME):
-        st.image(LOGO_FILENAME, width=150) # Display the logo
-        st.title(f"{WEBSITE_TITLE}: 28-in-1 Smart Utility Hub")
-    else:
-        st.title(f"🛠️ {WEBSITE_TITLE}: 28-in-1 Smart Utility Hub")
-        st.warning(f"⚠️ Logo file '{LOGO_FILENAME}' not found. Please save it to your directory.")
-
+    st.title(f"{WEBSITE_TITLE}: 28-in-1 Smart Utility Hub")
     st.caption("Select a category from the sidebar to begin using a stateless utility.")
 
     # Sidebar for category selection
@@ -349,14 +342,7 @@ def render_utility_hub():
 def render_teacher_aid():
     """Renders the complex, multi-tabbed Teacher's Aid curriculum manager."""
     
-    # Display the logo from the local file path at the top
-    if os.path.exists(LOGO_FILENAME):
-        st.image(LOGO_FILENAME, width=150) # Display the logo
-        st.title(f"{WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
-    else:
-        st.title(f"🎓 {WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
-        st.warning(f"⚠️ Logo file '{LOGO_FILENAME}' not found. Please save it to your directory.")
-        
+    st.title(f"🎓 {WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
     st.caption("Use this mode to plan and manage entire units, lessons, and resources. All resources are saved to disk.")
 
     st.header("Unit Planning & Resource Generation")
@@ -460,9 +446,7 @@ def render_teacher_aid():
 
 # --- 5. MAIN MODE SELECTION ---
 
-# Display the website name and logo in the top left corner (using the sidebar)
-if os.path.exists(LOGO_FILENAME):
-    st.sidebar.image(LOGO_FILENAME, width=100) # Smaller logo in the sidebar
+# Display the website name in the top left corner (using the sidebar)
 st.sidebar.title(WEBSITE_TITLE) 
 st.sidebar.markdown("---") 
 
