@@ -34,13 +34,11 @@ st.markdown(
         border-right: 1px solid #333333;
     }
 
-    /* ***CRITICAL FIX: Sidebar Text and Line (Image 2 Fix)*** */
-    /* Target the text in the sidebar (h1 and h2) */
+    /* **SIDEBAR TEXT AND LINE (Maintaining White)** */
     section[data-testid='stSidebar'] h1, 
     section[data-testid='stSidebar'] h2 {
         color: #FFFFFF !important; /* Forces "Artorius" and "Categories" to white */
     }
-    /* Target the horizontal separator line in the sidebar */
     section[data-testid='stSidebar'] .st-emotion-cache-1q1n0ol {
         border-bottom-color: #FFFFFF !important; /* Makes the line white */
     }
@@ -61,7 +59,7 @@ st.markdown(
         border-color: #777777;
     }
 
-    /* 4. TEXT INPUT FIELDS (What the user types) */
+    /* 4. TEXT INPUT FIELDS (What the user types - Maintaining White) */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
         background-color: #212121; 
         color: #FFFFFF !important; /* Ensures text user types is pure white */
@@ -78,24 +76,34 @@ st.markdown(
         font-weight: 500;
     }
 
-    /* 6. AI RESPONSE BOX (st.code CONTAINER) */
-    div.stCode {
+    /* 6. ***CRITICAL FIX: AI RESPONSE BOX BACKGROUND & TEXT (Image Fix)*** */
+    
+    /* A. Target the innermost container (pre) to force the dark background */
+    div.stCode pre {
         background-color: #1A1A1A !important; /* Solid Dark Grey Background */
+        color: #FFFFFF !important; /* Ensure output text is white */
+        border: none !important; 
+        padding: 0; /* Remove internal padding */
+    }
+    /* B. Target the code tag inside the pre block (sometimes necessary for text color) */
+    div.stCode pre code {
+        background-color: #1A1A1A !important;
+        color: #FFFFFF !important;
+    }
+
+    /* 7. AI RESPONSE BOX OUTER CONTAINER STYLING */
+    div.stCode {
+        background-color: #1A1A1A !important; /* Outer box background */
         border: none !important; 
         border-radius: 12px; 
-        padding: 15px; /* Apply padding here for the entire box */
+        padding: 15px; /* Outer box padding */
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
         overflow-x: auto;
     }
     
-    /* 7. Text inside AI Response Box (Code Block) */
-    div.stCode pre code {
-        color: #FFFFFF !important; /* Ensures the actual output text is pure white */
-    }
-    
-    /* 8. General paragraph/label text */
+    /* 8. General paragraph/label text (Maintaining White) */
     p, label, li, a, span { 
-        color: #FFFFFF !important; /* Ensure general body text is white */
+        color: #FFFFFF !important; 
     }
     
     /* 9. Info/Warning Boxes - clean look */
