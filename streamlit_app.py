@@ -15,10 +15,16 @@ SCHEDULE_DATA_FILE = "schedule_data.json"
 # Initial structure for Teacher's Aid resources
 TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
 
+# --- LOGO & ICON CONFIGURATION ---
+# IMPORTANT: Save your logo image as 'artorius_logo.png' in the same directory!
+LOGO_PATH = "artorius_logo.png" 
+# Use a default if the file isn't found, preventing an error
+ICON_SETTING = LOGO_PATH if os.path.exists(LOGO_PATH) else "🛠️" 
+
 # Set browser tab title, favicon, and layout. 
 st.set_page_config(
     page_title=f"{WEBSITE_TITLE} - Dual Mode", 
-    page_icon="👑", 
+    page_icon=ICON_SETTING, # Uses the logo file path
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -30,7 +36,6 @@ def load_teacher_data():
     if os.path.exists(TEACHER_DATA_FILE):
         try:
             with open(TEACHER_DATA_FILE, 'r') as f:
-                # Ensure we return the initial structure if the file is empty or corrupted
                 data = json.load(f)
                 return data if isinstance(data, dict) else TEACHER_DB_INITIAL
         except (json.JSONDecodeError, FileNotFoundError):
@@ -224,7 +229,9 @@ CATEGORIES_FEATURES = {
 # --- 3. UTILITY HUB MODE FUNCTION ---
 def render_utility_hub():
     """Renders the single-page 28-in-1 application."""
-    st.title(f"👑 {WEBSITE_TITLE}: 28-in-1 Smart Utility Hub")
+    # UPDATED: Use the logo file if it exists, otherwise use a placeholder emoji
+    icon = f"![Logo Placeholder]({LOGO_PATH})" if os.path.exists(LOGO_PATH) else "🛠️"
+    st.title(f"{icon} {WEBSITE_TITLE}: 28-in-1 Smart Utility Hub")
     st.caption("Select a category from the sidebar to begin using a stateless utility.")
 
     # Sidebar for category selection
@@ -335,7 +342,9 @@ def render_utility_hub():
 # --- 4. TEACHER'S AID MODE FUNCTION (Complex, Multi-Tabbed Application) ---
 def render_teacher_aid():
     """Renders the complex, multi-tabbed Teacher's Aid curriculum manager."""
-    st.title(f"🎓 {WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
+    # UPDATED: Use the logo file if it exists, otherwise use a placeholder emoji
+    icon = "🎓" # Keep the existing education emoji for this mode
+    st.title(f"{icon} {WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
     st.caption("Use this mode to plan and manage entire units, lessons, and resources. All resources are saved to disk.")
 
     st.header("Unit Planning & Resource Generation")
@@ -378,7 +387,7 @@ def render_teacher_aid():
             st.markdown("---")
             st.subheader(f"Saved {tab_name}")
             
-            # --- DISPLAY AND DELETE LOGIC (UPDATED) ---
+            # --- DISPLAY AND DELETE LOGIC ---
             if st.session_state['teacher_db'][db_key]:
                 # Iterate in reverse so most recent is on top
                 for i in range(len(st.session_state['teacher_db'][db_key]) - 1, -1, -1):
