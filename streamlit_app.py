@@ -50,7 +50,7 @@ except FileNotFoundError:
     """
 
 
-# --- CUSTOM CSS FOR DARK THEME (Updated with fixed boxes and complete white sidebar) ---
+# --- CUSTOM CSS FOR DARK THEME (Updated for robust dropdown menu fix) ---
 st.markdown(
     """
     <style>
@@ -66,11 +66,10 @@ st.markdown(
         border-right: 1px solid #333333;
     }
 
-    /* **SIDEBAR TEXT AND LINE (Full White Enforcement) - HIGH SPECIFICITY FIX** */
+    /* **SIDEBAR TEXT (Full White Enforcement) - Confirmed Fix** */
     section[data-testid='stSidebar'] * { 
         color: #FFFFFF !important; 
     }
-    /* Fallback specific selectors for headers/labels that might override the star */
     section[data-testid='stSidebar'] h1, 
     section[data-testid='stSidebar'] h2,
     section[data-testid='stSidebar'] p,
@@ -147,7 +146,7 @@ st.markdown(
         color: #FFFFFF !important;
     }
     
-    /* FIX FOR TEACHER'S AID SPACING: Add sufficient margin to text areas to separate them from the button below */
+    /* FIX FOR TEACHER'S AID SPACING */
     .stTextArea {
         margin-bottom: 25px !important; 
     }
@@ -159,22 +158,27 @@ st.markdown(
     }
     
     /* --- CRITICAL FIX FOR DROPDOWN LIST BACKGROUND --- */
-    /* Target the container that holds the actual list of options */
-    div[data-baseweb="select"] ul {
-        background-color: #212121 !important; /* Matches input box background */
-        border-color: #444444 !important;
+    
+    /* Target the UberMenu container, which is often named [data-baseweb="menu"] */
+    div[data-baseweb="menu"] {
+        background-color: #212121 !important;
+        border: 1px solid #444444 !important;
     }
-    /* Target the list items themselves for text color */
-    div[data-baseweb="select"] ul li div {
+
+    /* Target the list items within the menu */
+    div[data-baseweb="menu"] li {
         color: #FFFFFF !important; 
     }
-    /* Hover state for list items */
-    div[data-baseweb="select"] ul li:hover {
-        background-color: #333333 !important; 
-    }
-    /* If the above still fails, target the list items via their parent layer (this is often the most robust fix for Streamlit selectbox lists) */
-    div[data-baseweb="popover"] .st-emotion-cache-1215q58 div[role="listbox"] {
+
+    /* Target the actual element receiving the background color change */
+    div[data-baseweb="menu"] li div {
         background-color: #212121 !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* Hover state for list items */
+    div[data-baseweb="menu"] li div:hover {
+        background-color: #333333 !important; 
         color: #FFFFFF !important;
     }
 
@@ -202,7 +206,7 @@ st.markdown(
         color: #FFFFFF !important;
     }
     
-    /* CRITICAL FIX 3: Selection Highlight Visibility */
+    /* Selection Highlight Visibility */
     div.stCode ::selection {
         background-color: #004d99; /* Dark Blue highlight for selection */
         color: #FFFFFF !important; /* Keep selected text white */
@@ -223,7 +227,7 @@ st.markdown(
     p, li, a, span { 
         color: #FFFFFF !important; 
     }
-    /* Explicitly targeting all labels for white text (Final Fix) */
+    /* Explicitly targeting all labels for white text */
     .stApp label {
         color: #FFFFFF !important;
     }
