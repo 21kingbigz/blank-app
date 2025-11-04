@@ -147,26 +147,35 @@ st.markdown(
         color: #FFFFFF !important;
     }
     
-    /* FIX FOR SPACING (P1): Add sufficient margin to text areas to separate them from the button below */
+    /* FIX FOR TEACHER'S AID SPACING: Add sufficient margin to text areas to separate them from the button below */
     .stTextArea {
         margin-bottom: 25px !important; 
     }
 
 
-    /* 5. Dropdown Menu (Selectbox) Styling - BACKGROUND FIXED HERE (P2) */
+    /* 5. Dropdown Menu (Selectbox) Styling - BACKGROUND FIXED HERE */
     .stSelectbox div[data-testid="stTextInput"] div input {
         color: #FFFFFF !important;
     }
-    /* The UL is the list of options that drops down */
+    
+    /* --- CRITICAL FIX FOR DROPDOWN LIST BACKGROUND --- */
+    /* Target the container that holds the actual list of options */
     div[data-baseweb="select"] ul {
         background-color: #212121 !important; /* Matches input box background */
         border-color: #444444 !important;
     }
+    /* Target the list items themselves for text color */
     div[data-baseweb="select"] ul li div {
         color: #FFFFFF !important; 
     }
+    /* Hover state for list items */
     div[data-baseweb="select"] ul li:hover {
         background-color: #333333 !important; 
+    }
+    /* If the above still fails, target the list items via their parent layer (this is often the most robust fix for Streamlit selectbox lists) */
+    div[data-baseweb="popover"] .st-emotion-cache-1215q58 div[role="listbox"] {
+        background-color: #212121 !important;
+        color: #FFFFFF !important;
     }
 
 
