@@ -66,13 +66,18 @@ st.markdown(
         border-right: 1px solid #333333;
     }
 
-    /* **SIDEBAR TEXT AND LINE (Full White Enforcement)** */
+    /* **SIDEBAR TEXT AND LINE (Full White Enforcement) - HIGH SPECIFICITY FIX** */
+    section[data-testid='stSidebar'] * { 
+        color: #FFFFFF !important; 
+    }
+    /* Fallback specific selectors for headers/labels that might override the star */
     section[data-testid='stSidebar'] h1, 
     section[data-testid='stSidebar'] h2,
     section[data-testid='stSidebar'] p,
     section[data-testid='stSidebar'] label { 
         color: #FFFFFF !important; 
     }
+    
     section[data-testid='stSidebar'] .st-emotion-cache-1q1n0ol {
         border-bottom-color: #FFFFFF !important; 
     }
@@ -85,10 +90,6 @@ st.markdown(
     }
     div[data-testid="stSidebar"] div.stRadio > label {
         font-size: 15px !important; 
-    }
-    /* Make all sidebar radio button text white (especially the Mode Selector) */
-    div[data-testid="stSidebar"] div.stRadio label {
-        color: #FFFFFF !important;
     }
 
 
@@ -146,15 +147,17 @@ st.markdown(
         color: #FFFFFF !important;
     }
     
-    /* FIX: Add margin to text areas to separate them from the button below */
+    /* FIX FOR SPACING (P1): Add sufficient margin to text areas to separate them from the button below */
     .stTextArea {
-        margin-bottom: 20px; 
+        margin-bottom: 25px !important; 
     }
 
-    /* 5. Dropdown Menu (Selectbox) Styling - BACKGROUND FIXED HERE */
+
+    /* 5. Dropdown Menu (Selectbox) Styling - BACKGROUND FIXED HERE (P2) */
     .stSelectbox div[data-testid="stTextInput"] div input {
         color: #FFFFFF !important;
     }
+    /* The UL is the list of options that drops down */
     div[data-baseweb="select"] ul {
         background-color: #212121 !important; /* Matches input box background */
         border-color: #444444 !important;
