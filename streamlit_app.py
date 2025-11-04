@@ -16,15 +16,15 @@ SCHEDULE_DATA_FILE = "schedule_data.json"
 TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
 
 # --- LOGO & ICON CONFIGURATION ---
-# IMPORTANT: Save the provided logo image as 'artorius_logo.png' in the same directory!
-# We will rely on this local file for both the page icon and main display.
-LOGO_PATH = "artorius_logo.png" 
-ICON_SETTING = LOGO_PATH if os.path.exists(LOGO_PATH) else "🛠️" 
+# IMPORTANT: This must match the filename you saved in the project directory.
+LOGO_FILENAME = "image (13).png" 
+# Checks if the logo file exists to use it as the page_icon, otherwise defaults to an emoji.
+ICON_SETTING = LOGO_FILENAME if os.path.exists(LOGO_FILENAME) else "🛠️" 
 
 # Set browser tab title, favicon, and layout. 
 st.set_page_config(
     page_title=f"{WEBSITE_TITLE} - Dual Mode", 
-    page_icon=ICON_SETTING, # Uses the local logo file path for the tab icon
+    page_icon=ICON_SETTING, # USES THE IMAGE FILE FOR THE TAB ICON
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -231,12 +231,12 @@ def render_utility_hub():
     """Renders the single-page 28-in-1 application."""
     
     # Check if the local logo file exists and display it
-    if os.path.exists(LOGO_PATH):
-        st.image(LOGO_PATH, width=150) # Display the logo
+    if os.path.exists(LOGO_FILENAME):
+        st.image(LOGO_FILENAME, width=150) # Display the logo
         st.title(f"{WEBSITE_TITLE}: 28-in-1 Smart Utility Hub")
     else:
         st.title(f"🛠️ {WEBSITE_TITLE}: 28-in-1 Smart Utility Hub")
-        st.warning("⚠️ Logo file 'artorius_logo.png' not found. Please save it to your directory.")
+        st.warning(f"⚠️ Logo file '{LOGO_FILENAME}' not found. Please save it to your directory.")
 
     st.caption("Select a category from the sidebar to begin using a stateless utility.")
 
@@ -350,12 +350,12 @@ def render_teacher_aid():
     """Renders the complex, multi-tabbed Teacher's Aid curriculum manager."""
     
     # Display the logo from the local file path at the top
-    if os.path.exists(LOGO_PATH):
-        st.image(LOGO_PATH, width=150) # Display the logo
+    if os.path.exists(LOGO_FILENAME):
+        st.image(LOGO_FILENAME, width=150) # Display the logo
         st.title(f"{WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
     else:
         st.title(f"🎓 {WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
-        st.warning("⚠️ Logo file 'artorius_logo.png' not found. Please save it to your directory.")
+        st.warning(f"⚠️ Logo file '{LOGO_FILENAME}' not found. Please save it to your directory.")
         
     st.caption("Use this mode to plan and manage entire units, lessons, and resources. All resources are saved to disk.")
 
@@ -461,8 +461,8 @@ def render_teacher_aid():
 # --- 5. MAIN MODE SELECTION ---
 
 # Display the website name and logo in the top left corner (using the sidebar)
-if os.path.exists(LOGO_PATH):
-    st.sidebar.image(LOGO_PATH, width=100) # Smaller logo in the sidebar
+if os.path.exists(LOGO_FILENAME):
+    st.sidebar.image(LOGO_FILENAME, width=100) # Smaller logo in the sidebar
 st.sidebar.title(WEBSITE_TITLE) 
 st.sidebar.markdown("---") 
 
