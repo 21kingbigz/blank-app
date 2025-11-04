@@ -16,32 +16,25 @@ SCHEDULE_DATA_FILE = "schedule_data.json"
 TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
 
 # --- LOGO & ICON CONFIGURATION ---
-# IMPORTANT: Please rename your logo to 'artorius_logo.png' and place it in the same directory.
-LOGO_FILENAME = "artorius_logo.png" 
+# IMPORTANT: This must match the filename you provided: 'image (13).jpg'
+LOGO_FILENAME = "image (13).jpg" 
+
+# Check if the logo file actually exists.
+if os.path.exists(LOGO_FILENAME):
+    # Use the JPEG image file for the page icon.
+    ICON_SETTING = LOGO_FILENAME
+else:
+    # Fallback to an emoji and warn the user if the image is not found.
+    ICON_SETTING = "🚨" 
+    st.error(f"❌ ERROR: Favicon image file '{LOGO_FILENAME}' not found. Please ensure it's in the same directory as 'streamlit_app.py'.")
 
 # Set browser tab title, favicon, and layout. 
-# We'll try to use the Streamlit page_icon first, but also inject a meta tag as a fallback.
-# For local deployment, Streamlit's page_icon should ideally work with local paths.
 st.set_page_config(
-    page_title=WEBSITE_TITLE, 
-    page_icon=LOGO_FILENAME if os.path.exists(LOGO_FILENAME) else "🛠️", # Use the PNG file if it exists
+    page_title=WEBSITE_TITLE, # Only displays "Artorius" in the tab
+    page_icon=ICON_SETTING, # DIRECTLY USES THE 'image (13).jpg' FILE PATH FOR THE TAB ICON
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# --- Fallback/Redundant Favicon Injection (CSS/HTML) ---
-# This is a more aggressive way to try and force the favicon if st.set_page_config fails.
-# It might not work perfectly with Streamlit's rendering order, but it's worth a try.
-if os.path.exists(LOGO_FILENAME):
-    st.markdown(
-        f"""
-        <link rel="shortcut icon" href="app/{LOGO_FILENAME}" type="image/png">
-        <link rel="icon" href="app/{LOGO_FILENAME}" type="image/png">
-        """,
-        unsafe_allow_html=True,
-    )
-# --- END Favicon Injection ---
-
 
 # --- CRITICAL CSS FIXES (Targeted Overrides for Dropdown and Link Color) ---
 # Moved CSS up to ensure it applies early.
@@ -93,6 +86,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 # --- END CRITICAL CSS FIXES ---
+
 
 # --- TEACHER'S AID PERSISTENCE FUNCTIONS (Saves to JSON file) ---
 
