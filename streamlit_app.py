@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-import json # New Import for file handling
+import json # Import for file handling
 from google import genai
 from PIL import Image
 from io import BytesIO
@@ -9,7 +9,7 @@ from google.genai.errors import APIError
 # --- CONFIGURATION AND PERSISTENCE FILE PATHS ---
 WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash' 
-# File names for persistent storage
+# File names for permanent storage
 TEACHER_DATA_FILE = "teacher_data.json"
 SCHEDULE_DATA_FILE = "schedule_data.json"
 # Initial structure for Teacher's Aid resources
@@ -30,9 +30,10 @@ def load_teacher_data():
     if os.path.exists(TEACHER_DATA_FILE):
         try:
             with open(TEACHER_DATA_FILE, 'r') as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            st.warning("Could not decode existing teacher_data.json. Starting fresh.")
+                # Ensure we return the initial structure if the file is empty or corrupted
+                data = json.load(f)
+                return data if isinstance(data, dict) else TEACHER_DB_INITIAL
+        except (json.JSONDecodeError, FileNotFoundError):
             return TEACHER_DB_INITIAL
     return TEACHER_DB_INITIAL
 
@@ -47,18 +48,18 @@ def save_teacher_data(data):
 # --- SCHEDULE PERSISTENCE FUNCTIONS (Saves to JSON file) ---
 
 def load_last_schedule():
-    """Loads the last schedule from the JSON file."""
+    """Loads the last schedule from the JSON file. Persists across sessions."""
     if os.path.exists(SCHEDULE_DATA_FILE):
         try:
             with open(SCHEDULE_DATA_FILE, 'r') as f:
                 data = json.load(f)
                 return data.get("schedule", None)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, FileNotFoundError):
             return None
     return None
 
 def save_last_schedule(schedule_text: str):
-    """Saves the latest schedule to the JSON file."""
+    """Saves the latest schedule to the JSON file. Overwrites previous one."""
     try:
         with open(SCHEDULE_DATA_FILE, 'w') as f:
             json.dump({"schedule": schedule_text}, f, indent=4)
@@ -93,8 +94,6 @@ except FileNotFoundError:
 st.markdown(
     """
     <style>
-    /* NOTE: Primary theme colors are handled by .streamlit/config.toml (if created) */
-
     /* 1. INPUT FIELD BORDER (Ensuring they look crisp against the dark background) */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
         border: 1px solid #444444;
@@ -104,44 +103,26 @@ st.markdown(
     }
     
     /* --- CRITICAL DROPDOWN FIXES (The persistent issue) --- */
-    
-    /* Target the floating menu container (the box around all options) */
     div[data-baseweb="menu"] {
         background-color: #1A1A1A !important; 
-        border: 1px solid #FFFFFF !important; /* WHITE OUTLINE for the whole menu */
+        border: 1px solid #FFFFFF !important; 
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
     }
-    
-    /* 🔥 FORCING DARK BACKGROUND (Level 1: Menu Items/Options) */
-    [data-baseweb="menu-item"],
-    div[role="option"] { 
+    [data-baseweb="menu-item"], div[role="option"] { 
         background-color: #212121 !important; 
         color: #FFFFFF !important;
         border-color: #212121 !important; 
     }
-    
-    /* 🔥 FORCING DARK BACKGROUND (Level 2: Nested elements inside options) */
-    [data-baseweb="menu-item"] *,
-    div[role="option"] * {
+    [data-baseweb="menu-item"] *, div[role="option"] * {
         background-color: #212121 !important; 
         color: #FFFFFF !important;
     }
-    
-    /* HOVER/FOCUS STATE FIX: Solid dark grey on hover */
     [data-baseweb="menu-item"]:focus, 
     [data-baseweb="menu-item"]:active,
     [data-baseweb="menu-item"]:hover {
         background-color: #333333 !important; 
         color: #FFFFFF !important;
     }
-
-    /* Additional targets to cover all base layers */
-    .st-bw-list-box, 
-    div[role="listbox"],
-    ul[role="menu"] { 
-        background-color: #1A1A1A !important; 
-    }
-    
     /* --- END CRITICAL DROPDOWN FIXES --- */
 
     /* MANUAL ACCENT COLOR CHANGE (Blue links) */
@@ -197,7 +178,8 @@ def run_ai_generation(prompt_text: str, uploaded_file: BytesIO = None, max_token
 # --- 2. FEATURE LIST FOR UTILITY HUB (28 Features) ---
 CATEGORIES_FEATURES = {
     "🧠 Productivity": {"icon": "💡", "features": { 
-        "1. Daily Schedule Optimizer": "tasks: write report, call client. Time: 9am-12pm.",
+        # RENAMED FEATURE HERE
+        "1. Calendar Creator": "tasks: write report, call client. Time: 9am-12pm.", 
         "2. Task Deconstruction Expert": "Vague goal: Start an online business.",
         "3. Get Unstuck Prompter": "Problem: I keep procrastinating on my final essay.",
         "4. Habit Breaker": "Bad habit: Checking my phone right when I wake up.",
@@ -268,24 +250,26 @@ def render_utility_hub():
     user_input = ""
     uploaded_file = None
     image_needed = (selected_feature == "9. Image-to-Calorie Estimate")
-    is_schedule_optimizer = (selected_feature == "1. Daily Schedule Optimizer")
+    
+    # CRITICAL: Check against the new name "1. Calendar Creator"
+    is_calendar_creator = (selected_feature == "1. Calendar Creator") 
 
     if selected_feature != "Select a Feature to Use":
         feature_code = selected_feature.split(".")[0]
         
-        # COLUMN FIX: Adjusted to ensure the button is visible
+        # Column layout for visibility
         col1, col2 = st.columns([0.65, 0.35]) 
         
         with col1:
             st.markdown(f"##### Step 1: Provide Input Data for Feature #{feature_code}")
         
-        # POP-UP LOGIC: ONLY FOR DAILY SCHEDULE OPTIMIZER (Calendar Planner)
+        # POP-UP LOGIC: ONLY FOR CALENDAR CREATOR
         last_schedule = load_last_schedule()
-        if is_schedule_optimizer and last_schedule:
+        if is_calendar_creator and last_schedule:
             with col2:
-                # This button pulls up the last schedule made, fulfilling the user request.
-                with st.popover("📅 View Last Schedule"):
-                    st.markdown("### Saved Schedule")
+                # The pop-up button showing the last saved planner
+                with st.popover("📅 View Last Planner"):
+                    st.markdown("### Saved Calendar/Schedule")
                     st.caption("This schedule is saved to disk and persists across sessions.")
                     st.code(last_schedule, language='markdown')
 
@@ -336,7 +320,7 @@ def render_utility_hub():
                     st.session_state['hub_last_feature_used'] = selected_feature
                     
                     # SAVE LOGIC: Saves the result of the schedule optimizer to file
-                    if is_schedule_optimizer:
+                    if is_calendar_creator:
                         save_last_schedule(result) 
 
     # --- GLOBAL OUTPUT DISPLAY ---
