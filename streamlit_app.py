@@ -145,6 +145,11 @@ st.markdown(
     .stTextArea textarea { 
         color: #FFFFFF !important;
     }
+    
+    /* FIX: Add margin to text areas to separate them from the button below */
+    .stTextArea {
+        margin-bottom: 20px; 
+    }
 
     /* 5. Dropdown Menu (Selectbox) Styling - BACKGROUND FIXED HERE */
     .stSelectbox div[data-testid="stTextInput"] div input {
