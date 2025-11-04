@@ -8,10 +8,10 @@ from google.genai.errors import APIError
 # --- CONFIGURATION AND PERSISTENCE ---
 WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash' 
-# Key for session state persistence
+# Key for schedule persistence
 SCHEDULE_KEY = "last_schedule_data" 
-# Mock Database structure for Teacher's Aid resources
-TEACHER_DB = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
+# Mock Database structure for Teacher's Aid resources (Used for initial check)
+TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
 
 # Set browser tab title, favicon, and layout. 
 st.set_page_config(
@@ -21,11 +21,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- CRITICAL FIX 1: INITIALIZE TEACHER DATA (Ensures data persists across reruns) ---
+if 'teacher_db' not in st.session_state:
+    st.session_state['teacher_db'] = TEACHER_DB_INITIAL
+# ----------------------------------------------------------------------------------
+
 # --- CACHED MOCK PERSISTENCE FUNCTIONS ---
 @st.cache_data
 def load_last_schedule():
     """Loads the last schedule from session state."""
-    # This key holds the last schedule made, persisting until a new one is saved.
     return st.session_state.get(SCHEDULE_KEY, None) 
 
 def save_last_schedule(schedule_text: str):
@@ -233,7 +237,9 @@ def render_utility_hub():
 
     if selected_feature != "Select a Feature to Use":
         feature_code = selected_feature.split(".")[0]
-        col1, col2 = st.columns([0.7, 0.3])
+        
+        # CRITICAL FIX 2: ADJUST COLUMN WIDTHS FOR VISIBILITY
+        col1, col2 = st.columns([0.65, 0.35]) # Adjusted to give the button column more space
         
         with col1:
             st.markdown(f"##### Step 1: Provide Input Data for Feature #{feature_code}")
@@ -245,7 +251,7 @@ def render_utility_hub():
                 # This button pulls up the last schedule made, fulfilling the user request.
                 with st.popover("📅 View Last Schedule"):
                     st.markdown("### Saved Schedule")
-                    st.caption("This is your last saved schedule. It persists until a new one is generated.")
+                    st.caption("This schedule persists until a new one is generated.")
                     st.code(last_schedule, language='markdown')
 
 
@@ -315,10 +321,7 @@ def render_teacher_aid():
     st.title(f"🎓 {WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
     st.caption("Use this mode to plan and manage entire units, lessons, and resources.")
 
-    # Initialize state for persistence (Mock DB)
-    # This ensures the data persists as long as the user's Streamlit session is active.
-    if 'teacher_db' not in st.session_state:
-        st.session_state['teacher_db'] = TEACHER_DB
+    # Data is guaranteed to be in st.session_state['teacher_db'] thanks to the initialization block above.
 
     st.header("Unit Planning & Resource Generation")
 
@@ -355,12 +358,13 @@ def render_teacher_aid():
                         max_tokens_val = 1500 
                         result = run_ai_generation(final_prompt, max_tokens=max_tokens_val, temp=0.2)
                         
-                        # Store in mock DB (key is derived from resource name)
+                        # Store directly in the persistent session state dictionary
                         st.session_state['teacher_db'][db_key].append(result)
                         st.success(f"{tab_name} Generated and Saved!")
 
             st.markdown("---")
             st.subheader(f"Saved {tab_name}")
+            # Retrieve data directly from the persistent session state dictionary
             if st.session_state['teacher_db'][db_key]:
                 for i, resource in enumerate(st.session_state['teacher_db'][db_key]):
                     with st.expander(f"{tab_name} {i+1}"):
