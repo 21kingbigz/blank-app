@@ -59,30 +59,31 @@ st.markdown(
     }
 
     /* 5. HEADING COLORS (Big Words) */
-    /* Target all headers for a light medium grey to blend in more */
     h1, h2, h3, h4, h5, h6 {
-        color: #AFAFAF; /* Light medium grey */
+        color: #AFAFAF; /* Light medium grey for blending */
         font-weight: 500;
     }
 
-    /* 6. AI RESPONSE BOX (st.code CONTAINER) */
-    /* Make the entire response box dark grey, smooth, and borderless */
-    div.stCode {
+    /* 6. ***CRITICAL FIX: AI RESPONSE BOX BACKGROUND*** */
+    /* Target the pre element inside st.code, as this often contains the raw text */
+    div.stCode pre {
         background-color: #1A1A1A !important; /* Solid Dark Grey Background */
+        color: #FFFFFF !important; /* Ensure text is white */
+        border: none !important; /* Remove borders */
+        padding: 0; /* Remove padding from pre to let the outer div control it */
+    }
+
+    /* 7. AI RESPONSE BOX OUTER CONTAINER STYLING */
+    div.stCode {
+        background-color: #1A1A1A !important; /* Ensure the outer container is also dark grey */
         border: none !important; /* Remove borders */
         border-radius: 12px; 
-        padding: 15px;
+        padding: 15px; /* Apply padding here */
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
         overflow-x: auto;
     }
-    
-    /* 7. Text inside AI Response Box (Code Block) */
-    /* Ensure text inside the response box is bright white for reading */
-    div.stCode pre code {
-        color: #FFFFFF !important; 
-    }
-    
-    /* 8. Info/Warning Boxes - clean look */
+
+    /* 8. Other Smoothness Refinements */
     .stAlert {
         border-left: 5px solid #666666;
         color: #DDDDDD;
