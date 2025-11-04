@@ -66,7 +66,7 @@ st.markdown(
         border-right: 1px solid #333333;
     }
 
-    /* **SIDEBAR TEXT (Full White Enforcement) - Confirmed Fix** */
+    /* **SIDEBAR TEXT (Full White Enforcement)** */
     section[data-testid='stSidebar'] * { 
         color: #FFFFFF !important; 
     }
@@ -157,9 +157,9 @@ st.markdown(
         color: #FFFFFF !important;
     }
     
-    /* --- CRITICAL FIX: DROPDOWN LIST BACKGROUND --- */
+    /* --- CRITICAL FIX: DROPDOWN LIST BACKGROUND (Dark Gray #212121) --- */
     
-    /* Target the floating BaseWeb container */
+    /* Target the floating BaseWeb container (Menu Wrapper) */
     div[data-baseweb="menu"] {
         background-color: #212121 !important;
         border: 1px solid #444444 !important;
@@ -172,21 +172,30 @@ st.markdown(
         border: none !important;
     }
 
-    /* Target the individual options/items */
+    /* Target the individual options/items (li element in the menu) */
     div[role="option"], 
-    [data-baseweb="menu"] li {
+    [data-baseweb="menu"] li,
+    [data-baseweb="menu-item"] { /* Target the menu item element itself */
         background-color: #212121 !important;
         color: #FFFFFF !important; /* Keep text white for contrast */
     }
     
-    /* TARGETING THE CONTENT WRAPPER INSIDE THE LISTBOX */
+    /* NEW AGGRESSIVE TARGET: Target the inner content wrapper of the option, which often overrides the color */
+    [data-baseweb="menu-item"] > div { 
+        background-color: #212121 !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* Targeting the content wrapper inside the listbox */
     [data-baseweb="select"] [role="listbox"] > div {
         background-color: #212121 !important;
     }
 
-    /* Target the hover state for individual options */
+    /* Target the hover state for individual options and their content */
     div[role="option"]:hover,
-    [data-baseweb="menu"] li:hover {
+    [data-baseweb="menu"] li:hover,
+    [data-baseweb="menu-item"]:hover,
+    [data-baseweb="menu-item"]:hover > div { 
         background-color: #333333 !important; /* Slightly lighter gray on hover */
         color: #FFFFFF !important;
     }
