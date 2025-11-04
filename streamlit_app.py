@@ -9,8 +9,8 @@ from google.genai.errors import APIError
 # --- CONFIGURATION AND PERSISTENCE ---
 WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash' 
-# Mock file persistence (non-functional in this environment but kept for structure)
-SCHEDULE_FILE = "last_schedule.txt" 
+# Key for session state persistence
+SCHEDULE_KEY = "last_schedule_data" 
 TEACHER_DB = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
 
 # Set browser tab title, favicon, and layout. 
@@ -24,10 +24,13 @@ st.set_page_config(
 # --- CACHED MOCK PERSISTENCE FUNCTIONS ---
 @st.cache_data
 def load_last_schedule():
-    return None 
+    """Loads the last schedule from session state."""
+    # This pattern safely gets data from st.session_state if it exists
+    return st.session_state.get(SCHEDULE_KEY, None) 
 
 def save_last_schedule(schedule_text: str):
-    pass
+    """Saves the latest schedule to session state."""
+    st.session_state[SCHEDULE_KEY] = schedule_text
 
 # Load instruction and initialize client
 try:
@@ -72,25 +75,16 @@ st.markdown(
         border-bottom-color: #FFFFFF !important; 
     }
     
-    /* CRITICAL FIX 1: Sidebar Radio Button Highlight ELIMINATED */
+    /* Sidebar Radio Button Styling */
     div[data-testid="stSidebar"] div.stRadio > label {
         transition: none !important; 
         background-color: transparent !important;
         border-color: transparent !important;
     }
-    div[data-testid="stSidebar"] div.stRadio > label:hover,
-    div[data-testid="stSidebar"] div.stRadio > label:focus {
-        background-color: #121212 !important; 
-        border-color: #121212 !important;
-    }
-    div[data-testid="stSidebar"] div.stRadio > label:has(input:checked) {
-        background-color: #121212 !important;
-    }
     div[data-testid="stSidebar"] div.stRadio > label {
         font-size: 15px !important; 
     }
-    
-    /* FIX: Make all sidebar radio button text white (especially the Mode Selector) */
+    /* Make all sidebar radio button text white (especially the Mode Selector) */
     div[data-testid="stSidebar"] div.stRadio label {
         color: #FFFFFF !important;
     }
@@ -112,7 +106,7 @@ st.markdown(
         border-color: #777777;
     }
 
-    /* CRITICAL FIX 2: Popover Button and Content (Schedule Pop-up) */
+    /* Popover Button and Content (Schedule Pop-up) */
     div[data-testid="stPopover"] button {
         color: #FFFFFF !important;
         background-color: #333333 !important; 
@@ -139,7 +133,7 @@ st.markdown(
     }
 
 
-    /* 4. INPUT FIELD STYLING (The Box where you type/select) */
+    /* 4. INPUT FIELD STYLING (Text color and background) */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
         background-color: #212121; 
         color: #FFFFFF !important; 
@@ -172,7 +166,7 @@ st.markdown(
         font-weight: 500;
     }
 
-    /* 7. AI RESPONSE BOX BACKGROUND & TEXT (Dark Grey) */
+    /* 7. AI RESPONSE BOX BACKGROUND & TEXT */
     div.stCode pre {
         background-color: #1A1A1A !important; 
         color: #FFFFFF !important; 
@@ -184,14 +178,12 @@ st.markdown(
         color: #FFFFFF !important;
     }
 
-    /* FIX: Force white text for all content inside the output box */
+    /* Force white text for all content inside the output box */
     div.stCode pre *, div.stCode pre p {
         color: #FFFFFF !important;
-        /* Keep background transparent/dark for the box content itself */
     }
     
     /* CRITICAL FIX 3: Selection Highlight Visibility */
-    /* Target selected text within the output box to change the highlight color */
     div.stCode ::selection {
         background-color: #004d99; /* Dark Blue highlight for selection */
         color: #FFFFFF !important; /* Keep selected text white */
@@ -208,9 +200,13 @@ st.markdown(
         overflow-x: auto;
     }
     
-    /* 9. General paragraph/label text (White) */
-    p, label, li, a, span { 
+    /* 9. General paragraph, label, list, and link text (White) */
+    p, li, a, span { 
         color: #FFFFFF !important; 
+    }
+    /* Explicitly targeting all labels for white text (Fix for the words not being white) */
+    .stApp label {
+        color: #FFFFFF !important;
     }
     
     /* 10. Info/Warning Boxes - clean look */
@@ -346,13 +342,13 @@ def render_utility_hub():
         with col1:
             st.markdown(f"##### Step 1: Provide Input Data for Feature #{feature_code}")
         
-        # POP-UP LOGIC: ONLY FOR DAILY SCHEDULE OPTIMIZER (Mock persistence)
+        # POP-UP LOGIC: ONLY FOR DAILY SCHEDULE OPTIMIZER (Now using session_state persistence)
         last_schedule = load_last_schedule()
         if is_schedule_optimizer and last_schedule:
             with col2:
                 with st.popover("📅 View Last Schedule"):
                     st.markdown("### Saved Schedule")
-                    st.caption("This schedule was saved from your previous session (Mock Data).")
+                    st.caption("This is your last saved schedule.")
                     st.code(last_schedule, language='markdown')
 
 
@@ -395,6 +391,7 @@ def render_utility_hub():
                     st.session_state['hub_result'] = result
                     st.session_state['hub_last_feature_used'] = selected_feature
                     
+                    # SAVE LOGIC RESTORED HERE
                     if is_schedule_optimizer:
                         save_last_schedule(result) 
 
