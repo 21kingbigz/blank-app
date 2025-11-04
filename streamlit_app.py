@@ -25,7 +25,6 @@ st.set_page_config(
 @st.cache_data
 def load_last_schedule():
     """Loads the last schedule from session state."""
-    # This pattern safely gets data from st.session_state if it exists
     return st.session_state.get(SCHEDULE_KEY, None) 
 
 def save_last_schedule(schedule_text: str):
@@ -40,8 +39,6 @@ except Exception:
     st.error("❌ ERROR: Gemini Client initialization failed. Please ensure the API Key is correctly configured.")
     st.stop()
 try:
-    # This instruction handles both the Utility Hub and the Teacher's Aid text generation
-    # Replace "system_instruction.txt" with your instruction content if the file is missing.
     with open("system_instruction.txt", "r") as f:
         SYSTEM_INSTRUCTION = f.read()
 except FileNotFoundError:
@@ -161,12 +158,12 @@ st.markdown(
     
     /* --- CRITICAL FIX: DROPDOWN LIST BACKGROUND (Highest Specificity) --- */
     
-    /* Target the container that holds the options list. THIS IS THE KEY FIX. */
+    /* Target the container that holds the options list */
     div[role="listbox"] {
         background-color: #333333 !important; /* FIXED: Dark Gray */
     }
 
-    /* Target the main floating menu container */
+    /* Target the main floating menu container (BaseWeb's container) */
     div[data-baseweb="menu"] {
         background-color: #333333 !important; /* FIXED: Dark Gray */
         border: 1px solid #444444 !important;
@@ -186,20 +183,20 @@ st.markdown(
         color: #FFFFFF !important;
         cursor: pointer !important; 
     }
+    
+    /* --- NEW ULTIMATE FIX FOR ACTIVE/FOCUSED ITEM (THE WHITE BAR) --- */
+    /* This targets the focused item's container */
+    [data-baseweb="menu-item"]:focus, 
+    [data-baseweb="menu-item"]:active,
+    [data-baseweb="menu-item"]:hover {
+        background-color: #555555 !important; /* Darker gray on hover/focus */
+        color: #FFFFFF !important;
+    }
 
     /* Apply to all nested elements just in case, this is the 'nuclear' option */
     div[data-baseweb="menu"] * {
-        background-color: #333333 !important; /* FIXED: Dark Gray */
-        color: #FFFFFF !important;
+        color: #FFFFFF !important; /* Ensure all text is white */
         border-color: #333333 !important; 
-    }
-
-    /* Hover state fix */
-    [data-baseweb="menu-item"]:hover,
-    [data-baseweb="menu-item"]:hover > div,
-    div[data-baseweb="menu"] li:hover { 
-        background-color: #555555 !important; /* Slightly lighter gray on hover */
-        color: #FFFFFF !important;
     }
     /* --- END CRITICAL FIX --- */
 
