@@ -50,7 +50,7 @@ except FileNotFoundError:
     """
 
 
-# --- CUSTOM CSS FOR DARK THEME (Focusing ONLY on dropdown background fix) ---
+# --- CUSTOM CSS FOR DARK THEME (The essential fix is here) ---
 st.markdown(
     """
     <style>
@@ -157,55 +157,27 @@ st.markdown(
         color: #FFFFFF !important;
     }
     
-    /* --- CRITICAL FIX: DROPDOWN LIST BACKGROUND (Dark Gray #212121) --- */
+    /* --- CRITICAL FIX: DROPDOWN LIST BACKGROUND (Highest Specificity) --- */
     
-    /* 1. Target the floating BaseWeb container (Menu Wrapper) */
+    /* Targeting the main floating menu container */
     div[data-baseweb="menu"] {
         background-color: #212121 !important;
         border: 1px solid #444444 !important;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
     }
 
-    /* 2. Target the UL list container (if present) */
-    div[data-baseweb="menu"] ul {
-        background-color: #212121 !important;
-    }
-
-    /* 3. Target the list container itself (role="listbox") */
-    div[role="listbox"] {
-        background-color: #212121 !important;
-        border: none !important;
-    }
-
-    /* 4. Target the individual options/items (li/div) */
-    [data-baseweb="menu-item"], 
-    div[role="option"], 
-    [data-baseweb="menu"] li { 
-        background-color: #212121 !important;
-        color: #FFFFFF !important; 
-    }
-    
-    /* 5. Target the inner content wrapper of the option, which is often the final white layer */
-    [data-baseweb="menu-item"] > div { 
-        background-color: #212121 !important;
-        color: #FFFFFF !important;
-    }
-
-    /* 6. Targeting the content wrapper inside the listbox */
-    [data-baseweb="select"] [role="listbox"] > div {
-        background-color: #212121 !important;
-    }
-
-    /* 7. AGGRESSIVE TARGET: Target ALL list items and their containers inside the main menu wrapper */
+    /* AGGRESSIVE TARGET: Target ALL elements inside the floating menu container */
+    /* This should catch every single deeply nested element trying to revert to white */
     div[data-baseweb="menu"] * {
         background-color: #212121 !important; 
         color: #FFFFFF !important;
+        /* Force no specific border color if BaseWeb adds one */
+        border-color: #212121 !important; 
     }
 
-    /* 8. Target the hover state for individual options and their content */
+    /* Targeting the list items and forcing hover to a slightly lighter gray */
     [data-baseweb="menu-item"]:hover,
-    [data-baseweb="menu-item"]:hover > div,
-    div[data-baseweb="menu"] li:hover { 
+    [data-baseweb="menu-item"]:hover * { 
         background-color: #333333 !important; /* Slightly lighter gray on hover */
         color: #FFFFFF !important;
     }
