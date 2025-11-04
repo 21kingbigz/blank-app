@@ -99,28 +99,34 @@ st.markdown(
     /* Target the floating menu container (the box around all options) */
     div[data-baseweb="menu"] {
         background-color: #1A1A1A !important; 
-        border: 1px solid #FFFFFF !important; /* 🔥 WHITE OUTLINE for the whole menu */
+        border: 1px solid #FFFFFF !important; /* WHITE OUTLINE for the whole menu */
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
     }
     
-    /* Target menu items and their container to ensure dark background and white text */
+    /* 🔥 FIX 1: Aggressively target the menu items to remove white background */
     [data-baseweb="menu-item"],
-    [data-baseweb="menu-item"] * {
+    div[role="option"] { /* Target the core option elements */
         background-color: #1A1A1A !important; 
         color: #FFFFFF !important;
         border-color: #1A1A1A !important; 
     }
     
-    /* 🔥 HOVER/FOCUS STATE FIX: Subtle transparent white overlay */
+    /* 🔥 FIX 2: Ensure all children elements inherit dark background and white text */
+    [data-baseweb="menu-item"] *,
+    div[role="option"] * {
+        background-color: #1A1A1A !important; 
+        color: #FFFFFF !important;
+    }
+    
+    /* HOVER/FOCUS STATE FIX: Solid dark grey on hover */
     [data-baseweb="menu-item"]:focus, 
     [data-baseweb="menu-item"]:active,
     [data-baseweb="menu-item"]:hover {
-        /* This uses rgba to create a dark grey background with a touch of transparency */
-        background-color: rgba(255, 255, 255, 0.1) !important; 
+        background-color: #333333 !important; 
         color: #FFFFFF !important;
     }
 
-    /* Additional targets to aggressively enforce background/text */
+    /* Additional targets */
     .st-bw-list-box, div[role="listbox"] {
         background-color: #1A1A1A !important; 
     }
