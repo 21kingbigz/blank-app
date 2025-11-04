@@ -43,6 +43,20 @@ st.markdown(
         border-bottom-color: #FFFFFF !important; /* Makes the line white */
     }
 
+    /* ***CRITICAL FIX: Sidebar Radio Button Highlight*** */
+    /* Targets the background when a radio option is clicked/hovered/selected */
+    div[data-testid="stSidebar"] div.stRadio > label:hover,
+    div[data-testid="stSidebar"] div.stRadio > label:focus,
+    div[data-testid="stSidebar"] div.stRadio > label:active {
+        background-color: #1A1A1A !important; /* Use a darker color that blends well */
+        border-radius: 4px;
+    }
+    /* Ensures the selected/checked item also has a dark background */
+    div[data-testid="stSidebar"] div.stRadio > label > div > div:first-child > div:nth-child(2) {
+        background-color: #1A1A1A !important;
+    }
+
+
     /* 3. Button/Accent Color & Smoothness */
     .stButton>button {
         color: #FFFFFF;
@@ -70,29 +84,26 @@ st.markdown(
         color: #FFFFFF !important;
     }
 
-    /* ***CRITICAL FIX: Dropdown Menu (Selectbox) Styling*** */
-    /* Targets the Selectbox input area text (already mostly fixed, but ensures white) */
+    /* 5. Dropdown Menu (Selectbox) Styling */
     .stSelectbox div[data-testid="stTextInput"] div input {
         color: #FFFFFF !important;
     }
-    /* Targets the actual dropdown menu list when opened (background) */
     .st-bo, .st-bp, .st-bq, .st-br, .st-bs { 
         background-color: #212121 !important;
         border-color: #444444 !important;
     }
-    /* Targets the text inside the dropdown list items when the list is open */
     .st-bo > div > div {
         color: #FFFFFF !important; /* Ensures all text in the list is white */
     }
 
 
-    /* 5. HEADING COLORS (Big Words: H1, H2, H3, H4) */
+    /* 6. HEADING COLORS (Big Words: H1, H2, H3, H4) */
     h1, h2, h3, h4, h5, h6 {
         color: #AFAFAF; /* Light medium grey for blending */
         font-weight: 500;
     }
 
-    /* 6. ***CRITICAL FIX: AI RESPONSE BOX BACKGROUND & TEXT (Dark Grey)*** */
+    /* 7. ***CRITICAL FIX: AI RESPONSE BOX BACKGROUND & TEXT (Dark Grey)*** */
     div.stCode pre {
         background-color: #1A1A1A !important; /* Solid Dark Grey Background */
         color: #FFFFFF !important; /* Ensure output text is white */
@@ -104,7 +115,7 @@ st.markdown(
         color: #FFFFFF !important;
     }
 
-    /* 7. AI RESPONSE BOX OUTER CONTAINER STYLING */
+    /* 8. AI RESPONSE BOX OUTER CONTAINER STYLING */
     div.stCode {
         background-color: #1A1A1A !important; /* Outer box background */
         border: none !important; 
@@ -114,12 +125,12 @@ st.markdown(
         overflow-x: auto;
     }
     
-    /* 8. General paragraph/label text (White) */
+    /* 9. General paragraph/label text (White) */
     p, label, li, a, span { 
         color: #FFFFFF !important; 
     }
     
-    /* 9. Info/Warning Boxes - clean look */
+    /* 10. Info/Warning Boxes - clean look */
     .stAlert {
         border-left: 5px solid #666666;
         color: #DDDDDD;
