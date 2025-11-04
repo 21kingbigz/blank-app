@@ -83,18 +83,27 @@ st.markdown(
     section[data-testid='stSidebar'] .st-emotion-cache-1q1n0ol {
         border-bottom-color: #FFFFFF !important; /* Makes the line white */
     }
-
-    /* ***CRITICAL FIX 1: Sidebar Radio Button Highlight ELIMINATED*** */
-    /* Target the container element holding the label on hover/focus */
-    div[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover div:nth-child(2),
-    div[data-testid="stSidebar"] div[data-testid="stRadio"] label:focus div:nth-child(2) {
-        background-color: #121212 !important; /* Use sidebar color */
-        border-color: transparent !important; /* Remove any border highlight */
-    }
-    /* Ensure the actual selected element stays dark */
-    div[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
-        background-color: #121212 !important;
+    
+    /* CRITICAL FIX 1: Sidebar Radio Button Highlight ELIMINATED (Final Attempt) */
+    /* Target the container div and apply a transition and background fix */
+    div[data-testid="stSidebar"] div.stRadio > label {
+        transition: none !important; /* Stop the default highlight animation */
+        background-color: transparent !important; /* Base must be transparent */
         border-color: transparent !important;
+    }
+    /* Target the specific element that receives the hover/focus highlight */
+    div[data-testid="stSidebar"] div.stRadio > label:hover,
+    div[data-testid="stSidebar"] div.stRadio > label:focus {
+        background-color: #121212 !important; /* Force to sidebar background */
+        border-color: #121212 !important;
+    }
+    /* Ensure the selected item also uses the dark sidebar background */
+    div[data-testid="stSidebar"] div.stRadio > label:has(input:checked) {
+        background-color: #121212 !important;
+    }
+    /* Shrink font size slightly to help text fit on one line */
+    div[data-testid="stSidebar"] div.stRadio > label {
+        font-size: 15px !important; 
     }
 
 
@@ -114,7 +123,7 @@ st.markdown(
         border-color: #777777;
     }
 
-    /* ***CRITICAL FIX 2: Popover Button and Content (Schedule Pop-up)*** */
+    /* CRITICAL FIX 2: Popover Button and Content (Schedule Pop-up) */
     /* Target the Popover Button (st.popover) */
     div[data-testid="stPopover"] button {
         color: #FFFFFF !important;
@@ -243,49 +252,58 @@ def run_utility_hub(prompt_text: str, uploaded_file: BytesIO = None):
     except Exception as e:
         return f"An unknown API Error occurred: {e}"
 
-# --- 2. FEATURE LIST AND EXAMPLES (Existing Logic) ---
+# --- 2. FEATURE LIST AND EXAMPLES (Category Names Shortened) ---
 
 CATEGORIES_FEATURES = {
-    "🧠 Productivity/Cognitive": {"icon": "💡", "features": {
+    # Shortened: Productivity/Cognitive -> Productivity
+    "🧠 Productivity": {"icon": "💡", "features": { 
         "1. Daily Schedule Optimizer": "tasks: write report, call client. Time: 9am-12pm.",
         "2. Task Deconstruction Expert": "Vague goal: Start an online business.",
         "3. Get Unstuck Prompter": "Problem: I keep procrastinating on my final essay.",
         "4. Habit Breaker": "Bad habit: Checking my phone right when I wake up.",
         "5. One-Sentence Summarizer": "Text: The sun is a star at the center of the Solar System. It is a nearly perfect ball of hot plasma..."
     }},
-    "💰 Finance/Math": {"icon": "🧮", "features": {
+    # Shortened: Finance/Math -> Finance
+    "💰 Finance": {"icon": "🧮", "features": { 
         "6. Tip & Split Calculator": "bill $85.50, 15% tip, 2 people.",
         "7. Unit Converter": "Convert 500 milliliters to pints.",
         "8. Priority Spending Advisor": "Goal: Save $10k. Planned purchase: $800 new gaming PC."
     }},
-    "📸 Health/Multi-Modal": {"icon": "🥗", "features": {
+    # Shortened: Health/Multi-Modal -> Health
+    "📸 Health": {"icon": "🥗", "features": {
         "9. Image-to-Calorie Estimate": "Estimate the calories and macros for this meal.",
         "10. Recipe Improver": "Ingredients: Chicken breast, rice, soy sauce, broccoli.",
         "11. Symptom Clarifier": "Non-emergency symptoms: Headache and minor fatigue in the afternoon."
     }},
-    "🗣️ Communication/Writing": {"icon": "✍️", "features": {
+    # Shortened: Communication/Writing -> Writing/Comm
+    "🗣️ Writing/Comm": {"icon": "✍️", "features": {
         "12. Tone Checker & Rewriter": "Draft: I need the report soon. Desired tone: Professional.",
         "13. Contextual Translator": "Translate: 'It was lit.' Context: Talking about a good concert.",
         "14. Metaphor Machine": "Topic: Artificial Intelligence.",
         "15. Email/Text Reply Generator": "Received: 'Meeting canceled at 3pm.' Response points: Acknowledge, ask to reschedule for tomorrow."
     }},
-    "💡 Creative/Fun": {"icon": "🎭", "features": {
+    # Shortened: Creative/Fun -> Creative
+    "💡 Creative": {"icon": "🎭", "features": {
         "16. Idea Generator/Constraint Solver": "Idea type: App name. Constraint: Must contain 'Zen' and be for productivity.",
         "17. Random Fact Generator": "Category: Deep Sea Creatures.",
         "18. 'What If' Scenario Planner": "Hypothetical: Moving to a small town in Norway."
     }},
-    "💻 Tech/Travel": {"icon": "✈️", "features": {
+    # Shortened: Tech/Travel -> Tech
+    "💻 Tech": {"icon": "✈️", "features": {
         "19. Concept Simplifier": "Complex topic: Quantum Entanglement. Analogy type: Food.",
         "20. Code Explainer": "Code snippet: 'def fib(n): return n if n <= 1 else fib(n-1) + fib(n-2)'",
         "21. Packing List Generator": "Trip: 5 days, cold city, business trip."
     }},
+    # School Expert AI
     "📚 School Expert AI": {"icon": "🎓", "features": {
         "22. Mathematics Expert AI": "Solve for x: (4x^2 + 5x = 9) and show steps.",
         "23. English & Literature Expert AI": "Critique this thesis: 'Hamlet is a play about procrastination.'",
         "24. History & Social Studies Expert AI": "Explain the causes and effects of the Cuban Missile Crisis.",
         "25. Foreign Language Expert AI": "Conjugate 'aller' en French, passé simple, nous.",
         "26. Science Expert AI": "Explain the concept of entropy in simple terms.",
-        "27. Vocational & Applied Expert AI": "Code Debugger: 'for i in range(5) print(i)' (Python)"
+        "27. Vocational & Applied Expert AI": "Code Debugger: 'for i in range(5) print(i)' (Python)",
+        # *** NEW FEATURE: Lesson Planner ***
+        "28. Teacher's Lesson Planner": "Topic: Photosynthesis. Grade: 7th. Duration: 45 minutes."
     }}
 }
 
@@ -336,7 +354,6 @@ if selected_feature != "Select a Feature to Use":
     last_schedule = load_last_schedule()
     if is_schedule_optimizer and last_schedule:
         with col2:
-            # Note: The button text color is handled by the stPopover CSS block (Critical Fix 2)
             with st.popover("📅 View Last Schedule"):
                 st.markdown("### Saved Schedule")
                 st.caption("This schedule was saved from your previous session.")
