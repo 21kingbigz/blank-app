@@ -89,6 +89,11 @@ st.markdown(
     div[data-testid="stSidebar"] div.stRadio > label {
         font-size: 15px !important; 
     }
+    
+    /* FIX: Make all sidebar radio button text white (especially the Mode Selector) */
+    div[data-testid="stSidebar"] div.stRadio label {
+        color: #FFFFFF !important;
+    }
 
 
     /* 3. Button/Accent Color & Smoothness */
@@ -178,6 +183,20 @@ st.markdown(
         background-color: #1A1A1A !important;
         color: #FFFFFF !important;
     }
+
+    /* FIX: Force white text for all content inside the output box */
+    div.stCode pre *, div.stCode pre p {
+        color: #FFFFFF !important;
+        /* Keep background transparent/dark for the box content itself */
+    }
+    
+    /* CRITICAL FIX 3: Selection Highlight Visibility */
+    /* Target selected text within the output box to change the highlight color */
+    div.stCode ::selection {
+        background-color: #004d99; /* Dark Blue highlight for selection */
+        color: #FFFFFF !important; /* Keep selected text white */
+    }
+
 
     /* 8. AI RESPONSE BOX OUTER CONTAINER STYLING */
     div.stCode {
