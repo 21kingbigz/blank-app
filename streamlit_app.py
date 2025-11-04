@@ -94,35 +94,38 @@ st.markdown(
         border-radius: 6px; 
     }
     
-    /* --- ULTIMATE CRITICAL FIX: DROPDOWN LIST BACKGROUND --- */
-    .st-bw-list-box {
-        background-color: #1A1A1A !important; 
-    }
-    div[role="listbox"] {
-        background-color: #1A1A1A !important; 
-    }
+    /* --- CRITICAL DROPDOWN FIXES --- */
+    
+    /* Target the floating menu container (the box around all options) */
     div[data-baseweb="menu"] {
         background-color: #1A1A1A !important; 
-        border: 1px solid #444444 !important;
+        border: 1px solid #FFFFFF !important; /* 🔥 WHITE OUTLINE for the whole menu */
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
     }
-    [data-baseweb="menu-item"] {
+    
+    /* Target menu items and their container to ensure dark background and white text */
+    [data-baseweb="menu-item"],
+    [data-baseweb="menu-item"] * {
         background-color: #1A1A1A !important; 
+        color: #FFFFFF !important;
+        border-color: #1A1A1A !important; 
     }
-    div[data-baseweb="menu"] *, 
-    div[data-baseweb="menu"] [role="option"] *,
-    div[data-baseweb="menu"] li * { 
-        background-color: #1A1A1A !important; 
-        color: #1A1A1A !important;
-        border-color: #FFFFFF !important; 
-    }
+    
+    /* 🔥 HOVER/FOCUS STATE FIX: Subtle transparent white overlay */
     [data-baseweb="menu-item"]:focus, 
     [data-baseweb="menu-item"]:active,
     [data-baseweb="menu-item"]:hover {
-        background-color: #333333 !important; 
+        /* This uses rgba to create a dark grey background with a touch of transparency */
+        background-color: rgba(255, 255, 255, 0.1) !important; 
         color: #FFFFFF !important;
     }
-    /* --- END CRITICAL FIX --- */
+
+    /* Additional targets to aggressively enforce background/text */
+    .st-bw-list-box, div[role="listbox"] {
+        background-color: #1A1A1A !important; 
+    }
+    
+    /* --- END CRITICAL DROPDOWN FIXES --- */
 
     /* 7. AI RESPONSE BOX STYLING */
     div.stCode {
@@ -132,6 +135,7 @@ st.markdown(
     }
     div.stCode pre {
         background-color: #1A1A1A !important;
+        color: #FFFFFF !important;
     }
 
     /* 9. General text and label text */
@@ -139,12 +143,10 @@ st.markdown(
         color: #FFFFFF !important; 
     }
     
-    /* 10. MANUAL ACCENT COLOR CHANGE (Example: Blue links) */
+    /* 10. MANUAL ACCENT COLOR CHANGE (Blue links) */
     a {
-        color: #00BFFF !important; /* Deep Sky Blue for links/accents */
+        color: #00BFFF !important; 
     }
-    /* This overrides Streamlit's theme file for link color */
-
     </style>
     """,
     unsafe_allow_html=True
