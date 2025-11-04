@@ -34,7 +34,7 @@ st.markdown(
         border-right: 1px solid #333333;
     }
 
-    /* **SIDEBAR TEXT AND LINE (Maintaining White)** */
+    /* **SIDEBAR TEXT AND LINE (White)** */
     section[data-testid='stSidebar'] h1, 
     section[data-testid='stSidebar'] h2 {
         color: #FFFFFF !important; /* Forces "Artorius" and "Categories" to white */
@@ -59,7 +59,7 @@ st.markdown(
         border-color: #777777;
     }
 
-    /* 4. TEXT INPUT FIELDS (What the user types - Maintaining White) */
+    /* 4. TEXT INPUT FIELDS (What the user types - White) */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
         background-color: #212121; 
         color: #FFFFFF !important; /* Ensures text user types is pure white */
@@ -70,22 +70,37 @@ st.markdown(
         color: #FFFFFF !important;
     }
 
+    /* ***CRITICAL FIX: Dropdown Menu (Selectbox) Styling*** */
+    /* Targets the Selectbox input area */
+    .stSelectbox div[data-testid="stTextInput"] div input {
+        background-color: #212121 !important;
+        color: #FFFFFF !important;
+    }
+    /* Targets the actual dropdown menu list when opened */
+    .st-bo { /* Common class for dropdown list container in Streamlit */
+        background-color: #212121 !important;
+        border: 1px solid #444444;
+    }
+    /* Targets the text inside the dropdown list items */
+    .st-bp, .st-bq, .st-br, .st-bs { /* Common classes for list items */
+        color: #FFFFFF !important;
+        background-color: #212121 !important;
+    }
+
+
     /* 5. HEADING COLORS (Big Words: H1, H2, H3, H4) */
     h1, h2, h3, h4, h5, h6 {
         color: #AFAFAF; /* Light medium grey for blending */
         font-weight: 500;
     }
 
-    /* 6. ***CRITICAL FIX: AI RESPONSE BOX BACKGROUND & TEXT (Image Fix)*** */
-    
-    /* A. Target the innermost container (pre) to force the dark background */
+    /* 6. ***CRITICAL FIX: AI RESPONSE BOX BACKGROUND & TEXT (Dark Grey)*** */
     div.stCode pre {
         background-color: #1A1A1A !important; /* Solid Dark Grey Background */
         color: #FFFFFF !important; /* Ensure output text is white */
         border: none !important; 
-        padding: 0; /* Remove internal padding */
+        padding: 0; 
     }
-    /* B. Target the code tag inside the pre block (sometimes necessary for text color) */
     div.stCode pre code {
         background-color: #1A1A1A !important;
         color: #FFFFFF !important;
@@ -96,12 +111,12 @@ st.markdown(
         background-color: #1A1A1A !important; /* Outer box background */
         border: none !important; 
         border-radius: 12px; 
-        padding: 15px; /* Outer box padding */
+        padding: 15px; 
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
         overflow-x: auto;
     }
     
-    /* 8. General paragraph/label text (Maintaining White) */
+    /* 8. General paragraph/label text (White) */
     p, label, li, a, span { 
         color: #FFFFFF !important; 
     }
@@ -217,7 +232,7 @@ CATEGORIES_FEATURES = {
     }}
 }
 
-# --- 3. STREAMLIT UI AND SIDEBAR NAVIGATION (Updated Title) ---
+# --- 3. STREAMLIT UI AND SIDEBAR NAVIGATION (Existing Logic) ---
 
 # Display the website name in the top left corner (using the sidebar)
 st.sidebar.title(WEBSITE_TITLE) 
