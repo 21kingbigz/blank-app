@@ -5,27 +5,60 @@ from google import genai
 from PIL import Image
 from io import BytesIO
 
-# --- 0. INITIAL SETUP AND CONFIGURATION ---
+# --- NEW: WEBSITE BRANDING & CONFIGURATION ---
+WEBSITE_TITLE = "Artorius"
+CURRENT_APP_TITLE = "27-in-1 Smart Utility Hub"
 
-# Custom CSS for a cleaner look
+# Set browser tab title, favicon, and layout. 
+# Also applies Streamlit's built-in dark theme setting.
+st.set_page_config(
+    page_title=f"{WEBSITE_TITLE} - {CURRENT_APP_TITLE}", 
+    page_icon="👑", # Use a crown emoji for branding
+    layout="wide",
+    # Set built-in dark theme as default for a darker look
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS for a darker, more colorful feel (accenting the dark theme)
 st.markdown(
     """
     <style>
-    /* Main Streamlit container width */
+    /* 1. Set Dark Base Colors for Contrast */
+    .stApp {
+        background-color: #121212; /* Deep Black/Charcoal Background */
+        color: white;
+    }
+    
+    /* 2. Highlight Primary Content/Containers */
     .block-container {
         padding-top: 1rem;
         padding-bottom: 0rem;
         padding-left: 5%;
         padding-right: 5%;
     }
-    /* Style for the execution button */
+    
+    /* 3. Button/Accent Color (A vibrant gold/yellow accent) */
     .stButton>button {
-        color: white;
-        background-color: #4CAF50; /* Green */
+        color: #121212; /* Dark text on button */
+        background-color: #FFD700; /* Gold */
         border-radius: 8px;
         padding: 10px 20px;
         font-weight: bold;
+        border: 2px solid #FFD700;
     }
+
+    /* 4. Sidebar Branding (Top-Left) */
+    .css-1d391kg, .css-1dp5fjs {
+        background-color: #0d1218; /* Slightly darker sidebar for contrast */
+        border-right: 1px solid #333333;
+    }
+    
+    /* 5. Info/Warning Boxes for richer color */
+    .stAlert {
+        border-left: 5px solid #FFD700; /* Gold left border */
+        background-color: #212121;
+    }
+
     </style>
     """,
     unsafe_allow_html=True
@@ -33,31 +66,30 @@ st.markdown(
 
 # 1. API Key and Client Initialization
 try:
+    # Client is correctly configured to look for GEMINI_API_KEY environment variable (Streamlit Secrets)
     client = genai.Client()
 except Exception:
-    st.error("❌ ERROR: Gemini API Key not found. Please set your 'GEMINI_API_KEY' in Replit Secrets.")
+    st.error("❌ ERROR: Gemini API Key not found. Please set your 'GEMINI_API_KEY' in Streamlit Secrets.")
     st.stop()
 
-# 2. Load the System Instruction
+# 2. Load the System Instruction (Existing Logic)
 try:
     with open("system_instruction.txt", "r") as f:
         SYSTEM_INSTRUCTION = f.read()
 except FileNotFoundError:
-    st.error("❌ ERROR: system_instruction.txt not found. Please create it.")
+    st.error("❌ ERROR: system_instruction.txt not found. Please ensure it exists in your repository.")
     st.stop()
 
-# 3. Model Configuration
+# 3. Model Configuration (Existing Logic)
 MODEL = 'gemini-2.5-flash' 
 
-# --- 1. CORE AI FUNCTION ---
+# --- 1. CORE AI FUNCTION (Existing Logic) ---
 
 @st.cache_data(show_spinner=False)
 def run_utility_hub(prompt_text: str, uploaded_file: BytesIO = None):
-    """
-    Sends the user's request (and optional image) to Gemini.
-    """
+    # Function body remains the same
     parts = []
-
+    
     if uploaded_file is not None:
         try:
             uploaded_file.seek(0) 
@@ -80,10 +112,13 @@ def run_utility_hub(prompt_text: str, uploaded_file: BytesIO = None):
             )
         )
         return response.text
+    except APIError as e:
+        # Handle the 503 overload error gracefully
+        return f"An API Error occurred: 503 UNAVAILABLE. The model is overloaded. Please retry. Full error: {e}"
     except Exception as e:
-        return f"An API Error occurred: {e}"
+        return f"An unknown API Error occurred: {e}"
 
-# --- 2. FEATURE LIST AND EXAMPLES ---
+# --- 2. FEATURE LIST AND EXAMPLES (Existing Logic) ---
 
 CATEGORIES_FEATURES = {
     "🧠 Productivity/Cognitive": {"icon": "💡", "features": {
@@ -129,10 +164,10 @@ CATEGORIES_FEATURES = {
     }}
 }
 
-# --- 3. STREAMLIT UI AND SIDEBAR NAVIGATION ---
+# --- 3. STREAMLIT UI AND SIDEBAR NAVIGATION (Updated Title) ---
 
-st.set_page_config(layout="wide")
-st.title("🤖 27-in-1 Smart Utility Hub")
+# Display the main application title with new format
+st.title(f"👑 {WEBSITE_TITLE}: {CURRENT_APP_TITLE}")
 st.caption("Select a category from the sidebar to begin.")
 
 # Sidebar for category selection
@@ -153,7 +188,7 @@ selected_feature = st.selectbox(
     key="feature_select"
 )
 
-# --- INPUT AREA ---
+# --- INPUT AREA (Existing Logic) ---
 
 user_input = ""
 uploaded_file = None
@@ -163,10 +198,10 @@ image_needed = (selected_feature == "9. Image-to-Calorie Estimate")
 if selected_feature != "Select a Feature to Use":
     feature_code = selected_feature.split(".")[0]
     st.markdown(f"##### Step 1: Provide Input Data for Feature #{feature_code}")
-
+    
     if image_needed:
         st.warning("⚠️ **Image Required!** Please upload your meal photo below.")
-
+    
     example_prompt = category_data["features"][selected_feature]
     st.info(f"💡 **Example Input Format:** `{example_prompt}`")
 
@@ -179,7 +214,7 @@ if selected_feature != "Select a Feature to Use":
         )
         if uploaded_file:
             st.image(uploaded_file, caption="Meal to Analyze", width=250)
-
+            
     # 3. TEXT AREA INPUT
     user_input = st.text_area(
         "Enter your required data (e.g., your tasks, your math problem, your ingredients):",
@@ -190,24 +225,24 @@ if selected_feature != "Select a Feature to Use":
 
     # 4. EXECUTION BUTTON
     if st.button(f"EXECUTE: {selected_feature}", key="execute_btn"):
-
+        
         # Validation for Calorie Feature
         if image_needed and uploaded_file is None:
             st.error("Please upload an image to run the Image-to-Calorie Estimate.")
         else:
             # Combine feature name and user input for the AI routing
             final_prompt = f"{selected_feature}: {user_input}"
-
+            
             with st.spinner(f'🎯 Routing request to **{selected_feature}**...'):
                 # Send the request to the core function
                 result = run_utility_hub(final_prompt, uploaded_file)
-
+                
                 # Store and display the result
                 st.session_state['result'] = result
                 st.session_state['last_feature_used'] = selected_feature
 
 
-# --- 4. GLOBAL OUTPUT DISPLAY ---
+# --- 4. GLOBAL OUTPUT DISPLAY (Existing Logic) ---
 
 st.markdown("---")
 st.header("Hub Output")
