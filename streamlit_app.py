@@ -86,7 +86,7 @@ st.markdown(
         border-color: #777777;
     }
 
-    /* 4. INPUT FIELD STYLING */
+    /* 4. INPUT FIELD STYLING (Main box) */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
         background-color: #212121; 
         color: #FFFFFF !important; 
@@ -103,31 +103,33 @@ st.markdown(
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
     }
     
-    /* 🔥 FIX 1: Aggressively target the menu items to remove white background */
+    /* 🔥 FORCING DARK BACKGROUND (Level 1: Menu Items/Options) */
     [data-baseweb="menu-item"],
-    div[role="option"] { /* Target the core option elements */
-        background-color: #1A1A1A !important; 
+    div[role="option"] { 
+        background-color: #212121 !important; /* Force Dark Grey */
         color: #FFFFFF !important;
-        border-color: #1A1A1A !important; 
+        border-color: #212121 !important; 
     }
     
-    /* 🔥 FIX 2: Ensure all children elements inherit dark background and white text */
+    /* 🔥 FORCING DARK BACKGROUND (Level 2: Nested elements inside options) */
     [data-baseweb="menu-item"] *,
     div[role="option"] * {
-        background-color: #1A1A1A !important; 
+        background-color: #212121 !important; /* Force Dark Grey on all children */
         color: #FFFFFF !important;
     }
     
-    /* HOVER/FOCUS STATE FIX: Solid dark grey on hover */
+    /* HOVER/FOCUS STATE FIX: Solid dark grey on hover (maintains contrast) */
     [data-baseweb="menu-item"]:focus, 
     [data-baseweb="menu-item"]:active,
     [data-baseweb="menu-item"]:hover {
-        background-color: #333333 !important; 
+        background-color: #333333 !important; /* Slightly darker grey on hover */
         color: #FFFFFF !important;
     }
 
-    /* Additional targets */
-    .st-bw-list-box, div[role="listbox"] {
+    /* Additional targets to cover all base layers */
+    .st-bw-list-box, 
+    div[role="listbox"],
+    ul[role="menu"] { 
         background-color: #1A1A1A !important; 
     }
     
