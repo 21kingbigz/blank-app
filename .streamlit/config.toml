@@ -1,0 +1,10 @@
+[theme]
+# Primary Colors
+primaryColor="#555555"          # A subtle grey for buttons/sliders/accents
+backgroundColor="#0A0A0A"       # Deep Black for the main app background
+secondaryBackgroundColor="#121212" # Dark Grey for sidebar/input containers
+textColor="#FFFFFF"             # White text for readability
+font="sans serif"
+
+# Use this to globally override Streamlit's base theme if needed.
+# However, we will use targeted CSS for the dropdown fix.
