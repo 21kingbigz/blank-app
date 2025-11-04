@@ -18,20 +18,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for the strictly black/dark grey theme with smooth design
+# Custom CSS for the precise dark theme specifications
 st.markdown(
     """
     <style>
-    /* 1. Base Dark Theme Colors */
+    /* 1. Base App Background and General Text */
     .stApp {
         background-color: #0A0A0A; /* Deep Black */
-        color: white;
+        color: #FFFFFF; /* Main text (paragraph text, labels) is white */
     }
     
-    /* 2. Secondary Background (Sidebar, Code Blocks, Widgets) */
+    /* 2. Secondary Background (Sidebar, Input Widgets) */
     .css-1d391kg, .css-1dp5fjs, section[data-testid='stSidebar'] {
         background-color: #121212; /* Slightly Lighter Black Sidebar */
-        color: #F0F0F0;
         border-right: 1px solid #333333;
     }
     
@@ -39,7 +38,7 @@ st.markdown(
     .stButton>button {
         color: #FFFFFF;
         background-color: #333333; 
-        border-radius: 8px; /* SMOOTHNESS: Rounded corners */
+        border-radius: 8px; 
         padding: 10px 20px;
         font-weight: bold;
         border: 1px solid #555555;
@@ -60,35 +59,35 @@ st.markdown(
     }
 
     /* 5. HEADING COLORS (Big Words) */
+    /* Target all headers for a light medium grey to blend in more */
     h1, h2, h3, h4, h5, h6 {
-        color: #AAAAAA; /* Light grey for blending */
-        font-weight: 500; 
+        color: #AFAFAF; /* Light medium grey */
+        font-weight: 500;
     }
-    
+
     /* 6. AI RESPONSE BOX (st.code CONTAINER) */
+    /* Make the entire response box dark grey, smooth, and borderless */
     div.stCode {
-        background-color: #1A1A1A !important; /* Fully Dark Grey Background */
-        border: none !important; /* Remove all borders for smoothness */
-        border-radius: 12px; /* Smooth, rounded corners */
+        background-color: #1A1A1A !important; /* Solid Dark Grey Background */
+        border: none !important; /* Remove borders */
+        border-radius: 12px; 
         padding: 15px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
         overflow-x: auto;
-        /* Target the actual text *inside* the response box */
-        color: #DDDDDD !important; /* Lighter grey text for better blending and reading */
-        font-size: 14px;
     }
     
-    /* 7. Final Smoothness Refinements */
+    /* 7. Text inside AI Response Box (Code Block) */
+    /* Ensure text inside the response box is bright white for reading */
+    div.stCode pre code {
+        color: #FFFFFF !important; 
+    }
+    
+    /* 8. Info/Warning Boxes - clean look */
     .stAlert {
         border-left: 5px solid #666666;
         color: #DDDDDD;
         background-color: #1A1A1A;
         border-radius: 6px;
-    }
-    
-    /* Make the markdown elements inside st.code also the correct light color */
-    div.stCode pre code {
-        color: #DDDDDD !important; 
     }
     </style>
     """,
