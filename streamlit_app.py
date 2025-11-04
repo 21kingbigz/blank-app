@@ -159,9 +159,6 @@ st.markdown(
     
     /* --- CRITICAL FIX FOR DROPDOWN LIST BACKGROUND --- */
     
-    /* Target the component that renders the list of options when opened. */
-    /* This element often sits outside the main component structure and needs max specificity. */
-    
     /* Target the list container itself */
     div[role="listbox"] {
         background-color: #212121 !important;
@@ -169,9 +166,9 @@ st.markdown(
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* Add shadow for separation */
     }
 
-    /* Target the individual options for text color */
+    /* Target the individual options for text color and background */
     div[role="option"] {
-        color: #FFFFFF !important;
+        color: #FFFFFF !important; /* Set text to bright white */
         background-color: #212121 !important;
     }
     
