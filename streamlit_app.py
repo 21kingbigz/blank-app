@@ -378,25 +378,22 @@ def render_teacher_aid():
             st.markdown("---")
             st.subheader(f"Saved {tab_name}")
             
-            # --- DISPLAY AND DELETE LOGIC ---
+            # --- DISPLAY AND DELETE LOGIC (UPDATED) ---
             if st.session_state['teacher_db'][db_key]:
                 # Iterate in reverse so most recent is on top
                 for i in range(len(st.session_state['teacher_db'][db_key]) - 1, -1, -1):
                     resource = st.session_state['teacher_db'][db_key][i]
                     
-                    # Use a unique key for the expander
-                    expander_key = f"{db_key}_exp_{i}"
+                    # Title for the expander header
+                    expander_label = f"{tab_name} #{len(st.session_state['teacher_db'][db_key]) - i}"
                     
-                    # Create two columns inside the expander header area
-                    exp_col1, exp_col2 = st.columns([0.9, 0.1])
-                    
-                    with exp_col1:
-                        # Display resource title in the expander header
-                        st.markdown(f"**{tab_name} #{len(st.session_state['teacher_db'][db_key]) - i}**", unsafe_allow_html=True)
-                    
-                    with exp_col2:
-                        # DELETE BUTTON
-                        if st.button("🗑️ Delete", key=f"delete_{db_key}_{i}"):
+                    # Display the content and the delete button inside the expander
+                    with st.expander(expander_label, expanded=False):
+                        st.code(resource, language='markdown')
+                        st.markdown("---")
+                        
+                        # DELETE BUTTON: Placed at the very end of the specific save block
+                        if st.button("🗑️ Delete This Save", key=f"delete_{db_key}_{i}"):
                             # Remove the item at index i
                             del st.session_state['teacher_db'][db_key][i]
                             # Save the updated data to the JSON file
@@ -405,11 +402,6 @@ def render_teacher_aid():
                             # Rerun the app to update the list
                             st.rerun()
                             
-                    # Display the content inside the expander body
-                    with st.expander(f"View Resource Details", expanded=False):
-                        st.code(resource, language='markdown')
-                        st.markdown("---")
-                        
             else:
                 st.info(f"No {tab_name.lower()} saved yet.")
 
