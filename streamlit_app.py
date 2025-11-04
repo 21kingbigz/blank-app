@@ -34,12 +34,14 @@ def save_last_schedule(schedule_text: str):
 
 # Load instruction and initialize client
 try:
+    # NOTE: You must ensure your environment has the GEMINI_API_KEY environment variable set for this to work.
     client = genai.Client()
 except Exception:
     st.error("❌ ERROR: Gemini Client initialization failed. Please ensure the API Key is correctly configured.")
     st.stop()
 try:
     # This instruction handles both the Utility Hub and the Teacher's Aid text generation
+    # Replace "system_instruction.txt" with your instruction content if the file is missing.
     with open("system_instruction.txt", "r") as f:
         SYSTEM_INSTRUCTION = f.read()
 except FileNotFoundError:
@@ -159,6 +161,11 @@ st.markdown(
     
     /* --- CRITICAL FIX: DROPDOWN LIST BACKGROUND (Highest Specificity) --- */
     
+    /* Target the container that holds the options list. THIS IS THE KEY FIX. */
+    div[role="listbox"] {
+        background-color: #333333 !important; /* FIXED: Dark Gray */
+    }
+
     /* Target the main floating menu container */
     div[data-baseweb="menu"] {
         background-color: #333333 !important; /* FIXED: Dark Gray */
@@ -173,7 +180,6 @@ st.markdown(
     }
     
     /* AGGRESSIVE TARGET: The actual content wrapper inside the menu item */
-    /* This uses extreme specificity to override BaseWeb's default styles */
     [data-baseweb="menu-item"] > div, 
     div[data-baseweb="menu"] [role="option"] > div { 
         background-color: #333333 !important; /* FIXED: Dark Gray */
