@@ -161,14 +161,14 @@ st.markdown(
     
     /* Target the main floating menu container */
     div[data-baseweb="menu"] {
-        background-color: #212121 !important;
+        background-color: #333333 !important; /* FIXED: Dark Gray */
         border: 1px solid #444444 !important;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
     }
     
     /* Target the menu item container */
     [data-baseweb="menu-item"] {
-        background-color: #212121 !important;
+        background-color: #333333 !important; /* FIXED: Dark Gray */
         color: #FFFFFF !important;
     }
     
@@ -176,23 +176,23 @@ st.markdown(
     /* This uses extreme specificity to override BaseWeb's default styles */
     [data-baseweb="menu-item"] > div, 
     div[data-baseweb="menu"] [role="option"] > div { 
-        background-color: #212121 !important;
+        background-color: #333333 !important; /* FIXED: Dark Gray */
         color: #FFFFFF !important;
         cursor: pointer !important; 
     }
 
     /* Apply to all nested elements just in case, this is the 'nuclear' option */
     div[data-baseweb="menu"] * {
-        background-color: #212121 !important; 
+        background-color: #333333 !important; /* FIXED: Dark Gray */
         color: #FFFFFF !important;
-        border-color: #212121 !important; 
+        border-color: #333333 !important; 
     }
 
     /* Hover state fix */
     [data-baseweb="menu-item"]:hover,
     [data-baseweb="menu-item"]:hover > div,
     div[data-baseweb="menu"] li:hover { 
-        background-color: #333333 !important; /* Slightly lighter gray on hover */
+        background-color: #555555 !important; /* Slightly lighter gray on hover */
         color: #FFFFFF !important;
     }
     /* --- END CRITICAL FIX --- */
