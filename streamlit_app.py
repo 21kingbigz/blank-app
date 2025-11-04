@@ -16,18 +16,83 @@ SCHEDULE_DATA_FILE = "schedule_data.json"
 TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
 
 # --- LOGO & ICON CONFIGURATION ---
-# IMPORTANT: This must match the filename you saved in the project directory.
-LOGO_FILENAME = "image (13).jpg" # Using the JPEG file provided
-# CRITICAL: This line ensures the image file path is used if the file exists.
-ICON_SETTING = LOGO_FILENAME if os.path.exists(LOGO_FILENAME) else "🛠️" 
+# IMPORTANT: Please rename your logo to 'artorius_logo.png' and place it in the same directory.
+LOGO_FILENAME = "artorius_logo.png" 
 
 # Set browser tab title, favicon, and layout. 
+# We'll try to use the Streamlit page_icon first, but also inject a meta tag as a fallback.
+# For local deployment, Streamlit's page_icon should ideally work with local paths.
 st.set_page_config(
-    page_title=WEBSITE_TITLE, # Only displays "Artorius" in the tab
-    page_icon=ICON_SETTING, # USES THE IMAGE FILE PATH FOR THE TAB ICON
+    page_title=WEBSITE_TITLE, 
+    page_icon=LOGO_FILENAME if os.path.exists(LOGO_FILENAME) else "🛠️", # Use the PNG file if it exists
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# --- Fallback/Redundant Favicon Injection (CSS/HTML) ---
+# This is a more aggressive way to try and force the favicon if st.set_page_config fails.
+# It might not work perfectly with Streamlit's rendering order, but it's worth a try.
+if os.path.exists(LOGO_FILENAME):
+    st.markdown(
+        f"""
+        <link rel="shortcut icon" href="app/{LOGO_FILENAME}" type="image/png">
+        <link rel="icon" href="app/{LOGO_FILENAME}" type="image/png">
+        """,
+        unsafe_allow_html=True,
+    )
+# --- END Favicon Injection ---
+
+
+# --- CRITICAL CSS FIXES (Targeted Overrides for Dropdown and Link Color) ---
+# Moved CSS up to ensure it applies early.
+st.markdown(
+    """
+    <style>
+    /* 1. INPUT FIELD BORDER (Ensuring they look crisp against the dark background) */
+    .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
+        border: 1px solid #444444;
+        border-radius: 6px; 
+        background-color: #212121 !important; 
+        color: #FFFFFF !important;
+    }
+    
+    /* --- CRITICAL DROPDOWN FIXES (The persistent issue) --- */
+    div[data-baseweb="menu"] {
+        background-color: #1A1A1A !important; 
+        border: 1px solid #FFFFFF !important; 
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
+    }
+    [data-baseweb="menu-item"], div[role="option"] { 
+        background-color: #212121 !important; 
+        color: #FFFFFF !important;
+        border-color: #212121 !important; 
+    }
+    [data-baseweb="menu-item"] *, div[role="option"] * {
+        background-color: #212121 !important; 
+        color: #FFFFFF !important;
+    }
+    [data-baseweb="menu-item"]:focus, 
+    [data-baseweb="menu-item"]:active,
+    [data-baseweb="menu-item"]:hover {
+        background-color: #333333 !important; 
+        color: #FFFFFF !important;
+    }
+    /* --- END CRITICAL DROPDOWN FIXES --- */
+
+    /* MANUAL ACCENT COLOR CHANGE (Blue links) */
+    a {
+        color: #00BFFF !important; 
+    }
+    
+    /* Global text color enforcement (just in case the TOML file misses something) */
+    p, li, span {
+        color: #FFFFFF !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+# --- END CRITICAL CSS FIXES ---
 
 # --- TEACHER'S AID PERSISTENCE FUNCTIONS (Saves to JSON file) ---
 
@@ -93,58 +158,6 @@ except FileNotFoundError:
     st.error("❌ ERROR: 'system_instruction.txt' not found. Please ensure the file is in the same directory.")
     st.stop()
 # --- END SYSTEM INSTRUCTION LOAD ---
-
-
-# --- CRITICAL CSS FIXES (Targeted Overrides for Dropdown and Link Color) ---
-st.markdown(
-    """
-    <style>
-    /* 1. INPUT FIELD BORDER (Ensuring they look crisp against the dark background) */
-    .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
-        border: 1px solid #444444;
-        border-radius: 6px; 
-        background-color: #212121 !important; 
-        color: #FFFFFF !important;
-    }
-    
-    /* --- CRITICAL DROPDOWN FIXES (The persistent issue) --- */
-    div[data-baseweb="menu"] {
-        background-color: #1A1A1A !important; 
-        border: 1px solid #FFFFFF !important; 
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
-    }
-    [data-baseweb="menu-item"], div[role="option"] { 
-        background-color: #212121 !important; 
-        color: #FFFFFF !important;
-        border-color: #212121 !important; 
-    }
-    [data-baseweb="menu-item"] *, div[role="option"] * {
-        background-color: #212121 !important; 
-        color: #FFFFFF !important;
-    }
-    [data-baseweb="menu-item"]:focus, 
-    [data-baseweb="menu-item"]:active,
-    [data-baseweb="menu-item"]:hover {
-        background-color: #333333 !important; 
-        color: #FFFFFF !important;
-    }
-    /* --- END CRITICAL DROPDOWN FIXES --- */
-
-    /* MANUAL ACCENT COLOR CHANGE (Blue links) */
-    a {
-        color: #00BFFF !important; 
-    }
-    
-    /* Global text color enforcement (just in case the TOML file misses something) */
-    p, li, span {
-        color: #FFFFFF !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-# --- END CRITICAL CSS FIXES ---
-
 
 # --- 1. CORE AI FUNCTION (Handles both modes) ---
 
