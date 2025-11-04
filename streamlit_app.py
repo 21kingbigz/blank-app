@@ -16,22 +16,21 @@ SCHEDULE_DATA_FILE = "schedule_data.json"
 TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
 
 # --- LOGO & ICON CONFIGURATION ---
-# IMPORTANT: This must match the filename you provided: 'image (13).jpg'
-LOGO_FILENAME = "image (13).jpg" 
+# IMPORTANT: Corrected filename and path based on your clarification.
+# Assuming 'image (13).png' is directly in the same directory as this script.
+LOGO_FILENAME = "image (13).png" 
 
-# Check if the logo file actually exists.
+# Check if the logo file actually exists at the specified path.
 if os.path.exists(LOGO_FILENAME):
-    # Use the JPEG image file for the page icon.
     ICON_SETTING = LOGO_FILENAME
 else:
-    # Fallback to an emoji and warn the user if the image is not found.
     ICON_SETTING = "🚨" 
     st.error(f"❌ ERROR: Favicon image file '{LOGO_FILENAME}' not found. Please ensure it's in the same directory as 'streamlit_app.py'.")
 
 # Set browser tab title, favicon, and layout. 
 st.set_page_config(
     page_title=WEBSITE_TITLE, # Only displays "Artorius" in the tab
-    page_icon=ICON_SETTING, # DIRECTLY USES THE 'image (13).jpg' FILE PATH FOR THE TAB ICON
+    page_icon=ICON_SETTING, # Uses the image from the main folder
     layout="wide",
     initial_sidebar_state="expanded"
 )
