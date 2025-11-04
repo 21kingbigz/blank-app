@@ -27,9 +27,10 @@ st.set_page_config(
 def load_last_schedule():
     """Loads the last saved schedule from the persistent file."""
     try:
-        with open(SCHEDULE_FILE, "r") as f:
-            return f.read()
-    except FileNotFoundError:
+        # Check if the file exists before attempting to read
+        if os.path.exists(SCHEDULE_FILE):
+            with open(SCHEDULE_FILE, "r") as f:
+                return f.read()
         return None
     except Exception:
         return None
@@ -58,7 +59,7 @@ except FileNotFoundError:
     st.stop()
 
 
-# --- CUSTOM CSS FOR DARK THEME (UNCHANGED) ---
+# --- CUSTOM CSS FOR DARK THEME (UPDATED) ---
 st.markdown(
     """
     <style>
@@ -83,17 +84,17 @@ st.markdown(
         border-bottom-color: #FFFFFF !important; /* Makes the line white */
     }
 
-    /* ***CRITICAL FIX: Sidebar Radio Button Highlight ELIMINATED*** */
-    /* Target the radio button container on hover/focus and set a transparent background */
-    div[data-testid="stSidebar"] div.stRadio > label:has(input:checked) > div:nth-child(2),
-    div[data-testid="stSidebar"] div.stRadio > label:hover,
-    div[data-testid="stSidebar"] div.stRadio > label:focus {
-        background-color: transparent !important; /* Forces transparency on highlight */
-        border-radius: 4px;
+    /* ***CRITICAL FIX 1: Sidebar Radio Button Highlight ELIMINATED*** */
+    /* Target the container element holding the label on hover/focus */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover div:nth-child(2),
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label:focus div:nth-child(2) {
+        background-color: #121212 !important; /* Use sidebar color */
+        border-color: transparent !important; /* Remove any border highlight */
     }
-    /* Fallback to ensure the selected item doesn't have a background */
-    div[data-testid="stSidebar"] div.stRadio > label[data-baseweb="radio"] {
-        background-color: transparent !important;
+    /* Ensure the actual selected element stays dark */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
+        background-color: #121212 !important;
+        border-color: transparent !important;
     }
 
 
@@ -112,6 +113,30 @@ st.markdown(
         background-color: #555555; 
         border-color: #777777;
     }
+
+    /* ***CRITICAL FIX 2: Popover Button and Content (Schedule Pop-up)*** */
+    /* Target the Popover Button (st.popover) */
+    div[data-testid="stPopover"] button {
+        color: #FFFFFF !important;
+        background-color: #333333 !important; /* Dark background like other buttons */
+        border: 1px solid #555555 !important;
+    }
+    /* Target the Popover Content Box (the modal itself) */
+    div[data-baseweb="popover"] div.st-ck, div[data-baseweb="popover"] {
+        background-color: #1A1A1A !important; /* Inner dark gray for contrast */
+        border: 1px solid #444444 !important;
+        color: #FFFFFF !important;
+    }
+    /* Ensure text inside the popover is white */
+    div[data-baseweb="popover"] p, div[data-baseweb="popover"] h3 {
+        color: #FFFFFF !important;
+    }
+    /* Ensure code block inside popover is styled correctly */
+    div[data-baseweb="popover"] div.stCode {
+        background-color: #212121 !important; /* Slightly lighter inner box */
+        border: 1px solid #444444 !important;
+    }
+
 
     /* 4. INPUT FIELD STYLING (The Box where you type/select) */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
@@ -143,7 +168,7 @@ st.markdown(
         font-weight: 500;
     }
 
-    /* 7. ***CRITICAL FIX: AI RESPONSE BOX BACKGROUND & TEXT (Dark Grey)*** */
+    /* 7. AI RESPONSE BOX BACKGROUND & TEXT (Dark Grey) */
     div.stCode pre {
         background-color: #1A1A1A !important; /* Solid Dark Grey Background */
         color: #FFFFFF !important; /* Ensure output text is white */
@@ -311,6 +336,7 @@ if selected_feature != "Select a Feature to Use":
     last_schedule = load_last_schedule()
     if is_schedule_optimizer and last_schedule:
         with col2:
+            # Note: The button text color is handled by the stPopover CSS block (Critical Fix 2)
             with st.popover("📅 View Last Schedule"):
                 st.markdown("### Saved Schedule")
                 st.caption("This schedule was saved from your previous session.")
