@@ -185,23 +185,31 @@ st.markdown(
         color: #FFFFFF !important; 
     }
     
-    /* 5. NEW AGGRESSIVE TARGET: Target the inner content wrapper of the option, which is the last layer of white */
+    /* 5. Target the inner content wrapper of the option, which is often the final white layer */
     [data-baseweb="menu-item"] > div { 
         background-color: #212121 !important;
         color: #FFFFFF !important;
     }
-    
+
     /* 6. Targeting the content wrapper inside the listbox */
     [data-baseweb="select"] [role="listbox"] > div {
         background-color: #212121 !important;
     }
 
-    /* 7. Target the hover state for individual options and their content */
+    /* 7. AGGRESSIVE TARGET: Target ALL list items and their containers inside the main menu wrapper */
+    div[data-baseweb="menu"] * {
+        background-color: #212121 !important; 
+        color: #FFFFFF !important;
+    }
+
+    /* 8. Target the hover state for individual options and their content */
     [data-baseweb="menu-item"]:hover,
-    [data-baseweb="menu-item"]:hover > div { 
+    [data-baseweb="menu-item"]:hover > div,
+    div[data-baseweb="menu"] li:hover { 
         background-color: #333333 !important; /* Slightly lighter gray on hover */
         color: #FFFFFF !important;
     }
+    /* --- END CRITICAL FIX --- */
 
 
     /* 6. HEADING COLORS (Big Words: H1, H2, H3, H4) */
