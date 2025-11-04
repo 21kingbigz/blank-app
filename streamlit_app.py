@@ -50,7 +50,7 @@ except FileNotFoundError:
     """
 
 
-# --- CUSTOM CSS FOR DARK THEME (The fully corrected styling) ---
+# --- CUSTOM CSS FOR DARK THEME (Updated with fixed boxes and complete white sidebar) ---
 st.markdown(
     """
     <style>
@@ -66,9 +66,11 @@ st.markdown(
         border-right: 1px solid #333333;
     }
 
-    /* **SIDEBAR TEXT AND LINE (White)** */
+    /* **SIDEBAR TEXT AND LINE (Full White Enforcement)** */
     section[data-testid='stSidebar'] h1, 
-    section[data-testid='stSidebar'] h2 {
+    section[data-testid='stSidebar'] h2,
+    section[data-testid='stSidebar'] p,
+    section[data-testid='stSidebar'] label { 
         color: #FFFFFF !important; 
     }
     section[data-testid='stSidebar'] .st-emotion-cache-1q1n0ol {
@@ -144,12 +146,12 @@ st.markdown(
         color: #FFFFFF !important;
     }
 
-    /* 5. Dropdown Menu (Selectbox) Styling */
+    /* 5. Dropdown Menu (Selectbox) Styling - BACKGROUND FIXED HERE */
     .stSelectbox div[data-testid="stTextInput"] div input {
         color: #FFFFFF !important;
     }
     div[data-baseweb="select"] ul {
-        background-color: #212121 !important;
+        background-color: #212121 !important; /* Matches input box background */
         border-color: #444444 !important;
     }
     div[data-baseweb="select"] ul li div {
@@ -204,7 +206,7 @@ st.markdown(
     p, li, a, span { 
         color: #FFFFFF !important; 
     }
-    /* Explicitly targeting all labels for white text (Fix for the words not being white) */
+    /* Explicitly targeting all labels for white text (Final Fix) */
     .stApp label {
         color: #FFFFFF !important;
     }
@@ -391,7 +393,7 @@ def render_utility_hub():
                     st.session_state['hub_result'] = result
                     st.session_state['hub_last_feature_used'] = selected_feature
                     
-                    # SAVE LOGIC RESTORED HERE
+                    # SAVE LOGIC 
                     if is_schedule_optimizer:
                         save_last_schedule(result) 
 
@@ -428,7 +430,8 @@ def render_teacher_aid():
         unit_prompt = st.text_area(
             "Unit Details (e.g., Topic, Grade, Duration):",
             placeholder="Create a Unit called 'The American Revolution' for 8th-grade history, lasting 10 days.",
-            key="unit_prompt"
+            key="unit_prompt",
+            height=250 # Fixed height
         )
         if st.button("Generate Unit Overview", key="generate_unit_btn"):
             if unit_prompt:
@@ -454,7 +457,8 @@ def render_teacher_aid():
         lesson_prompt = st.text_area(
             "Lesson Details:",
             placeholder="Based on the American Revolution Unit, create a 45-minute lesson plan on 'Causes of the War' for 8th graders.",
-            key="lesson_prompt"
+            key="lesson_prompt",
+            height=250 # Fixed height
         )
         if st.button("Generate Lesson Plan", key="generate_lesson_btn"):
             if lesson_prompt:
@@ -479,7 +483,8 @@ def render_teacher_aid():
         prompt = st.text_area(
             f"Enter details for the {tab_name.lower()}:",
             placeholder=f"{ai_instruction} (e.g., '10 key terms for the American Revolution Unit')",
-            key=prompt_key
+            key=prompt_key,
+            height=250 # Fixed height
         )
         if st.button(f"Generate {tab_name}", key=button_key):
             if prompt:
