@@ -18,13 +18,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for the strictly black/dark grey theme with smooth corners
+# Custom CSS for the strictly black/dark grey theme with smooth design
 st.markdown(
     """
     <style>
     /* 1. Base Dark Theme Colors */
     .stApp {
-        background-color: #0A0A0A; /* Deeper Black */
+        background-color: #0A0A0A; /* Deep Black */
         color: white;
     }
     
@@ -59,26 +59,24 @@ st.markdown(
         border-radius: 6px; /* SMOOTHNESS: Rounded corners for inputs */
     }
 
-    /* 5. AI RESPONSE BOXES (CODE BLOCKS) */
-    /* Target the code block area for the specific dark grey color */
+    /* 5. HEADING COLORS (Big Words) */
+    /* Target all headers (h1, h2, h3, h4) for a subtle, light grey */
+    h1, h2, h3, h4, h5, h6 {
+        color: #AAAAAA; /* Light grey for blending */
+        font-weight: 500; /* Slightly reduced boldness */
+    }
+    
+    /* 6. AI RESPONSE BOXES (CODE BLOCKS) */
     .stCode {
-        background-color: #242424; /* DARK GREY for AI Output */
-        border: 1px solid #3A3A3A;
-        border-radius: 10px; /* SMOOTHNESS: More pronounced rounded corners */
+        background-color: #1A1A1A; /* Darker Grey (blends more with main background) */
+        border: none; /* No visible border for smoother look */
+        border-radius: 10px; 
         padding: 15px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* Subtle shadow for depth */
         overflow-x: auto;
     }
-
-    /* 6. General Block Container Smoothness */
-    .block-container {
-        border-radius: 12px; /* Subtle rounding on main content areas */
-    }
     
-    h1, h2, h3, h4, h5, h6 {
-        color: #F0F0F0;
-    }
-    
+    /* 7. Other Smoothness Refinements */
     .stAlert {
         border-left: 5px solid #666666;
         color: #DDDDDD;
@@ -193,7 +191,7 @@ CATEGORIES_FEATURES = {
 
 # Display the website name in the top left corner (using the sidebar)
 st.sidebar.title(WEBSITE_TITLE) 
-st.sidebar.markdown("---") 
+st.sidebar.markdown("---") # Visual separator
 
 # Display the main application title with new format
 st.title(f"👑 {WEBSITE_TITLE}: {CURRENT_APP_TITLE}")
