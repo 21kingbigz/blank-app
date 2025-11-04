@@ -34,14 +34,14 @@ st.markdown(
         border-right: 1px solid #333333;
     }
 
-    /* CRITICAL FIX: Sidebar text color */
-    section[data-testid='stSidebar'] .css-pk0abn, 
-    section[data-testid='stSidebar'] .css-1dp5fjs {
-        color: #FFFFFF !important; /* Forces sidebar text (like "Artorius", "Categories") to white */
+    /* ***CRITICAL FIX: Sidebar Text and Line (Image 2 Fix)*** */
+    /* Target the text in the sidebar (h1 and h2) */
+    section[data-testid='stSidebar'] h1, 
+    section[data-testid='stSidebar'] h2 {
+        color: #FFFFFF !important; /* Forces "Artorius" and "Categories" to white */
     }
-    
-    /* CRITICAL FIX: Sidebar separator line color */
-    section[data-testid='stSidebar'] .st-emotion-cache-1q1n0ol { /* This targets the divider line */
+    /* Target the horizontal separator line in the sidebar */
+    section[data-testid='stSidebar'] .st-emotion-cache-1q1n0ol {
         border-bottom-color: #FFFFFF !important; /* Makes the line white */
     }
 
@@ -72,25 +72,15 @@ st.markdown(
         color: #FFFFFF !important;
     }
 
-    /* 5. HEADING COLORS (Big Words: H1, H2, H3, H4, etc.) */
+    /* 5. HEADING COLORS (Big Words: H1, H2, H3, H4) */
     h1, h2, h3, h4, h5, h6 {
         color: #AFAFAF; /* Light medium grey for blending */
         font-weight: 500;
     }
 
-    /* 6. ***CRITICAL FIX: AI RESPONSE BOX BACKGROUND & TEXT (Image 1)*** */
-    /* This targets the 'pre' element which is usually the innermost container of text in st.code */
-    div.stCode pre {
-        background-color: #1A1A1A !important; /* Solid Dark Grey Background */
-        color: #FFFFFF !important; /* Ensure text inside is white */
-        border: none !important; /* Remove borders */
-        padding: 0; /* Remove internal padding to let the outer div control it */
-    }
-
-    /* 7. AI RESPONSE BOX OUTER CONTAINER STYLING */
-    /* This sets the background for the entire box wrapper around the text */
+    /* 6. AI RESPONSE BOX (st.code CONTAINER) */
     div.stCode {
-        background-color: #1A1A1A !important; /* Ensure the outer container is also dark grey */
+        background-color: #1A1A1A !important; /* Solid Dark Grey Background */
         border: none !important; 
         border-radius: 12px; 
         padding: 15px; /* Apply padding here for the entire box */
@@ -98,8 +88,13 @@ st.markdown(
         overflow-x: auto;
     }
     
+    /* 7. Text inside AI Response Box (Code Block) */
+    div.stCode pre code {
+        color: #FFFFFF !important; /* Ensures the actual output text is pure white */
+    }
+    
     /* 8. General paragraph/label text */
-    p, label, li, a, span { /* Added span to target more general text */
+    p, label, li, a, span { 
         color: #FFFFFF !important; /* Ensure general body text is white */
     }
     
@@ -218,7 +213,7 @@ CATEGORIES_FEATURES = {
 
 # Display the website name in the top left corner (using the sidebar)
 st.sidebar.title(WEBSITE_TITLE) 
-st.sidebar.markdown("---") # Visual separator
+st.sidebar.markdown("---") 
 
 # Display the main application title with new format
 st.title(f"👑 {WEBSITE_TITLE}: {CURRENT_APP_TITLE}")
