@@ -43,7 +43,7 @@ st.markdown(
         padding: 10px 20px;
         font-weight: bold;
         border: 1px solid #555555;
-        transition: all 0.2s ease-in-out; /* Smooth transition on hover */
+        transition: all 0.2s ease-in-out; 
     }
     
     .stButton>button:hover {
@@ -56,32 +56,39 @@ st.markdown(
         background-color: #212121; 
         color: white;
         border: 1px solid #444444;
-        border-radius: 6px; /* SMOOTHNESS: Rounded corners for inputs */
+        border-radius: 6px; 
     }
 
     /* 5. HEADING COLORS (Big Words) */
-    /* Target all headers (h1, h2, h3, h4) for a subtle, light grey */
     h1, h2, h3, h4, h5, h6 {
         color: #AAAAAA; /* Light grey for blending */
-        font-weight: 500; /* Slightly reduced boldness */
+        font-weight: 500; 
     }
     
-    /* 6. AI RESPONSE BOXES (CODE BLOCKS) */
-    .stCode {
-        background-color: #1A1A1A; /* Darker Grey (blends more with main background) */
-        border: none; /* No visible border for smoother look */
-        border-radius: 10px; 
+    /* 6. AI RESPONSE BOX (st.code CONTAINER) */
+    div.stCode {
+        background-color: #1A1A1A !important; /* Fully Dark Grey Background */
+        border: none !important; /* Remove all borders for smoothness */
+        border-radius: 12px; /* Smooth, rounded corners */
         padding: 15px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* Subtle shadow for depth */
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
         overflow-x: auto;
+        /* Target the actual text *inside* the response box */
+        color: #DDDDDD !important; /* Lighter grey text for better blending and reading */
+        font-size: 14px;
     }
     
-    /* 7. Other Smoothness Refinements */
+    /* 7. Final Smoothness Refinements */
     .stAlert {
         border-left: 5px solid #666666;
         color: #DDDDDD;
         background-color: #1A1A1A;
         border-radius: 6px;
+    }
+    
+    /* Make the markdown elements inside st.code also the correct light color */
+    div.stCode pre code {
+        color: #DDDDDD !important; 
     }
     </style>
     """,
@@ -181,7 +188,7 @@ CATEGORIES_FEATURES = {
         "22. Mathematics Expert AI": "Solve for x: (4x^2 + 5x = 9) and show steps.",
         "23. English & Literature Expert AI": "Critique this thesis: 'Hamlet is a play about procrastination.'",
         "24. History & Social Studies Expert AI": "Explain the causes and effects of the Cuban Missile Crisis.",
-        "25. Foreign Language Expert AI": "Conjugate 'aller' in French, passé simple, nous.",
+        "25. Foreign Language Expert AI": "Conjugate 'aller' en French, passé simple, nous.",
         "26. Science Expert AI": "Explain the concept of entropy in simple terms.",
         "27. Vocational & Applied Expert AI": "Code Debugger: 'for i in range(5) print(i)' (Python)"
     }}
@@ -191,7 +198,7 @@ CATEGORIES_FEATURES = {
 
 # Display the website name in the top left corner (using the sidebar)
 st.sidebar.title(WEBSITE_TITLE) 
-st.sidebar.markdown("---") # Visual separator
+st.sidebar.markdown("---") 
 
 # Display the main application title with new format
 st.title(f"👑 {WEBSITE_TITLE}: {CURRENT_APP_TITLE}")
