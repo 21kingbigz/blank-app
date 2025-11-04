@@ -5,60 +5,71 @@ from google import genai
 from PIL import Image
 from io import BytesIO
 
-# --- NEW: WEBSITE BRANDING & CONFIGURATION ---
+# --- WEBSITE BRANDING & CONFIGURATION ---
 WEBSITE_TITLE = "Artorius"
 CURRENT_APP_TITLE = "27-in-1 Smart Utility Hub"
 
 # Set browser tab title, favicon, and layout. 
-# Also applies Streamlit's built-in dark theme setting.
 st.set_page_config(
     page_title=f"{WEBSITE_TITLE} - {CURRENT_APP_TITLE}", 
-    page_icon="👑", # Use a crown emoji for branding
+    page_icon="👑", 
     layout="wide",
-    # Set built-in dark theme as default for a darker look
+    # Enforce built-in dark theme
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for a darker, more colorful feel (accenting the dark theme)
+# Custom CSS for the strictly black/dark grey theme
 st.markdown(
     """
     <style>
-    /* 1. Set Dark Base Colors for Contrast */
+    /* 1. Base Dark Theme Colors */
     .stApp {
-        background-color: #121212; /* Deep Black/Charcoal Background */
+        background-color: #000000; /* PURE BLACK for the main background */
         color: white;
     }
     
-    /* 2. Highlight Primary Content/Containers */
-    .block-container {
-        padding-top: 1rem;
-        padding-bottom: 0rem;
-        padding-left: 5%;
-        padding-right: 5%;
+    /* 2. Secondary Background (Sidebar, Code Blocks, Widgets) */
+    /* Use a dark charcoal grey for contrast against the black app background */
+    .css-1d391kg, .css-1dp5fjs, .stAlert, section[data-testid='stSidebar'] {
+        background-color: #1A1A1A; 
+        color: #FFFFFF;
+        border-right: 1px solid #333333; /* Subtle border for separation */
     }
     
-    /* 3. Button/Accent Color (A vibrant gold/yellow accent) */
+    /* 3. Button/Accent Color */
+    /* Use a light grey or white for high-contrast accents */
     .stButton>button {
-        color: #121212; /* Dark text on button */
-        background-color: #FFD700; /* Gold */
-        border-radius: 8px;
+        color: #FFFFFF; /* White text */
+        background-color: #333333; /* Dark grey button background */
+        border-radius: 6px;
         padding: 10px 20px;
         font-weight: bold;
-        border: 2px solid #FFD700;
-    }
-
-    /* 4. Sidebar Branding (Top-Left) */
-    .css-1d391kg, .css-1dp5fjs {
-        background-color: #0d1218; /* Slightly darker sidebar for contrast */
-        border-right: 1px solid #333333;
+        border: 2px solid #555555; /* Slightly lighter border */
     }
     
-    /* 5. Info/Warning Boxes for richer color */
-    .stAlert {
-        border-left: 5px solid #FFD700; /* Gold left border */
-        background-color: #212121;
+    .stButton>button:hover {
+        background-color: #555555; /* Lighter grey on hover */
     }
 
+    /* 4. Text and Input Fields */
+    /* Ensure text and inputs look clean on the dark background */
+    .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
+        background-color: #2B2B2B; /* Deep grey for input fields */
+        color: white;
+        border: 1px solid #444444;
+    }
+
+    /* 5. Main Title and Headings */
+    h1, h2, h3, h4, h5, h6 {
+        color: #F0F0F0; /* Off-white for clean headings */
+    }
+    
+    /* 6. Info/Warning Boxes - subtle grey treatment */
+    .stAlert {
+        border-left: 5px solid #666666; /* Subtle grey left border */
+        color: #DDDDDD;
+        background-color: #212121;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -165,6 +176,10 @@ CATEGORIES_FEATURES = {
 }
 
 # --- 3. STREAMLIT UI AND SIDEBAR NAVIGATION (Updated Title) ---
+
+# Display the website name in the top left corner (using the sidebar)
+st.sidebar.title(WEBSITE_TITLE) 
+st.sidebar.markdown("---") # Visual separator
 
 # Display the main application title with new format
 st.title(f"👑 {WEBSITE_TITLE}: {CURRENT_APP_TITLE}")
