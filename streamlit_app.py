@@ -1,16 +1,18 @@
 import streamlit as st
 import os
+import json # New Import for file handling
 from google import genai
 from PIL import Image
 from io import BytesIO
 from google.genai.errors import APIError
 
-# --- CONFIGURATION AND PERSISTENCE ---
+# --- CONFIGURATION AND PERSISTENCE FILE PATHS ---
 WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash' 
-# Key for schedule persistence
-SCHEDULE_KEY = "last_schedule_data" 
-# Mock Database structure for Teacher's Aid resources (Used for initial check)
+# File names for persistent storage
+TEACHER_DATA_FILE = "teacher_data.json"
+SCHEDULE_DATA_FILE = "schedule_data.json"
+# Initial structure for Teacher's Aid resources
 TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
 
 # Set browser tab title, favicon, and layout. 
@@ -21,20 +23,53 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CRITICAL FIX 1: INITIALIZE TEACHER DATA (Ensures data persists across reruns) ---
-if 'teacher_db' not in st.session_state:
-    st.session_state['teacher_db'] = TEACHER_DB_INITIAL
-# ----------------------------------------------------------------------------------
+# --- TEACHER'S AID PERSISTENCE FUNCTIONS (Saves to JSON file) ---
 
-# --- CACHED MOCK PERSISTENCE FUNCTIONS ---
-@st.cache_data
+def load_teacher_data():
+    """Loads all Teacher's Aid data from the JSON file."""
+    if os.path.exists(TEACHER_DATA_FILE):
+        try:
+            with open(TEACHER_DATA_FILE, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            st.warning("Could not decode existing teacher_data.json. Starting fresh.")
+            return TEACHER_DB_INITIAL
+    return TEACHER_DB_INITIAL
+
+def save_teacher_data(data):
+    """Saves all Teacher's Aid data to the JSON file."""
+    try:
+        with open(TEACHER_DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        st.error(f"Error saving teacher data to file: {e}")
+
+# --- SCHEDULE PERSISTENCE FUNCTIONS (Saves to JSON file) ---
+
 def load_last_schedule():
-    """Loads the last schedule from session state."""
-    return st.session_state.get(SCHEDULE_KEY, None) 
+    """Loads the last schedule from the JSON file."""
+    if os.path.exists(SCHEDULE_DATA_FILE):
+        try:
+            with open(SCHEDULE_DATA_FILE, 'r') as f:
+                data = json.load(f)
+                return data.get("schedule", None)
+        except json.JSONDecodeError:
+            return None
+    return None
 
 def save_last_schedule(schedule_text: str):
-    """Saves the latest schedule to session state."""
-    st.session_state[SCHEDULE_KEY] = schedule_text
+    """Saves the latest schedule to the JSON file."""
+    try:
+        with open(SCHEDULE_DATA_FILE, 'w') as f:
+            json.dump({"schedule": schedule_text}, f, indent=4)
+    except Exception as e:
+        st.error(f"Error saving schedule data to file: {e}")
+
+
+# --- INITIALIZATION BLOCK ---
+# Load teacher data from file and store it in session state for runtime access
+if 'teacher_db' not in st.session_state:
+    st.session_state['teacher_db'] = load_teacher_data()
 
 # Load instruction and initialize client
 try:
@@ -64,7 +99,7 @@ st.markdown(
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
         border: 1px solid #444444;
         border-radius: 6px; 
-        background-color: #212121 !important; /* Input background needs an explicit dark setting too */
+        background-color: #212121 !important; 
         color: #FFFFFF !important;
     }
     
@@ -80,7 +115,7 @@ st.markdown(
     /* 🔥 FORCING DARK BACKGROUND (Level 1: Menu Items/Options) */
     [data-baseweb="menu-item"],
     div[role="option"] { 
-        background-color: #212121 !important; /* Force Dark Grey on unselected options */
+        background-color: #212121 !important; 
         color: #FFFFFF !important;
         border-color: #212121 !important; 
     }
@@ -88,7 +123,7 @@ st.markdown(
     /* 🔥 FORCING DARK BACKGROUND (Level 2: Nested elements inside options) */
     [data-baseweb="menu-item"] *,
     div[role="option"] * {
-        background-color: #212121 !important; /* Force Dark Grey on all children */
+        background-color: #212121 !important; 
         color: #FFFFFF !important;
     }
     
@@ -96,7 +131,7 @@ st.markdown(
     [data-baseweb="menu-item"]:focus, 
     [data-baseweb="menu-item"]:active,
     [data-baseweb="menu-item"]:hover {
-        background-color: #333333 !important; /* Slightly darker grey on hover */
+        background-color: #333333 !important; 
         color: #FFFFFF !important;
     }
 
@@ -238,8 +273,8 @@ def render_utility_hub():
     if selected_feature != "Select a Feature to Use":
         feature_code = selected_feature.split(".")[0]
         
-        # CRITICAL FIX 2: ADJUST COLUMN WIDTHS FOR VISIBILITY
-        col1, col2 = st.columns([0.65, 0.35]) # Adjusted to give the button column more space
+        # COLUMN FIX: Adjusted to ensure the button is visible
+        col1, col2 = st.columns([0.65, 0.35]) 
         
         with col1:
             st.markdown(f"##### Step 1: Provide Input Data for Feature #{feature_code}")
@@ -251,7 +286,7 @@ def render_utility_hub():
                 # This button pulls up the last schedule made, fulfilling the user request.
                 with st.popover("📅 View Last Schedule"):
                     st.markdown("### Saved Schedule")
-                    st.caption("This schedule persists until a new one is generated.")
+                    st.caption("This schedule is saved to disk and persists across sessions.")
                     st.code(last_schedule, language='markdown')
 
 
@@ -300,7 +335,7 @@ def render_utility_hub():
                     st.session_state['hub_result'] = result
                     st.session_state['hub_last_feature_used'] = selected_feature
                     
-                    # SAVE LOGIC: Saves the result of the schedule optimizer 
+                    # SAVE LOGIC: Saves the result of the schedule optimizer to file
                     if is_schedule_optimizer:
                         save_last_schedule(result) 
 
@@ -319,7 +354,7 @@ def render_utility_hub():
 def render_teacher_aid():
     """Renders the complex, multi-tabbed Teacher's Aid curriculum manager."""
     st.title(f"🎓 {WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
-    st.caption("Use this mode to plan and manage entire units, lessons, and resources.")
+    st.caption("Use this mode to plan and manage entire units, lessons, and resources. All resources are saved to disk.")
 
     # Data is guaranteed to be in st.session_state['teacher_db'] thanks to the initialization block above.
 
@@ -350,17 +385,17 @@ def render_teacher_aid():
             )
             if st.button(f"Generate {tab_name}", key=f"generate_{db_key}_btn"):
                 if prompt:
-                    # CRITICAL: Send the explicit AI_TAG (e.g., "Unit Overview") 
                     final_prompt = f"TEACHER'S AID RESOURCE TAG: {ai_tag}: {prompt}"
                     
                     with st.spinner(f'Building {tab_name} using tag "{ai_tag}"...'):
-                        # Specific max_tokens for complex resources
                         max_tokens_val = 1500 
                         result = run_ai_generation(final_prompt, max_tokens=max_tokens_val, temp=0.2)
                         
-                        # Store directly in the persistent session state dictionary
+                        # Store in persistent session state dictionary
                         st.session_state['teacher_db'][db_key].append(result)
-                        st.success(f"{tab_name} Generated and Saved!")
+                        # CRITICAL: Save the entire data structure to the JSON file
+                        save_teacher_data(st.session_state['teacher_db'])
+                        st.success(f"{tab_name} Generated and Saved Permanently!")
 
             st.markdown("---")
             st.subheader(f"Saved {tab_name}")
