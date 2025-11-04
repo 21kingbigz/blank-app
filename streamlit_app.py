@@ -16,15 +16,17 @@ SCHEDULE_DATA_FILE = "schedule_data.json"
 TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
 
 # --- LOGO & ICON CONFIGURATION ---
-# IMPORTANT: Save your logo image as 'artorius_logo.png' in the same directory!
-LOGO_PATH = "artorius_logo.png" 
-# Use a default if the file isn't found, preventing an error
-ICON_SETTING = LOGO_PATH if os.path.exists(LOGO_PATH) else "🛠️" 
+# The URL to your logo image
+LOGO_URL = "https://i.postimg.cc/g2w82Rw7/image-13.png" 
+# For page_icon, we'll still use a local file path if possible, or an emoji.
+# Streamlit's page_icon works best with local files or emojis, not direct URLs.
+LOCAL_LOGO_PATH = "artorius_logo.png" 
+ICON_SETTING = LOCAL_LOGO_PATH if os.path.exists(LOCAL_LOGO_PATH) else "🛠️" 
 
 # Set browser tab title, favicon, and layout. 
 st.set_page_config(
     page_title=f"{WEBSITE_TITLE} - Dual Mode", 
-    page_icon=ICON_SETTING, # Uses the logo file path
+    page_icon=ICON_SETTING, # Page icon (favicon) remains local file or emoji
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -229,9 +231,9 @@ CATEGORIES_FEATURES = {
 # --- 3. UTILITY HUB MODE FUNCTION ---
 def render_utility_hub():
     """Renders the single-page 28-in-1 application."""
-    # UPDATED: Use the logo file if it exists, otherwise use a placeholder emoji
-    icon = f"![Logo Placeholder]({LOGO_PATH})" if os.path.exists(LOGO_PATH) else "🛠️"
-    st.title(f"{icon} {WEBSITE_TITLE}: 28-in-1 Smart Utility Hub")
+    # Display the logo from the URL at the top
+    st.image(LOGO_URL, width=150) # Adjust width as needed
+    st.title(f"{WEBSITE_TITLE}: 28-in-1 Smart Utility Hub")
     st.caption("Select a category from the sidebar to begin using a stateless utility.")
 
     # Sidebar for category selection
@@ -339,12 +341,12 @@ def render_utility_hub():
             language='markdown'
         )
 
-# --- 4. TEACHER'S AID MODE FUNCTION (Complex, Multi-Tabbed Application) ---
+# --- 4. TEACHER'S AID MODE FUNCTION (Complex, Multi-tabbed Application) ---
 def render_teacher_aid():
     """Renders the complex, multi-tabbed Teacher's Aid curriculum manager."""
-    # UPDATED: Use the logo file if it exists, otherwise use a placeholder emoji
-    icon = "🎓" # Keep the existing education emoji for this mode
-    st.title(f"{icon} {WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
+    # Display the logo from the URL at the top
+    st.image(LOGO_URL, width=150) # Adjust width as needed
+    st.title(f"{WEBSITE_TITLE}: Teacher's Aid Curriculum Manager")
     st.caption("Use this mode to plan and manage entire units, lessons, and resources. All resources are saved to disk.")
 
     st.header("Unit Planning & Resource Generation")
@@ -449,6 +451,7 @@ def render_teacher_aid():
 # --- 5. MAIN MODE SELECTION ---
 
 # Display the website name in the top left corner (using the sidebar)
+st.sidebar.image(LOGO_URL, width=100) # Smaller logo in the sidebar
 st.sidebar.title(WEBSITE_TITLE) 
 st.sidebar.markdown("---") 
 
