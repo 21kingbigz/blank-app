@@ -25,7 +25,7 @@ st.markdown(
     /* 1. Base App Background and General Text */
     .stApp {
         background-color: #0A0A0A; /* Deep Black */
-        color: #FFFFFF; /* Main text (paragraph text, labels) is white */
+        color: #FFFFFF; /* Makes all general body text white */
     }
     
     /* 2. Secondary Background (Sidebar, Input Widgets) */
@@ -50,15 +50,19 @@ st.markdown(
         border-color: #777777;
     }
 
-    /* 4. TEXT INPUT FIELDS (The Box where the user types) */
+    /* 4. TEXT INPUT FIELDS (What the user types) */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
         background-color: #212121; 
-        color: #FFFFFF !important; /* CRITICAL FIX: Ensures text user types is white */
+        color: #FFFFFF !important; /* CRITICAL FIX: Ensures text user types is pure white */
         border: 1px solid #444444;
         border-radius: 6px; 
     }
+    /* CRITICAL FIX: Ensure text inside the multiline area (textarea) is white */
+    .stTextArea textarea {
+        color: #FFFFFF !important;
+    }
 
-    /* 5. HEADING COLORS (Big Words) */
+    /* 5. HEADING COLORS (Big Words: H1, H2, H3, H4) */
     h1, h2, h3, h4, h5, h6 {
         color: #AFAFAF; /* Light medium grey for blending */
         font-weight: 500;
@@ -67,7 +71,7 @@ st.markdown(
     /* 6. AI RESPONSE BOX (st.code CONTAINER) */
     div.stCode {
         background-color: #1A1A1A !important; /* Solid Dark Grey Background */
-        border: none !important; /* Remove borders */
+        border: none !important; 
         border-radius: 12px; 
         padding: 15px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
@@ -76,10 +80,15 @@ st.markdown(
     
     /* 7. Text inside AI Response Box (Code Block) */
     div.stCode pre code {
-        color: #FFFFFF !important; /* Ensures text inside response box is white */
+        color: #FFFFFF !important; /* Ensures the actual output text is pure white */
     }
     
-    /* 8. Info/Warning Boxes - clean look */
+    /* 8. Text that is bolded or specific inside general markdown */
+    p, label, li, a {
+        color: #FFFFFF; /* Ensure general body text is white */
+    }
+    
+    /* 9. Info/Warning Boxes - clean look */
     .stAlert {
         border-left: 5px solid #666666;
         color: #DDDDDD;
