@@ -43,15 +43,19 @@ st.markdown(
         border-bottom-color: #FFFFFF !important; /* Makes the line white */
     }
 
-    /* ***CRITICAL FIX: Sidebar Radio Button Highlight*** */
-    /* Targets the background when a radio option is clicked/hovered/selected */
+    /* ***CRITICAL FIX: Sidebar Radio Button Highlight ELIMINATED*** */
+    /* Target the label elements for hover/focus background (the light box that appears) */
     div[data-testid="stSidebar"] div.stRadio > label:hover,
     div[data-testid="stSidebar"] div.stRadio > label:focus,
     div[data-testid="stSidebar"] div.stRadio > label:active {
-        background-color: #1A1A1A !important; /* Use a darker color that blends well */
+        background-color: #1A1A1A !important; /* Dark color for hover */
         border-radius: 4px;
     }
-    /* Ensures the selected/checked item also has a dark background */
+    /* Target the currently selected item's background */
+    div[data-testid="stSidebar"] div.stRadio > label[data-baseweb="radio"] {
+        background-color: #121212 !important; /* Base sidebar color for the selected item */
+    }
+    /* Target the specific checked state element if the above fails to catch it */
     div[data-testid="stSidebar"] div.stRadio > label > div > div:first-child > div:nth-child(2) {
         background-color: #1A1A1A !important;
     }
