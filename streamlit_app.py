@@ -50,7 +50,7 @@ except FileNotFoundError:
     """
 
 
-# --- CUSTOM CSS FOR DARK THEME (Final attempt at dropdown menu fix) ---
+# --- CUSTOM CSS FOR DARK THEME (Focusing ONLY on dropdown background fix) ---
 st.markdown(
     """
     <style>
@@ -152,36 +152,43 @@ st.markdown(
     }
 
 
-    /* 5. Dropdown Menu (Selectbox) Styling - BACKGROUND FIXED HERE */
+    /* 5. Dropdown Menu (Selectbox) Styling */
     .stSelectbox div[data-testid="stTextInput"] div input {
         color: #FFFFFF !important;
     }
     
-    /* --- CRITICAL FIX FOR DROPDOWN LIST BACKGROUND --- */
+    /* --- CRITICAL FIX: DROPDOWN LIST BACKGROUND --- */
     
-    /* Target the list container itself */
-    div[role="listbox"] {
-        background-color: #212121 !important;
-        border: 1px solid #444444 !important;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* Add shadow for separation */
-    }
-
-    /* Target the individual options for text color and background */
-    div[role="option"] {
-        color: #FFFFFF !important; /* Set text to bright white */
-        background-color: #212121 !important;
-    }
-    
-    /* Target the hover state for individual options */
-    div[role="option"]:hover {
-        background-color: #333333 !important; 
-        color: #FFFFFF !important;
-    }
-    
-    /* Target the main menu container used by BaseWeb for ultimate certainty */
+    /* Target the floating BaseWeb container */
     div[data-baseweb="menu"] {
         background-color: #212121 !important;
         border: 1px solid #444444 !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
+    }
+
+    /* Target the list container itself (role="listbox") */
+    div[role="listbox"] {
+        background-color: #212121 !important;
+        border: none !important;
+    }
+
+    /* Target the individual options/items */
+    div[role="option"], 
+    [data-baseweb="menu"] li {
+        background-color: #212121 !important;
+        color: #FFFFFF !important; /* Keep text white for contrast */
+    }
+    
+    /* TARGETING THE CONTENT WRAPPER INSIDE THE LISTBOX */
+    [data-baseweb="select"] [role="listbox"] > div {
+        background-color: #212121 !important;
+    }
+
+    /* Target the hover state for individual options */
+    div[role="option"]:hover,
+    [data-baseweb="menu"] li:hover {
+        background-color: #333333 !important; /* Slightly lighter gray on hover */
+        color: #FFFFFF !important;
     }
 
 
