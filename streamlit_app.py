@@ -25,6 +25,7 @@ st.set_page_config(
 @st.cache_data
 def load_last_schedule():
     """Loads the last schedule from session state."""
+    # This key holds the last schedule made, persisting until a new one is saved.
     return st.session_state.get(SCHEDULE_KEY, None) 
 
 def save_last_schedule(schedule_text: str):
@@ -33,7 +34,7 @@ def save_last_schedule(schedule_text: str):
 
 # Load instruction and initialize client
 try:
-    # NOTE: You must ensure your environment has the GEMINI_API_KEY environment variable set for this to work.
+    # NOTE: Ensure GEMINI_API_KEY environment variable is set
     client = genai.Client()
 except Exception:
     st.error("❌ ERROR: Gemini Client initialization failed. Please ensure the API Key is correctly configured.")
@@ -49,52 +50,21 @@ except FileNotFoundError:
 # --- END SYSTEM INSTRUCTION LOAD ---
 
 
-# --- CRITICAL CSS FIX FOR DROPDOWN AND THEME ---
+# --- CRITICAL CSS FIXES (Targeted Overrides for Dropdown and Link Color) ---
 st.markdown(
     """
     <style>
-    /* 1. Base App Background and General Text */
-    .stApp {
-        background-color: #0A0A0A; /* Deep Black */
-        color: #FFFFFF; 
-    }
-    
-    /* 2. Secondary Background (Sidebar, Input Widgets) */
-    .css-1d391kg, .css-1dp5fjs, section[data-testid='stSidebar'] {
-        background-color: #121212; 
-        border-right: 1px solid #333333;
-    }
+    /* NOTE: Primary theme colors are handled by .streamlit/config.toml (if created) */
 
-    /* **SIDEBAR TEXT (Full White Enforcement)** */
-    section[data-testid='stSidebar'] * { 
-        color: #FFFFFF !important; 
-    }
-    
-    /* 3. Button/Accent Color & Smoothness */
-    .stButton>button {
-        color: #FFFFFF;
-        background-color: #333333; 
-        border-radius: 8px; 
-        padding: 10px 20px;
-        font-weight: bold;
-        border: 1px solid #555555;
-        transition: all 0.2s ease-in-out; 
-    }
-    
-    .stButton>button:hover {
-        background-color: #555555; 
-        border-color: #777777;
-    }
-
-    /* 4. INPUT FIELD STYLING (Main box) */
+    /* 1. INPUT FIELD BORDER (Ensuring they look crisp against the dark background) */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
-        background-color: #212121; 
-        color: #FFFFFF !important; 
         border: 1px solid #444444;
         border-radius: 6px; 
+        background-color: #212121 !important; /* Input background needs an explicit dark setting too */
+        color: #FFFFFF !important;
     }
     
-    /* --- CRITICAL DROPDOWN FIXES --- */
+    /* --- CRITICAL DROPDOWN FIXES (The persistent issue) --- */
     
     /* Target the floating menu container (the box around all options) */
     div[data-baseweb="menu"] {
@@ -106,7 +76,7 @@ st.markdown(
     /* 🔥 FORCING DARK BACKGROUND (Level 1: Menu Items/Options) */
     [data-baseweb="menu-item"],
     div[role="option"] { 
-        background-color: #212121 !important; /* Force Dark Grey */
+        background-color: #212121 !important; /* Force Dark Grey on unselected options */
         color: #FFFFFF !important;
         border-color: #212121 !important; 
     }
@@ -118,7 +88,7 @@ st.markdown(
         color: #FFFFFF !important;
     }
     
-    /* HOVER/FOCUS STATE FIX: Solid dark grey on hover (maintains contrast) */
+    /* HOVER/FOCUS STATE FIX: Solid dark grey on hover */
     [data-baseweb="menu-item"]:focus, 
     [data-baseweb="menu-item"]:active,
     [data-baseweb="menu-item"]:hover {
@@ -135,30 +105,21 @@ st.markdown(
     
     /* --- END CRITICAL DROPDOWN FIXES --- */
 
-    /* 7. AI RESPONSE BOX STYLING */
-    div.stCode {
-        background-color: #1A1A1A !important; 
-        border-radius: 12px; 
-        padding: 15px; 
-    }
-    div.stCode pre {
-        background-color: #1A1A1A !important;
-        color: #FFFFFF !important;
-    }
-
-    /* 9. General text and label text */
-    p, li, a, span, .stApp label { 
-        color: #FFFFFF !important; 
-    }
-    
-    /* 10. MANUAL ACCENT COLOR CHANGE (Blue links) */
+    /* MANUAL ACCENT COLOR CHANGE (Blue links) */
     a {
         color: #00BFFF !important; 
+    }
+    
+    /* Global text color enforcement (just in case the TOML file misses something) */
+    p, li, span {
+        color: #FFFFFF !important;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
+# --- END CRITICAL CSS FIXES ---
+
 
 # --- 1. CORE AI FUNCTION (Handles both modes) ---
 
@@ -277,13 +238,14 @@ def render_utility_hub():
         with col1:
             st.markdown(f"##### Step 1: Provide Input Data for Feature #{feature_code}")
         
-        # POP-UP LOGIC: ONLY FOR DAILY SCHEDULE OPTIMIZER
+        # POP-UP LOGIC: ONLY FOR DAILY SCHEDULE OPTIMIZER (Calendar Planner)
         last_schedule = load_last_schedule()
         if is_schedule_optimizer and last_schedule:
             with col2:
+                # This button pulls up the last schedule made, fulfilling the user request.
                 with st.popover("📅 View Last Schedule"):
                     st.markdown("### Saved Schedule")
-                    st.caption("This is your last saved schedule.")
+                    st.caption("This is your last saved schedule. It persists until a new one is generated.")
                     st.code(last_schedule, language='markdown')
 
 
@@ -332,7 +294,7 @@ def render_utility_hub():
                     st.session_state['hub_result'] = result
                     st.session_state['hub_last_feature_used'] = selected_feature
                     
-                    # SAVE LOGIC 
+                    # SAVE LOGIC: Saves the result of the schedule optimizer 
                     if is_schedule_optimizer:
                         save_last_schedule(result) 
 
@@ -354,6 +316,7 @@ def render_teacher_aid():
     st.caption("Use this mode to plan and manage entire units, lessons, and resources.")
 
     # Initialize state for persistence (Mock DB)
+    # This ensures the data persists as long as the user's Streamlit session is active.
     if 'teacher_db' not in st.session_state:
         st.session_state['teacher_db'] = TEACHER_DB
 
