@@ -1,6 +1,5 @@
 import streamlit as st
 import os
-import sys
 from google import genai
 from PIL import Image
 from io import BytesIO
@@ -11,6 +10,7 @@ WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash' 
 # Key for session state persistence
 SCHEDULE_KEY = "last_schedule_data" 
+# Mock Database structure for Teacher's Aid resources
 TEACHER_DB = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
 
 # Set browser tab title, favicon, and layout. 
@@ -38,18 +38,18 @@ try:
 except Exception:
     st.error("❌ ERROR: Gemini Client initialization failed. Please ensure the API Key is correctly configured.")
     st.stop()
+    
+# --- CRITICAL: LOAD SYSTEM INSTRUCTION FROM SEPARATE FILE ---
 try:
     with open("system_instruction.txt", "r") as f:
         SYSTEM_INSTRUCTION = f.read()
 except FileNotFoundError:
-    SYSTEM_INSTRUCTION = """
-    You are the 'Artorius AI.' Depending on the user's selected mode, adopt one of two personas:
-    1. Utility Hub: Act as a stateless, expert tool, providing direct, concise results formatted in markdown.
-    2. Teacher's Aid: Act as a comprehensive curriculum management assistant, providing detailed, structured, and helpful content for K-12 educators.
-    """
+    st.error("❌ ERROR: 'system_instruction.txt' not found. Please ensure the file is in the same directory.")
+    st.stop()
+# --- END SYSTEM INSTRUCTION LOAD ---
 
 
-# --- CUSTOM CSS FOR DARK THEME (The essential fix is here) ---
+# --- CRITICAL CSS FIX FOR DROPDOWN AND THEME ---
 st.markdown(
     """
     <style>
@@ -69,28 +69,7 @@ st.markdown(
     section[data-testid='stSidebar'] * { 
         color: #FFFFFF !important; 
     }
-    section[data-testid='stSidebar'] h1, 
-    section[data-testid='stSidebar'] h2,
-    section[data-testid='stSidebar'] p,
-    section[data-testid='stSidebar'] label { 
-        color: #FFFFFF !important; 
-    }
     
-    section[data-testid='stSidebar'] .st-emotion-cache-1q1n0ol {
-        border-bottom-color: #FFFFFF !important; 
-    }
-    
-    /* Sidebar Radio Button Styling */
-    div[data-testid="stSidebar"] div.stRadio > label {
-        transition: none !important; 
-        background-color: transparent !important;
-        border-color: transparent !important;
-    }
-    div[data-testid="stSidebar"] div.stRadio > label {
-        font-size: 15px !important; 
-    }
-
-
     /* 3. Button/Accent Color & Smoothness */
     .stButton>button {
         color: #FFFFFF;
@@ -107,156 +86,65 @@ st.markdown(
         border-color: #777777;
     }
 
-    /* Popover Button and Content (Schedule Pop-up) */
-    div[data-testid="stPopover"] button {
-        color: #FFFFFF !important;
-        background-color: #333333 !important; 
-        border: 1px solid #555555 !important;
-    }
-    div[data-baseweb="popover"] div.st-ck, div[data-baseweb="popover"] {
-        background-color: #1A1A1A !important; 
-        border: 1px solid #444444 !important;
-        color: #FFFFFF !important;
-    }
-    div[data-baseweb="popover"] p, div[data-baseweb="popover"] h3 {
-        color: #FFFFFF !important;
-    }
-    div[data-baseweb="popover"] div.stCode {
-        background-color: #212121 !important; 
-        border: 1px solid #444444 !important;
-    }
-    
-    /* Fix for tabs background */
-    .stTabs [data-testid="stMarkdownContainer"] {
-        background-color: #1A1A1A; /* Inner section background for Teacher's Aid */
-        padding: 15px;
-        border-radius: 8px;
-    }
-
-
-    /* 4. INPUT FIELD STYLING (Text color and background) */
+    /* 4. INPUT FIELD STYLING */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
         background-color: #212121; 
         color: #FFFFFF !important; 
         border: 1px solid #444444;
         border-radius: 6px; 
     }
-    .stTextArea textarea { 
-        color: #FFFFFF !important;
-    }
     
-    /* FIX FOR TEACHER'S AID SPACING */
-    .stTextArea {
-        margin-bottom: 25px !important; 
+    /* --- ULTIMATE CRITICAL FIX: DROPDOWN LIST BACKGROUND --- */
+    .st-bw-list-box {
+        background-color: #1A1A1A !important; 
     }
-
-
-    /* 5. Dropdown Menu (Selectbox) Styling */
-    .stSelectbox div[data-testid="stTextInput"] div input {
-        color: #FFFFFF !important;
-    }
-    
-    /* --- CRITICAL FIX: DROPDOWN LIST BACKGROUND (Highest Specificity) --- */
-    
-    /* Target the container that holds the options list */
     div[role="listbox"] {
-        background-color: #333333 !important; /* FIXED: Dark Gray */
+        background-color: #1A1A1A !important; 
     }
-
-    /* Target the main floating menu container (BaseWeb's container) */
     div[data-baseweb="menu"] {
-        background-color: #333333 !important; /* FIXED: Dark Gray */
+        background-color: #1A1A1A !important; 
         border: 1px solid #444444 !important;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
     }
-    
-    /* Target the menu item container */
     [data-baseweb="menu-item"] {
-        background-color: #333333 !important; /* FIXED: Dark Gray */
-        color: #FFFFFF !important;
+        background-color: #1A1A1A !important; 
     }
-    
-    /* AGGRESSIVE TARGET: The actual content wrapper inside the menu item */
-    [data-baseweb="menu-item"] > div, 
-    div[data-baseweb="menu"] [role="option"] > div { 
-        background-color: #333333 !important; /* FIXED: Dark Gray */
-        color: #FFFFFF !important;
-        cursor: pointer !important; 
+    div[data-baseweb="menu"] *, 
+    div[data-baseweb="menu"] [role="option"] *,
+    div[data-baseweb="menu"] li * { 
+        background-color: #1A1A1A !important; 
+        color: #1A1A1A !important;
+        border-color: #FFFFFF !important; 
     }
-    
-    /* --- NEW ULTIMATE FIX FOR ACTIVE/FOCUSED ITEM (THE WHITE BAR) --- */
-    /* This targets the focused item's container */
     [data-baseweb="menu-item"]:focus, 
     [data-baseweb="menu-item"]:active,
     [data-baseweb="menu-item"]:hover {
-        background-color: #555555 !important; /* Darker gray on hover/focus */
+        background-color: #333333 !important; 
         color: #FFFFFF !important;
-    }
-
-    /* Apply to all nested elements just in case, this is the 'nuclear' option */
-    div[data-baseweb="menu"] * {
-        color: #FFFFFF !important; /* Ensure all text is white */
-        border-color: #333333 !important; 
     }
     /* --- END CRITICAL FIX --- */
 
-
-    /* 6. HEADING COLORS (Big Words: H1, H2, H3, H4) */
-    h1, h2, h3, h4, h5, h6 {
-        color: #AFAFAF; 
-        font-weight: 500;
-    }
-
-    /* 7. AI RESPONSE BOX BACKGROUND & TEXT */
-    div.stCode pre {
-        background-color: #1A1A1A !important; 
-        color: #FFFFFF !important; 
-        border: none !important; 
-        padding: 0; 
-    }
-    div.stCode pre code {
-        background-color: #1A1A1A !important;
-        color: #FFFFFF !important;
-    }
-
-    /* Force white text for all content inside the output box */
-    div.stCode pre *, div.stCode pre p {
-        color: #FFFFFF !important;
-    }
-    
-    /* Selection Highlight Visibility */
-    div.stCode ::selection {
-        background-color: #004d99; /* Dark Blue highlight for selection */
-        color: #FFFFFF !important; /* Keep selected text white */
-    }
-
-
-    /* 8. AI RESPONSE BOX OUTER CONTAINER STYLING */
+    /* 7. AI RESPONSE BOX STYLING */
     div.stCode {
         background-color: #1A1A1A !important; 
-        border: none !important; 
         border-radius: 12px; 
         padding: 15px; 
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
-        overflow-x: auto;
     }
-    
-    /* 9. General paragraph, label, list, and link text (White) */
-    p, li, a, span { 
+    div.stCode pre {
+        background-color: #1A1A1A !important;
+    }
+
+    /* 9. General text and label text */
+    p, li, a, span, .stApp label { 
         color: #FFFFFF !important; 
     }
-    /* Explicitly targeting all labels for white text */
-    .stApp label {
-        color: #FFFFFF !important;
-    }
     
-    /* 10. Info/Warning Boxes - clean look */
-    .stAlert {
-        border-left: 5px solid #666666;
-        color: #DDDDDD;
-        background-color: #1A1A1A;
-        border-radius: 6px;
+    /* 10. MANUAL ACCENT COLOR CHANGE (Example: Blue links) */
+    a {
+        color: #00BFFF !important; /* Deep Sky Blue for links/accents */
     }
+    /* This overrides Streamlit's theme file for link color */
+
     </style>
     """,
     unsafe_allow_html=True
@@ -270,8 +158,6 @@ def run_ai_generation(prompt_text: str, uploaded_file: BytesIO = None, max_token
     
     if uploaded_file is not None:
         try:
-            from PIL import Image
-            from io import BytesIO
             uploaded_file.seek(0) 
             image = Image.open(uploaded_file)
             parts.append(image)
@@ -280,7 +166,7 @@ def run_ai_generation(prompt_text: str, uploaded_file: BytesIO = None, max_token
 
     parts.append(prompt_text)
 
-    # API Call with System Instruction
+    # API Call with System Instruction loaded from file
     try:
         response = client.models.generate_content(
             model=MODEL,
@@ -299,7 +185,6 @@ def run_ai_generation(prompt_text: str, uploaded_file: BytesIO = None, max_token
 
 
 # --- 2. FEATURE LIST FOR UTILITY HUB (28 Features) ---
-
 CATEGORIES_FEATURES = {
     "🧠 Productivity": {"icon": "💡", "features": { 
         "1. Daily Schedule Optimizer": "tasks: write report, call client. Time: 9am-12pm.",
@@ -341,8 +226,7 @@ CATEGORIES_FEATURES = {
         "25. Foreign Language Expert AI": "Conjugate 'aller' en French, passé simple, nous.",
         "26. Science Expert AI": "Explain the concept of entropy in simple terms.",
         "27. Vocational & Applied Expert AI": "Code Debugger: 'for i in range(5) print(i)' (Python)",
-        # NEW FEATURE 28: Grade Calculator
-        "28. Grade Calculator": "assignments: Quiz 80/100 (20%), Midterm 90/100 (30%), Final 75/100 (50%)." 
+        "28. Grade Calculator": "Input: Assignments 30% (85/100), Midterm 40% (92/100), Final 30% (78/100)."
     }}
 }
 
@@ -383,7 +267,7 @@ def render_utility_hub():
         with col1:
             st.markdown(f"##### Step 1: Provide Input Data for Feature #{feature_code}")
         
-        # POP-UP LOGIC: ONLY FOR DAILY SCHEDULE OPTIMIZER (Now using session_state persistence)
+        # POP-UP LOGIC: ONLY FOR DAILY SCHEDULE OPTIMIZER
         last_schedule = load_last_schedule()
         if is_schedule_optimizer and last_schedule:
             with col2:
@@ -407,7 +291,6 @@ def render_utility_hub():
                 key="calorie_image_upload_area"
             )
             if uploaded_file:
-                from PIL import Image
                 st.image(Image.open(uploaded_file), caption="Meal to Analyze", width=250)
                 
         # TEXT AREA INPUT
@@ -427,7 +310,14 @@ def render_utility_hub():
                 final_prompt = f"UTILITY HUB: {selected_feature}: {user_input}"
                 
                 with st.spinner(f'🎯 Routing request to **{selected_feature}**...'):
-                    result = run_ai_generation(final_prompt, uploaded_file)
+                    # Increased max_tokens for specific features
+                    max_tokens_val = 700
+                    if selected_feature in ["28. Grade Calculator", "22. Mathematics Expert AI"]:
+                        max_tokens_val = 1000
+                    elif selected_feature in ["23. English & Literature Expert AI", "24. History & Social Studies Expert AI"]:
+                        max_tokens_val = 1200
+                        
+                    result = run_ai_generation(final_prompt, uploaded_file, max_tokens=max_tokens_val)
                     
                     st.session_state['hub_result'] = result
                     st.session_state['hub_last_feature_used'] = selected_feature
@@ -459,101 +349,82 @@ def render_teacher_aid():
 
     st.header("Unit Planning & Resource Generation")
 
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-        ["Unit", "Lesson Plans", "Vocab", "Worksheets", "Quizzes", "Tests"]
+    # Mapped resource names for display and the specific tag to send to the AI
+    RESOURCE_MAP = {
+        "Unit Overview": "Unit Overview",
+        "Lesson Plan": "Lesson Plan",
+        "Vocabulary List": "Vocabulary List",
+        "Worksheet": "Worksheet",
+        "Quiz": "Quiz",
+        "Test": "Test"
+    }
+
+    tab_titles = list(RESOURCE_MAP.keys())
+    tabs = st.tabs(tab_titles)
+
+    # --- Tab Generation Helper Function (Handles the repetitive tab logic) ---
+    def generate_and_save_resource(tab_name, tab_object, ai_tag, db_key, ai_instruction_placeholder):
+        with tab_object:
+            st.subheader(f"1. Generate {tab_name}")
+            prompt = st.text_area(
+                f"Enter details for the {tab_name.lower()}:",
+                placeholder=f"E.g., '{ai_instruction_placeholder}'",
+                key=f"{db_key}_prompt",
+                height=250 
+            )
+            if st.button(f"Generate {tab_name}", key=f"generate_{db_key}_btn"):
+                if prompt:
+                    # CRITICAL: Send the explicit AI_TAG (e.g., "Unit Overview") 
+                    final_prompt = f"TEACHER'S AID RESOURCE TAG: {ai_tag}: {prompt}"
+                    
+                    with st.spinner(f'Building {tab_name} using tag "{ai_tag}"...'):
+                        # Specific max_tokens for complex resources
+                        max_tokens_val = 1500 
+                        result = run_ai_generation(final_prompt, max_tokens=max_tokens_val, temp=0.2)
+                        
+                        # Store in mock DB (key is derived from resource name)
+                        st.session_state['teacher_db'][db_key].append(result)
+                        st.success(f"{tab_name} Generated and Saved!")
+
+            st.markdown("---")
+            st.subheader(f"Saved {tab_name}")
+            if st.session_state['teacher_db'][db_key]:
+                for i, resource in enumerate(st.session_state['teacher_db'][db_key]):
+                    with st.expander(f"{tab_name} {i+1}"):
+                        st.code(resource, language='markdown')
+            else:
+                st.info(f"No {tab_name.lower()} saved yet.")
+
+    # Apply the helper function to all tabs, ensuring the correct tag is passed
+    generate_and_save_resource(
+        "Unit Overview", tabs[0], RESOURCE_MAP["Unit Overview"], "units", 
+        "Generate a detailed unit plan for a 10th-grade World History class on the Renaissance."
     )
-
-    # --- Unit Tab ---
-    with tab1:
-        st.subheader("1. Create New Unit")
-        unit_prompt = st.text_area(
-            "Unit Details (e.g., Topic, Grade, Duration):",
-            placeholder="Create a Unit called 'The American Revolution' for 8th-grade history, lasting 10 days.",
-            key="unit_prompt",
-            height=250 # Fixed height
-        )
-        if st.button("Generate Unit Overview", key="generate_unit_btn"):
-            if unit_prompt:
-                final_prompt = f"TEACHER'S AID: Generate a detailed unit overview including objectives, key topics, and suggested assessments for the following: {unit_prompt}"
-                with st.spinner('Building Unit...'):
-                    result = run_ai_generation(final_prompt, max_tokens=1500, temp=0.2)
-                    # Mock storage
-                    st.session_state['teacher_db']['units'].append(result)
-                    st.success("Unit Generated and Saved!")
-
-        st.markdown("---")
-        st.subheader("Saved Units")
-        if st.session_state['teacher_db']['units']:
-            for i, unit in enumerate(st.session_state['teacher_db']['units']):
-                with st.expander(f"Unit {i+1}"):
-                    st.code(unit, language='markdown')
-        else:
-            st.info("No units saved yet. Generate one above!")
-
-    # --- Lesson Plans Tab ---
-    with tab2:
-        st.subheader("2. Generate Lesson Plan")
-        lesson_prompt = st.text_area(
-            "Lesson Details:",
-            placeholder="Based on the American Revolution Unit, create a 45-minute lesson plan on 'Causes of the War' for 8th graders.",
-            key="lesson_prompt",
-            height=250 # Fixed height
-        )
-        if st.button("Generate Lesson Plan", key="generate_lesson_btn"):
-            if lesson_prompt:
-                final_prompt = f"TEACHER'S AID: Create a detailed, 45-minute lesson plan (including warm-up, main activity, materials, and wrap-up) for the topic: {lesson_prompt}"
-                with st.spinner('Building Lesson Plan...'):
-                    result = run_ai_generation(final_prompt, max_tokens=1500, temp=0.2)
-                    st.session_state['teacher_db']['lessons'].append(result)
-                    st.success("Lesson Plan Generated and Saved!")
-
-        st.markdown("---")
-        st.subheader("Saved Lesson Plans")
-        if st.session_state['teacher_db']['lessons']:
-            for i, lesson in enumerate(st.session_state['teacher_db']['lessons']):
-                with st.expander(f"Lesson Plan {i+1}"):
-                    st.code(lesson, language='markdown')
-        else:
-            st.info("No lesson plans saved yet.")
-
-    # --- Other Tabs (Simplified Placeholder Logic) ---
-    def generate_and_save_resource(tab_name, prompt_key, button_key, db_key, ai_instruction):
-        st.subheader(f"3. Generate {tab_name}")
-        prompt = st.text_area(
-            f"Enter details for the {tab_name.lower()}:",
-            placeholder=f"{ai_instruction} (e.g., '10 key terms for the American Revolution Unit')",
-            key=prompt_key,
-            height=250 # Fixed height
-        )
-        if st.button(f"Generate {tab_name}", key=button_key):
-            if prompt:
-                final_prompt = f"TEACHER'S AID: {ai_instruction}: {prompt}"
-                with st.spinner(f'Building {tab_name}...'):
-                    result = run_ai_generation(final_prompt, max_tokens=1000, temp=0.3)
-                    st.session_state['teacher_db'][db_key].append(result)
-                    st.success(f"{tab_name} Generated and Saved!")
-
-        st.markdown("---")
-        st.subheader(f"Saved {tab_name}")
-        if st.session_state['teacher_db'][db_key]:
-            for i, resource in enumerate(st.session_state['teacher_db'][db_key]):
-                with st.expander(f"{tab_name} {i+1}"):
-                    st.code(resource, language='markdown')
-        else:
-            st.info(f"No {tab_name.lower()} saved yet.")
-
-    with tab3:
-        generate_and_save_resource("Vocabulary List", "vocab_prompt", "generate_vocab_btn", "vocab", 
-                                   "Generate a vocabulary list with definitions and example sentences")
-    with tab4:
-        generate_and_save_resource("Worksheet", "worksheet_prompt", "generate_worksheet_btn", "worksheets", 
-                                   "Create a 10-question worksheet with mixed question types (matching, short answer)")
-    with tab5:
-        generate_and_save_resource("Quiz", "quiz_prompt", "generate_quiz_btn", "quizzes", 
-                                   "Generate a 5-question multiple choice quiz with answer key")
-    with tab6:
-        generate_and_save_resource("Test", "test_prompt", "generate_test_btn", "tests", 
-                                   "Design a comprehensive end-of-unit test covering 4 essay questions and 15 multiple choice questions")
+    
+    generate_and_save_resource(
+        "Lesson Plan", tabs[1], RESOURCE_MAP["Lesson Plan"], "lessons", 
+        "Create a 45-minute lesson plan on Newton's First Law of Motion for 9th-grade science."
+    )
+    
+    generate_and_save_resource(
+        "Vocabulary List", tabs[2], RESOURCE_MAP["Vocabulary List"], "vocab", 
+        "Generate 10 vocabulary words for a 5th-grade math lesson on fractions."
+    )
+    
+    generate_and_save_resource(
+        "Worksheet", tabs[3], RESOURCE_MAP["Worksheet"], "worksheets", 
+        "Create a 10-question worksheet on subject-verb agreement for 7th-grade English."
+    )
+    
+    generate_and_save_resource(
+        "Quiz", tabs[4], RESOURCE_MAP["Quiz"], "quizzes", 
+        "Generate a 5-question multiple-choice quiz on the causes of the American Civil War."
+    )
+    
+    generate_and_save_resource(
+        "Test", tabs[5], RESOURCE_MAP["Test"], "tests", 
+        "Design a comprehensive end-of-unit test for a high school economics class on supply and demand."
+    )
 
 
 # --- 5. MAIN MODE SELECTION ---
@@ -565,15 +436,12 @@ st.sidebar.markdown("---")
 # Mode Selector
 mode = st.sidebar.radio(
     "Select Application Mode:",
-    options=["1. Utility Hub (28 Features)", "2. Teacher's Aid"],
-    index=0,
-    key="app_mode_radio"
+    options=["1. Utility Hub (28-in-1)", "2. Teacher's Aid"],
+    key="main_mode_select"
 )
-st.sidebar.markdown("---") 
 
-
-# Run the selected mode
-if mode == "1. Utility Hub (28 Features)":
+# Render the selected mode
+if mode == "1. Utility Hub (28-in-1)":
     render_utility_hub()
 elif mode == "2. Teacher's Aid":
     render_teacher_aid()
