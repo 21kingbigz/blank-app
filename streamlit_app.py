@@ -59,10 +59,10 @@ st.markdown(
         border-color: #777777;
     }
 
-    /* 4. TEXT INPUT FIELDS (What the user types - White) */
+    /* 4. INPUT FIELD STYLING (The Box where you type/select) */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
         background-color: #212121; 
-        color: #FFFFFF !important; /* Ensures text user types is pure white */
+        color: #FFFFFF !important; /* Ensures selected text is white */
         border: 1px solid #444444;
         border-radius: 6px; 
     }
@@ -71,20 +71,18 @@ st.markdown(
     }
 
     /* ***CRITICAL FIX: Dropdown Menu (Selectbox) Styling*** */
-    /* Targets the Selectbox input area */
+    /* Targets the Selectbox input area text (already mostly fixed, but ensures white) */
     .stSelectbox div[data-testid="stTextInput"] div input {
-        background-color: #212121 !important;
         color: #FFFFFF !important;
     }
-    /* Targets the actual dropdown menu list when opened */
-    .st-bo { /* Common class for dropdown list container in Streamlit */
+    /* Targets the actual dropdown menu list when opened (background) */
+    .st-bo, .st-bp, .st-bq, .st-br, .st-bs { 
         background-color: #212121 !important;
-        border: 1px solid #444444;
+        border-color: #444444 !important;
     }
-    /* Targets the text inside the dropdown list items */
-    .st-bp, .st-bq, .st-br, .st-bs { /* Common classes for list items */
-        color: #FFFFFF !important;
-        background-color: #212121 !important;
+    /* Targets the text inside the dropdown list items when the list is open */
+    .st-bo > div > div {
+        color: #FFFFFF !important; /* Ensures all text in the list is white */
     }
 
 
