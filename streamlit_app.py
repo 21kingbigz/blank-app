@@ -159,41 +159,44 @@ st.markdown(
     
     /* --- CRITICAL FIX: DROPDOWN LIST BACKGROUND (Dark Gray #212121) --- */
     
-    /* Target the floating BaseWeb container (Menu Wrapper) */
+    /* 1. Target the floating BaseWeb container (Menu Wrapper) */
     div[data-baseweb="menu"] {
         background-color: #212121 !important;
         border: 1px solid #444444 !important;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
     }
 
-    /* Target the list container itself (role="listbox") */
+    /* 2. Target the UL list container (if present) */
+    div[data-baseweb="menu"] ul {
+        background-color: #212121 !important;
+    }
+
+    /* 3. Target the list container itself (role="listbox") */
     div[role="listbox"] {
         background-color: #212121 !important;
         border: none !important;
     }
 
-    /* Target the individual options/items (li element in the menu) */
+    /* 4. Target the individual options/items (li/div) */
+    [data-baseweb="menu-item"], 
     div[role="option"], 
-    [data-baseweb="menu"] li,
-    [data-baseweb="menu-item"] { /* Target the menu item element itself */
+    [data-baseweb="menu"] li { 
         background-color: #212121 !important;
-        color: #FFFFFF !important; /* Keep text white for contrast */
+        color: #FFFFFF !important; 
     }
     
-    /* NEW AGGRESSIVE TARGET: Target the inner content wrapper of the option, which often overrides the color */
+    /* 5. NEW AGGRESSIVE TARGET: Target the inner content wrapper of the option, which is the last layer of white */
     [data-baseweb="menu-item"] > div { 
         background-color: #212121 !important;
         color: #FFFFFF !important;
     }
     
-    /* Targeting the content wrapper inside the listbox */
+    /* 6. Targeting the content wrapper inside the listbox */
     [data-baseweb="select"] [role="listbox"] > div {
         background-color: #212121 !important;
     }
 
-    /* Target the hover state for individual options and their content */
-    div[role="option"]:hover,
-    [data-baseweb="menu"] li:hover,
+    /* 7. Target the hover state for individual options and their content */
     [data-baseweb="menu-item"]:hover,
     [data-baseweb="menu-item"]:hover > div { 
         background-color: #333333 !important; /* Slightly lighter gray on hover */
