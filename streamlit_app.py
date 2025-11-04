@@ -7,7 +7,7 @@ from io import BytesIO
 from google.genai.errors import APIError
 
 # --- CONFIGURATION AND PERSISTENCE FILE PATHS ---
-WEBSITE_TITLE = "Artorius" # This remains "Artorius"
+WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash' 
 # File names for permanent storage
 TEACHER_DATA_FILE = "teacher_data.json"
@@ -18,13 +18,13 @@ TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [],
 # --- LOGO & ICON CONFIGURATION ---
 # IMPORTANT: This must match the filename you saved in the project directory.
 LOGO_FILENAME = "image (13).jpg" # Using the JPEG file provided
-# Checks if the logo file exists to use it as the page_icon, otherwise defaults to an emoji.
+# CRITICAL: This line ensures the image file path is used if the file exists.
 ICON_SETTING = LOGO_FILENAME if os.path.exists(LOGO_FILENAME) else "🛠️" 
 
 # Set browser tab title, favicon, and layout. 
 st.set_page_config(
-    page_title=WEBSITE_TITLE, # CHANGED: Now only displays "Artorius" in the tab
-    page_icon=ICON_SETTING, # LOGO REMAINS HERE (TAB ICON)
+    page_title=WEBSITE_TITLE, # Only displays "Artorius" in the tab
+    page_icon=ICON_SETTING, # USES THE IMAGE FILE PATH FOR THE TAB ICON
     layout="wide",
     initial_sidebar_state="expanded"
 )
