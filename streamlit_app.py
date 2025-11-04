@@ -50,10 +50,10 @@ st.markdown(
         border-color: #777777;
     }
 
-    /* 4. Text and Input Fields & Smoothness */
+    /* 4. TEXT INPUT FIELDS (The Box where the user types) */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
         background-color: #212121; 
-        color: white;
+        color: #FFFFFF !important; /* CRITICAL FIX: Ensures text user types is white */
         border: 1px solid #444444;
         border-radius: 6px; 
     }
@@ -64,26 +64,22 @@ st.markdown(
         font-weight: 500;
     }
 
-    /* 6. ***CRITICAL FIX: AI RESPONSE BOX BACKGROUND*** */
-    /* Target the pre element inside st.code, as this often contains the raw text */
-    div.stCode pre {
-        background-color: #1A1A1A !important; /* Solid Dark Grey Background */
-        color: #FFFFFF !important; /* Ensure text is white */
-        border: none !important; /* Remove borders */
-        padding: 0; /* Remove padding from pre to let the outer div control it */
-    }
-
-    /* 7. AI RESPONSE BOX OUTER CONTAINER STYLING */
+    /* 6. AI RESPONSE BOX (st.code CONTAINER) */
     div.stCode {
-        background-color: #1A1A1A !important; /* Ensure the outer container is also dark grey */
+        background-color: #1A1A1A !important; /* Solid Dark Grey Background */
         border: none !important; /* Remove borders */
         border-radius: 12px; 
-        padding: 15px; /* Apply padding here */
+        padding: 15px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
         overflow-x: auto;
     }
-
-    /* 8. Other Smoothness Refinements */
+    
+    /* 7. Text inside AI Response Box (Code Block) */
+    div.stCode pre code {
+        color: #FFFFFF !important; /* Ensures text inside response box is white */
+    }
+    
+    /* 8. Info/Warning Boxes - clean look */
     .stAlert {
         border-left: 5px solid #666666;
         color: #DDDDDD;
