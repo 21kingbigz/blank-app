@@ -1,1 +1,4 @@
+google-genai
+Pillow
 streamlit
+sift-stack-py
