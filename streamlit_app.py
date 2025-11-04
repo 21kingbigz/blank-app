@@ -6,9 +6,12 @@ from PIL import Image
 from io import BytesIO
 from google.genai.errors import APIError
 
-# --- WEBSITE BRANDING & CONFIGURATION ---
+# --- CONFIGURATION AND PERSISTENCE ---
 WEBSITE_TITLE = "Artorius"
 CURRENT_APP_TITLE = "27-in-1 Smart Utility Hub"
+# Define a persistent storage file for the last schedule
+SCHEDULE_FILE = "last_schedule.txt" 
+MODEL = 'gemini-2.5-flash' 
 
 # Set browser tab title, favicon, and layout. 
 st.set_page_config(
@@ -18,7 +21,44 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for the precise dark theme specifications
+# --- CACHED FUNCTIONS FOR PERSISTENCE ---
+
+@st.cache_data
+def load_last_schedule():
+    """Loads the last saved schedule from the persistent file."""
+    try:
+        with open(SCHEDULE_FILE, "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        return None
+    except Exception:
+        return None
+
+def save_last_schedule(schedule_text: str):
+    """Saves the schedule to the persistent file and clears the cache."""
+    try:
+        with open(SCHEDULE_FILE, "w") as f:
+            f.write(schedule_text)
+        # Clear the cache so the app reloads the new content next time
+        load_last_schedule.clear()
+    except Exception as e:
+        st.error(f"Error saving schedule: {e}")
+
+# Load instruction and initialize client (Existing Logic)
+try:
+    client = genai.Client()
+except Exception:
+    st.error("❌ ERROR: Gemini API Key not found. Please set your 'GEMINI_API_KEY' in Streamlit Secrets.")
+    st.stop()
+try:
+    with open("system_instruction.txt", "r") as f:
+        SYSTEM_INSTRUCTION = f.read()
+except FileNotFoundError:
+    st.error("❌ ERROR: system_instruction.txt not found. Please ensure it exists in your repository.")
+    st.stop()
+
+
+# --- CUSTOM CSS FOR DARK THEME (UNCHANGED) ---
 st.markdown(
     """
     <style>
@@ -44,20 +84,16 @@ st.markdown(
     }
 
     /* ***CRITICAL FIX: Sidebar Radio Button Highlight ELIMINATED*** */
-    /* Target the label elements for hover/focus background (the light box that appears) */
+    /* Target the radio button container on hover/focus and set a transparent background */
+    div[data-testid="stSidebar"] div.stRadio > label:has(input:checked) > div:nth-child(2),
     div[data-testid="stSidebar"] div.stRadio > label:hover,
-    div[data-testid="stSidebar"] div.stRadio > label:focus,
-    div[data-testid="stSidebar"] div.stRadio > label:active {
-        background-color: #1A1A1A !important; /* Dark color for hover */
+    div[data-testid="stSidebar"] div.stRadio > label:focus {
+        background-color: transparent !important; /* Forces transparency on highlight */
         border-radius: 4px;
     }
-    /* Target the currently selected item's background */
+    /* Fallback to ensure the selected item doesn't have a background */
     div[data-testid="stSidebar"] div.stRadio > label[data-baseweb="radio"] {
-        background-color: #121212 !important; /* Base sidebar color for the selected item */
-    }
-    /* Target the specific checked state element if the above fails to catch it */
-    div[data-testid="stSidebar"] div.stRadio > label > div > div:first-child > div:nth-child(2) {
-        background-color: #1A1A1A !important;
+        background-color: transparent !important;
     }
 
 
@@ -146,23 +182,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# 1. API Key and Client Initialization
-try:
-    client = genai.Client()
-except Exception:
-    st.error("❌ ERROR: Gemini API Key not found. Please set your 'GEMINI_API_KEY' in Streamlit Secrets.")
-    st.stop()
-
-# 2. Load the System Instruction (Existing Logic)
-try:
-    with open("system_instruction.txt", "r") as f:
-        SYSTEM_INSTRUCTION = f.read()
-except FileNotFoundError:
-    st.error("❌ ERROR: system_instruction.txt not found. Please ensure it exists in your repository.")
-    st.stop()
-
-# 3. Model Configuration (Existing Logic)
-MODEL = 'gemini-2.5-flash' 
 
 # --- 1. CORE AI FUNCTION (Existing Logic) ---
 
@@ -273,24 +292,38 @@ selected_feature = st.selectbox(
     key="feature_select"
 )
 
-# --- INPUT AREA (Existing Logic) ---
+# --- INPUT AREA ---
 
 user_input = ""
 uploaded_file = None
 image_needed = (selected_feature == "9. Image-to-Calorie Estimate")
+is_schedule_optimizer = (selected_feature == "1. Daily Schedule Optimizer")
 
 # 1. SHOW EXAMPLE AND HINT
 if selected_feature != "Select a Feature to Use":
     feature_code = selected_feature.split(".")[0]
-    st.markdown(f"##### Step 1: Provide Input Data for Feature #{feature_code}")
+    col1, col2 = st.columns([0.7, 0.3])
     
+    with col1:
+        st.markdown(f"##### Step 1: Provide Input Data for Feature #{feature_code}")
+    
+    # 2. POP-UP LOGIC: ONLY FOR DAILY SCHEDULE OPTIMIZER
+    last_schedule = load_last_schedule()
+    if is_schedule_optimizer and last_schedule:
+        with col2:
+            with st.popover("📅 View Last Schedule"):
+                st.markdown("### Saved Schedule")
+                st.caption("This schedule was saved from your previous session.")
+                st.code(last_schedule, language='markdown')
+
+
     if image_needed:
         st.warning("⚠️ **Image Required!** Please upload your meal photo below.")
     
     example_prompt = category_data["features"][selected_feature]
     st.info(f"💡 **Example Input Format:** `{example_prompt}`")
 
-    # 2. FILE UPLOADER (ONLY FOR CALORIE)
+    # 3. FILE UPLOADER (ONLY FOR CALORIE)
     if image_needed:
         uploaded_file = st.file_uploader(
             "Upload Meal Photo (Feature 9 Only)", 
@@ -300,7 +333,7 @@ if selected_feature != "Select a Feature to Use":
         if uploaded_file:
             st.image(uploaded_file, caption="Meal to Analyze", width=250)
             
-    # 3. TEXT AREA INPUT
+    # 4. TEXT AREA INPUT
     user_input = st.text_area(
         "Enter your required data (e.g., your tasks, your math problem, your ingredients):",
         value="" if not image_needed else "Estimate the calories and macros for this meal.",
@@ -308,7 +341,7 @@ if selected_feature != "Select a Feature to Use":
         key="text_input"
     )
 
-    # 4. EXECUTION BUTTON
+    # 5. EXECUTION BUTTON
     if st.button(f"EXECUTE: {selected_feature}", key="execute_btn"):
         
         # Validation for Calorie Feature
@@ -322,9 +355,14 @@ if selected_feature != "Select a Feature to Use":
                 # Send the request to the core function
                 result = run_utility_hub(final_prompt, uploaded_file)
                 
-                # Store and display the result
+                # Update Session State
                 st.session_state['result'] = result
                 st.session_state['last_feature_used'] = selected_feature
+                
+                # *** PERSISTENT SAVE LOGIC ***
+                if is_schedule_optimizer:
+                    save_last_schedule(result)
+                # *****************************
 
 
 # --- 4. GLOBAL OUTPUT DISPLAY (Existing Logic) ---
