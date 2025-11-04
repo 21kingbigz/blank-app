@@ -4,6 +4,7 @@ import sys
 from google import genai
 from PIL import Image
 from io import BytesIO
+from google.genai.errors import APIError
 
 # --- WEBSITE BRANDING & CONFIGURATION ---
 WEBSITE_TITLE = "Artorius"
@@ -14,61 +15,75 @@ st.set_page_config(
     page_title=f"{WEBSITE_TITLE} - {CURRENT_APP_TITLE}", 
     page_icon="👑", 
     layout="wide",
-    # Enforce built-in dark theme
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for the strictly black/dark grey theme
+# Custom CSS for the strictly black/dark grey theme with smooth corners
 st.markdown(
     """
     <style>
     /* 1. Base Dark Theme Colors */
     .stApp {
-        background-color: #000000; /* PURE BLACK for the main background */
+        background-color: #0A0A0A; /* Deeper Black */
         color: white;
     }
     
     /* 2. Secondary Background (Sidebar, Code Blocks, Widgets) */
-    /* Use a dark charcoal grey for contrast against the black app background */
-    .css-1d391kg, .css-1dp5fjs, .stAlert, section[data-testid='stSidebar'] {
-        background-color: #1A1A1A; 
-        color: #FFFFFF;
-        border-right: 1px solid #333333; /* Subtle border for separation */
+    .css-1d391kg, .css-1dp5fjs, section[data-testid='stSidebar'] {
+        background-color: #121212; /* Slightly Lighter Black Sidebar */
+        color: #F0F0F0;
+        border-right: 1px solid #333333;
     }
     
-    /* 3. Button/Accent Color */
-    /* Use a light grey or white for high-contrast accents */
+    /* 3. Button/Accent Color & Smoothness */
     .stButton>button {
-        color: #FFFFFF; /* White text */
-        background-color: #333333; /* Dark grey button background */
-        border-radius: 6px;
+        color: #FFFFFF;
+        background-color: #333333; 
+        border-radius: 8px; /* SMOOTHNESS: Rounded corners */
         padding: 10px 20px;
         font-weight: bold;
-        border: 2px solid #555555; /* Slightly lighter border */
+        border: 1px solid #555555;
+        transition: all 0.2s ease-in-out; /* Smooth transition on hover */
     }
     
     .stButton>button:hover {
-        background-color: #555555; /* Lighter grey on hover */
+        background-color: #555555; 
+        border-color: #777777;
     }
 
-    /* 4. Text and Input Fields */
-    /* Ensure text and inputs look clean on the dark background */
+    /* 4. Text and Input Fields & Smoothness */
     .stTextInput>div>div>input, .stTextArea>div>div, .stSelectbox>div>div {
-        background-color: #2B2B2B; /* Deep grey for input fields */
+        background-color: #212121; 
         color: white;
         border: 1px solid #444444;
+        border-radius: 6px; /* SMOOTHNESS: Rounded corners for inputs */
     }
 
-    /* 5. Main Title and Headings */
-    h1, h2, h3, h4, h5, h6 {
-        color: #F0F0F0; /* Off-white for clean headings */
+    /* 5. AI RESPONSE BOXES (CODE BLOCKS) */
+    /* Target the code block area for the specific dark grey color */
+    .stCode {
+        background-color: #242424; /* DARK GREY for AI Output */
+        border: 1px solid #3A3A3A;
+        border-radius: 10px; /* SMOOTHNESS: More pronounced rounded corners */
+        padding: 15px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+        overflow-x: auto;
+    }
+
+    /* 6. General Block Container Smoothness */
+    .block-container {
+        border-radius: 12px; /* Subtle rounding on main content areas */
     }
     
-    /* 6. Info/Warning Boxes - subtle grey treatment */
+    h1, h2, h3, h4, h5, h6 {
+        color: #F0F0F0;
+    }
+    
     .stAlert {
-        border-left: 5px solid #666666; /* Subtle grey left border */
+        border-left: 5px solid #666666;
         color: #DDDDDD;
-        background-color: #212121;
+        background-color: #1A1A1A;
+        border-radius: 6px;
     }
     </style>
     """,
@@ -77,7 +92,6 @@ st.markdown(
 
 # 1. API Key and Client Initialization
 try:
-    # Client is correctly configured to look for GEMINI_API_KEY environment variable (Streamlit Secrets)
     client = genai.Client()
 except Exception:
     st.error("❌ ERROR: Gemini API Key not found. Please set your 'GEMINI_API_KEY' in Streamlit Secrets.")
@@ -179,7 +193,7 @@ CATEGORIES_FEATURES = {
 
 # Display the website name in the top left corner (using the sidebar)
 st.sidebar.title(WEBSITE_TITLE) 
-st.sidebar.markdown("---") # Visual separator
+st.sidebar.markdown("---") 
 
 # Display the main application title with new format
 st.title(f"👑 {WEBSITE_TITLE}: {CURRENT_APP_TITLE}")
