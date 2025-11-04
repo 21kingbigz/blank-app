@@ -178,7 +178,6 @@ def run_ai_generation(prompt_text: str, uploaded_file: BytesIO = None, max_token
 # --- 2. FEATURE LIST FOR UTILITY HUB (28 Features) ---
 CATEGORIES_FEATURES = {
     "🧠 Productivity": {"icon": "💡", "features": { 
-        # RENAMED FEATURE HERE
         "1. Calendar Creator": "tasks: write report, call client. Time: 9am-12pm.", 
         "2. Task Deconstruction Expert": "Vague goal: Start an online business.",
         "3. Get Unstuck Prompter": "Problem: I keep procrastinating on my final essay.",
@@ -250,28 +249,27 @@ def render_utility_hub():
     user_input = ""
     uploaded_file = None
     image_needed = (selected_feature == "9. Image-to-Calorie Estimate")
-    
-    # CRITICAL: Check against the new name "1. Calendar Creator"
     is_calendar_creator = (selected_feature == "1. Calendar Creator") 
 
     if selected_feature != "Select a Feature to Use":
         feature_code = selected_feature.split(".")[0]
         
-        # Column layout for visibility
-        col1, col2 = st.columns([0.65, 0.35]) 
+        # --- NEW BUTTON LAYOUT ---
+        col1, col2 = st.columns([0.7, 0.3])
         
         with col1:
             st.markdown(f"##### Step 1: Provide Input Data for Feature #{feature_code}")
         
-        # POP-UP LOGIC: ONLY FOR CALENDAR CREATOR
+        # SEPARATE BUTTON LOGIC FOR CALENDAR CREATOR
         last_schedule = load_last_schedule()
         if is_calendar_creator and last_schedule:
             with col2:
-                # The pop-up button showing the last saved planner
-                with st.popover("📅 View Last Planner"):
+                # The small, rectangular button separate from the popover
+                with st.popover("📅 Last Planner"):
                     st.markdown("### Saved Calendar/Schedule")
                     st.caption("This schedule is saved to disk and persists across sessions.")
                     st.code(last_schedule, language='markdown')
+        # --- END NEW BUTTON LAYOUT ---
 
 
         if image_needed:
