@@ -159,25 +159,39 @@ st.markdown(
     
     /* --- CRITICAL FIX: DROPDOWN LIST BACKGROUND (Highest Specificity) --- */
     
-    /* Targeting the main floating menu container */
+    /* Target the main floating menu container */
     div[data-baseweb="menu"] {
         background-color: #212121 !important;
         border: 1px solid #444444 !important;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
     }
+    
+    /* Target the menu item container */
+    [data-baseweb="menu-item"] {
+        background-color: #212121 !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* AGGRESSIVE TARGET: The actual content wrapper inside the menu item */
+    /* This uses extreme specificity to override BaseWeb's default styles */
+    [data-baseweb="menu-item"] > div, 
+    div[data-baseweb="menu"] [role="option"] > div { 
+        background-color: #212121 !important;
+        color: #FFFFFF !important;
+        cursor: pointer !important; 
+    }
 
-    /* AGGRESSIVE TARGET: Target ALL elements inside the floating menu container */
-    /* This should catch every single deeply nested element trying to revert to white */
+    /* Apply to all nested elements just in case, this is the 'nuclear' option */
     div[data-baseweb="menu"] * {
         background-color: #212121 !important; 
         color: #FFFFFF !important;
-        /* Force no specific border color if BaseWeb adds one */
         border-color: #212121 !important; 
     }
 
-    /* Targeting the list items and forcing hover to a slightly lighter gray */
+    /* Hover state fix */
     [data-baseweb="menu-item"]:hover,
-    [data-baseweb="menu-item"]:hover * { 
+    [data-baseweb="menu-item"]:hover > div,
+    div[data-baseweb="menu"] li:hover { 
         background-color: #333333 !important; /* Slightly lighter gray on hover */
         color: #FFFFFF !important;
     }
