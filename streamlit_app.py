@@ -50,7 +50,7 @@ except FileNotFoundError:
     """
 
 
-# --- CUSTOM CSS FOR DARK THEME (Updated for robust dropdown menu fix) ---
+# --- CUSTOM CSS FOR DARK THEME (Final attempt at dropdown menu fix) ---
 st.markdown(
     """
     <style>
@@ -159,27 +159,32 @@ st.markdown(
     
     /* --- CRITICAL FIX FOR DROPDOWN LIST BACKGROUND --- */
     
-    /* Target the UberMenu container, which is often named [data-baseweb="menu"] */
-    div[data-baseweb="menu"] {
+    /* Target the component that renders the list of options when opened. */
+    /* This element often sits outside the main component structure and needs max specificity. */
+    
+    /* Target the list container itself */
+    div[role="listbox"] {
         background-color: #212121 !important;
         border: 1px solid #444444 !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* Add shadow for separation */
     }
 
-    /* Target the list items within the menu */
-    div[data-baseweb="menu"] li {
-        color: #FFFFFF !important; 
-    }
-
-    /* Target the actual element receiving the background color change */
-    div[data-baseweb="menu"] li div {
+    /* Target the individual options for text color */
+    div[role="option"] {
+        color: #FFFFFF !important;
         background-color: #212121 !important;
+    }
+    
+    /* Target the hover state for individual options */
+    div[role="option"]:hover {
+        background-color: #333333 !important; 
         color: #FFFFFF !important;
     }
     
-    /* Hover state for list items */
-    div[data-baseweb="menu"] li div:hover {
-        background-color: #333333 !important; 
-        color: #FFFFFF !important;
+    /* Target the main menu container used by BaseWeb for ultimate certainty */
+    div[data-baseweb="menu"] {
+        background-color: #212121 !important;
+        border: 1px solid #444444 !important;
     }
 
 
