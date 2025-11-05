@@ -10,10 +10,31 @@ import traceback # Import traceback for detailed error logging
 
 # --- CRITICAL FIX: Ensure you have google-generativeai installed ---
 import google.generativeai as genai
-from google.generativeai import APIError # Corrected safe import for APIError
-# Import necessary types for function arguments (like GenerationConfig)
-from google.generativeai.types import GenerationConfig 
 
+# Attempt to import necessary components from their most likely locations,
+# providing fallbacks in case of version mismatch/conflicts.
+try:
+    from google.generativeai import APIError # Primary location
+except ImportError:
+    try:
+        from google.generativeai.errors import APIError # Secondary location (used in some versions)
+    except ImportError:
+        # Fallback: Define a generic exception to allow the rest of the code to function
+        class APIError(Exception):
+            """Generic fallback for missing APIError class."""
+            pass
+        st.warning("⚠️ Could not import 'APIError'. API errors may be handled generically.")
+
+
+try:
+    from google.generativeai.types import GenerationConfig
+except ImportError:
+    # Fallback: Define a mock class if the official one is not found
+    class GenerationConfig:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+    st.warning("⚠️ Could not import 'GenerationConfig'. Using a mock class.")
+    
 # Import custom modules (Assuming these files exist and are correct)
 # NOTE: These files (auth, storage_logic) MUST be present for the app to run.
 from auth import render_login_page, logout, load_users, load_plan_overrides
