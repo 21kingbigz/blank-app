@@ -23,7 +23,7 @@ from storage_logic import (
 WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash'
 # Note: Using image_ffd419.png as an example logo filename since it was uploaded
-LOGO_FILENAME = "image_ffd419.png"
+LOGO_FILENAME = "image_ffd419.png" # Assuming this is the correct logo file name
 ICON_SETTING = "💡"
 
 st.set_page_config(
@@ -283,7 +283,7 @@ FEATURE_EXAMPLES = {
     "15. Email/Text Reply Generator": "Message: Meeting moved to 3 PM. Reply points: Confirm, apologize for absence at 1 PM.",
     "16. Idea Generator/Constraint Solver": "Generate 3 ideas for a mobile app using only the microphone and camera.",
     "17. Random Fact Generator": "Give me a random fact about the Roman Empire.",
-    '18. "What If" Scenario Planner': "What if humanity successfully colonized Mars in the next 10 years?",
+    '18. "What If" Scenario Planner': "What if global internet access was free?",
     "19. Concept Simplifier": "Explain the basics of Blockchain technology to a 10-year-old.",
     "20. Code Explainer": "Explain this Python code: `def sum_list(x): return sum(x)`",
     "21. Packing List Generator": "I'm taking a 5-day business trip to Chicago in December.",
@@ -307,20 +307,48 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
     if client is None:
         st.warning("Gemini Client is NOT initialized. Using Mock Response.")
         selected_function = None
+        
+        # Check Utility Mappings
         for category_features in UTILITY_CATEGORIES.values():
             if feature_function_key in category_features:
                 selected_function = category_features[feature_function_key]
                 break
-
+        
+        # Check Teacher Aid Proxy
+        is_teacher_aid_proxy = feature_function_key == "Teacher_Aid_Routing"
+        
         if selected_function:
-            is_teacher_aid_proxy = feature_function_key == "Teacher_Aid_Routing"
-
             if feature_function_key == "9. Image-to-Calorie Estimate":
                 return selected_function(uploaded_image, prompt_text)
-            elif is_teacher_aid_proxy:
-                 return f"**Teacher Aid Mock Result:** Your request for '{prompt_text}' has been received. A full Lesson Plan/Quiz/etc., following the system instructions, would be generated here."
             else:
                 return selected_function(prompt_text)
+        elif is_teacher_aid_proxy:
+             # This mock response is intentionally verbose to fill the space
+             return f"""
+**Teacher Aid Resource Generation (MOCK)**
+
+**Request:** *{prompt_text}*
+
+---
+
+### **A) Unit Objectives**
+1. Students will be able to identify the primary causes of the requested topic.
+2. Students will analyze conflicting viewpoints or components of the subject.
+3. Students will synthesize the information to form a cohesive conclusion.
+
+### **B) Key Topics/Subtopics**
+* **Topic 1:** Historical/Foundational Context
+* **Topic 2:** Core Mechanics/Theories involved
+* **Topic 3:** Real-world Applications/Impact
+
+### **C) Suggested Activities (3-5)**
+1.  **Warm-up (5 min):** Quick 2-question quiz on prerequisite knowledge.
+2.  **Main Activity (30 min):** Group debate on a core controversy related to the topic.
+3.  **Wrap-up (10 min):** Individual summary of three key takeaways posted to a digital board.
+
+### **D) Assessment Overview**
+A 10-question mixed-format (MC and Short Answer) quiz will be administered at the end of the lesson to test both recall and synthesis skills.
+"""
         else:
             return "Error: Feature not found or not yet implemented."
 
@@ -395,14 +423,13 @@ if st.session_state.logged_in:
     # --- Standard App State Initialization ---
     if 'app_mode' not in st.session_state:
         st.session_state['app_mode'] = "Dashboard"
-    if 'utility_view' not in st.session_state:
-        st.session_state['utility_view'] = 'main'
-    if 'teacher_mode' not in st.session_state:
-        st.session_state['teacher_mode'] = "Resource Dashboard (AI Generation)"
     if '28_in_1_output' not in st.session_state:
         st.session_state['28_in_1_output'] = ""
     if 'teacher_output' not in st.session_state:
         st.session_state['teacher_output'] = ""
+    if 'selected_teacher_tab' not in st.session_state: # New state for tab persistence
+        st.session_state['selected_teacher_tab'] = "Resource Generation"
+
 
     if 'selected_28_in_1_category' not in st.session_state:
         st.session_state['selected_28_in_1_category'] = list(UTILITY_CATEGORIES.keys())[0]
@@ -432,8 +459,10 @@ def render_main_navigation_sidebar():
         st.markdown("---")
 
         menu_options = [
-            {"label": "📊 Usage Dashboard", "mode": "Usage Dashboard"},
             {"label": "🖥️ Dashboard", "mode": "Dashboard"},
+            {"label": "💡 28-in-1 Utilities", "mode": "28-in-1 Utilities"},
+            {"label": "🎓 Teacher Aid", "mode": "Teacher Aid"},
+            {"label": "📊 Usage Dashboard", "mode": "Usage Dashboard"},
             {"label": "💳 Plan Manager", "mode": "Plan Manager"},
             {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"},
             {"label": "🚪 Logout", "mode": "Logout"}
@@ -448,7 +477,6 @@ def render_main_navigation_sidebar():
                     logout()
                 else:
                     st.session_state['app_mode'] = mode
-                    st.session_state['teacher_mode'] = "Resource Dashboard (AI Generation)"
                     st.rerun()
 
 
@@ -486,9 +514,6 @@ def render_utility_hub_content(can_interact, universal_error_msg):
     if not can_interact:
         display_msg = universal_error_msg if universal_error_msg else "Storage limit reached or plan data loading error."
         st.error(f"🛑 **ACCESS BLOCKED:** {display_msg}. Cannot interact with the application while over your universal limit.")
-        if st.button("← Back to Dashboard", key="utility_back_btn_blocked"):
-            st.session_state['app_mode'] = "Dashboard"
-            st.rerun()
         return
 
     can_save_utility, utility_error_msg, utility_limit = check_storage_limit(st.session_state.storage, 'utility_save')
@@ -608,25 +633,22 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
         st.error(f"🛑 **ACCESS BLOCKED:** {universal_error_msg}. Cannot interact.")
         return
 
+    # Use Streamlit Tabs for the requested layout
+    tab_gen, tab_plan, tab_student = st.tabs(
+        ["📝 Resource Generation", "🗓️ Curriculum Planner (Stub)", "👥 Student Manager (Stub)"]
+    )
+
+    # Pass the save check results to the generation tab
     can_save_teacher, teacher_error_msg, teacher_limit = check_storage_limit(st.session_state.storage, 'teacher_save')
 
-    teacher_modes = ["Resource Dashboard (AI Generation)", "Curriculum Planner (Stub)", "Student Manager (Stub)"]
-    st.session_state['teacher_mode'] = st.radio(
-        "Select Teacher Mode",
-        teacher_modes,
-        index=teacher_modes.index(st.session_state.get('teacher_mode', "Resource Dashboard (AI Generation)"))
-    )
-    st.markdown("---")
-
-    if st.session_state['teacher_mode'] == "Resource Dashboard (AI Generation)":
-
-        st.subheader("Generate Resource")
+    with tab_gen:
+        st.subheader("Generate Specialized Resource")
 
         example_input = "Create a **Lesson Plan** for teaching the causes of World War I."
         st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
 
         teacher_prompt = st.text_area(
-            "Resource Request:",
+            "Resource Request (e.g., 'Unit Overview for high school physics on momentum'):",
             placeholder=example_input,
             height=150,
             key="teacher_ai_prompt"
@@ -668,14 +690,35 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
                     st.error(f"⚠️ **Teacher History Save Blocked:** {teacher_error_msg}. Result is displayed below but not saved.")
 
         st.markdown("---")
-        st.subheader("Generated Resource")
+        st.subheader("Generated Resource Output")
         if 'teacher_output' in st.session_state:
             st.markdown(st.session_state['teacher_output'])
         else:
-            st.info("Your generated resource will appear here.")
+            st.info("Your generated resource will appear here. The AI is instructed to follow strict formats like **Lesson Plan**, **Quiz**, or **Unit Overview**.")
 
-    else:
-        st.info(f"The **{st.session_state['teacher_mode']}** functionality is a placeholder.")
+    with tab_plan:
+        st.header("Curriculum Planner")
+        st.info("This section allows you to organize and structure your academic year, mapping resources to learning standards. *(Placeholder Feature)*")
+        st.markdown("""
+        #### Plan Overview
+        * **Current Unit:** Unit 4 - The Age of Exploration
+        * **Duration:** 3 Weeks
+        * **Standard Mapping:** 8/10 standards covered.
+        """)
+        st.button("View Full Plan Breakdown", key="planner_stub_btn")
+
+    with tab_student:
+        st.header("Student Manager")
+        st.info("Track student progress, log communications, and generate individualized feedback reports. *(Placeholder Feature)*")
+        st.markdown("""
+        #### Student Roster Snapshot
+        | Student | Average Grade | Missing Assignments |
+        | :--- | :--- | :--- |
+        | John D. | B+ | 2 |
+        | Jane S. | A- | 0 |
+        | Alex K. | C | 4 |
+        """)
+        st.button("Generate Detailed Progress Report", key="manager_stub_btn")
 
 
 # --- USAGE DASHBOARD RENDERER ---
@@ -707,13 +750,57 @@ def render_usage_dashboard():
         st.info("No utility history saved yet.")
 
 
-# --- PLAN MANAGER RENDERER ---
+# --- PLAN MANAGER RENDERER (CONTENT RESTORED) ---
 def render_plan_manager():
     st.title("💳 Plan Manager")
     st.markdown("---")
     st.subheader(f"Your Current Plan: **{st.session_state.storage['tier']}**")
     st.markdown(f"Price: **{TIER_PRICES.get(st.session_state.storage['tier'], 'N/A')}**")
-    st.write("Plan Upgrade/Downgrade options would be displayed here.")
+
+    st.markdown("### Choose a New Plan")
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    plans_list = ["Free Tier", "28/1 Pro", "Teacher Pro", "Universal Pro", "Unlimited"]
+    cols = [col1, col2, col3, col4, col5]
+
+    for i, plan in enumerate(plans_list):
+        with cols[i]:
+            with st.container(border=True):
+                st.header(plan)
+                price = TIER_PRICES[plan]
+                st.markdown(f"**{price}**")
+                
+                # Dynamic feature descriptions (simplified)
+                if "Pro" in plan:
+                    st.markdown("✅ Enhanced Storage")
+                    if "28/1" in plan:
+                        st.markdown("✅ **28-in-1** Access")
+                        st.markdown("❌ Teacher Aid")
+                    elif "Teacher" in plan:
+                        st.markdown("❌ 28-in-1 Access")
+                        st.markdown("✅ **Teacher Aid**")
+                    elif "Universal" in plan:
+                        st.markdown("✅ Both Suites")
+                        st.markdown("✅ Dedicated Support")
+                elif plan == "Unlimited":
+                    st.markdown("🌟 Everything")
+                    st.markdown("🚀 Infinite Storage")
+                else:
+                    st.markdown("Basic Access")
+                    st.markdown("Limited Storage")
+
+                
+                if plan == st.session_state.storage['tier']:
+                    st.button("Current Plan", key=f"plan_current_{plan.replace(' ', '_')}", use_container_width=True, disabled=True)
+                else:
+                    # Restore the clickable interaction
+                    if st.button(f"Select {plan}", key=f"plan_select_{plan.replace(' ', '_')}", use_container_width=True):
+                        st.session_state.storage['tier'] = plan
+                        # NOTE: In a real app, this would trigger a payment gateway.
+                        st.success(f"Successfully selected the {plan}! (A full implementation would now process payment).")
+                        save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+                        st.rerun()
 
 
 # --- DATA CLEAN UP RENDERER ---
@@ -766,7 +853,6 @@ else:
     render_main_navigation_sidebar()
 
     # Check universal access based on storage limits
-    # This now safely calls check_storage_limit which handles float('inf')
     can_interact, universal_error_msg, _ = check_storage_limit(st.session_state.storage, 'universal_storage')
 
     # --- 2. Content Routing ---
