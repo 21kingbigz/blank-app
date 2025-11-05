@@ -73,6 +73,10 @@ st.markdown(
         margin-top: -15px;
         margin-bottom: 20px;
     }
+    /* Custom styling for horizontal radio buttons */
+    .stRadio > label {
+        padding-right: 15px; /* Adjust spacing between radio buttons */
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -179,7 +183,7 @@ def history_social_studies_expert_ai(query: str) -> str:
 def foreign_language_expert_ai(query: str) -> str:
     return f"**Feature 25: Foreign Language Expert AI**\nTranslation/Context for '{query}':\n*German:* **Guten Tag! Wie geht es Ihnen?** (Formal: Hello! How are you?). *Context:* Use 'Ihnen' when speaking to strangers or elders."
 def science_expert_ai(query: str) -> str:
-    return f"**Feature 26: Science Expert AI**\nExplanation/Analysis for '{query}':\nPhotosynthesis is the process by which plants convert light energy, carbon dioxide, and water into glucose (food) and oxygen. Its chemical formula is **6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂**."
+    return f"**Feature 26: Science Expert AI**\nExplanation/Analysis for '{query}':\nPhotosynthesis is the process by which plants convert light energy, carbon dioxide, and water into glucose (food) and oxygen. Its chemical formula is **6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₆**." # Corrected CO6 to C6H12O6 + 6O2
 def vocational_applied_expert_ai(query: str) -> str:
     return f"**Feature 27: Vocational & Applied Expert AI**\nExpert Answer for '{query}':\nPolymorphism in Python allows objects of different classes to be treated as objects of a common interface (the same function name can be used on different types of objects)."
 def grade_calculator(scores_weights: str) -> str:
@@ -304,7 +308,7 @@ if st.session_state.logged_in:
         st.session_state['teacher_mode'] = "Resource Dashboard"
     if '28_in_1_output' not in st.session_state:
         st.session_state['28_in_1_output'] = ""
-    # Initialize selected category/feature for the new dropdowns
+    # Initialize selected category/feature for the dropdowns
     if 'selected_28_in_1_category' not in st.session_state:
         st.session_state['selected_28_in_1_category'] = list(UTILITY_CATEGORIES.keys())[0]
     if 'selected_28_in_1_feature' not in st.session_state:
@@ -378,15 +382,15 @@ def render_main_dashboard():
             st.header("💡 28-in-1 Stateless Utility Hub")
             st.markdown("Use **28 specialized AI tools** via single input, identified by immediate intent routing.")
             if st.button("Launch 28-in-1 Hub", key="launch_utility_btn", use_container_width=True):
-                st.session_state['app_mode'] = "28-in-1 Utilities" # Renamed mode
+                st.session_state['app_mode'] = "28-in-1 Utilities"
                 st.rerun()
 
-# --- REVERTED: 28-in-1 Utility Hub Content with Category/Feature Select Boxes ---
+# --- MODIFIED: 28-in-1 Utility Hub Content with Category Radio Buttons ---
 def render_utility_hub_content(can_interact, universal_error_msg):
-    """The 28-in-1 Stateless AI Utility Hub (with category and feature select boxes)"""
+    """The 28-in-1 Stateless AI Utility Hub (with category radio buttons and feature select box)"""
 
     st.title("💡 28-in-1 Stateless AI Utility Hub")
-    st.caption("Select a category and feature, then provide your input.")
+    st.caption("Select a category, then choose a feature, and provide your input.")
     st.markdown("---")
 
     if not can_interact:
@@ -400,32 +404,47 @@ def render_utility_hub_content(can_interact, universal_error_msg):
     # Check if interaction is possible specifically for utility data saves
     can_save_utility, utility_error_msg, utility_limit = check_storage_limit(st.session_state.storage, 'utility_save')
 
-    col_category, col_feature = st.columns(2)
+    # --- CATEGORY SELECTION: Now uses st.radio ---
+    category_options = list(UTILITY_CATEGORIES.keys())
 
-    with col_category:
-        selected_category = st.selectbox(
-            "Select a Category",
-            list(UTILITY_CATEGORIES.keys()),
-            key="28_in_1_category_selector",
-            index=list(UTILITY_CATEGORIES.keys()).index(st.session_state['selected_28_in_1_category'])
-            if st.session_state['selected_28_in_1_category'] in UTILITY_CATEGORIES else 0
-        )
+    # Ensure the session state value is valid, default to the first if not
+    if st.session_state['selected_28_in_1_category'] not in category_options:
+         st.session_state['selected_28_in_1_category'] = category_options[0]
+
+    st.subheader("Select a Category:")
+    selected_category = st.radio(
+        "Category", # Label is hidden as we use st.subheader above
+        category_options,
+        key="28_in_1_category_radio",
+        index=category_options.index(st.session_state['selected_28_in_1_category']),
+        horizontal=True, # Display options horizontally for a clean look
+        label_visibility="collapsed" # Hide the default label to use the subheader
+    )
     st.session_state['selected_28_in_1_category'] = selected_category
 
+    st.markdown("---")
+
+    # --- FEATURE SELECTION: Stays as st.selectbox, dependent on Category ---
+    col_feature, _ = st.columns([1, 2])
     with col_feature:
         # Get features for the selected category
         features_in_category = UTILITY_CATEGORIES[selected_category]
+
+        # Ensure the selected feature is valid for the new category, otherwise reset to the first one
+        if st.session_state['selected_28_in_1_feature'] not in features_in_category:
+            st.session_state['selected_28_in_1_feature'] = list(features_in_category.keys())[0]
+
         selected_feature = st.selectbox(
-            "Select a Feature",
+            "Select a Feature/Module:",
             list(features_in_category.keys()),
             key="28_in_1_feature_selector",
             index=list(features_in_category.keys()).index(st.session_state['selected_28_in_1_feature'])
-            if st.session_state['selected_28_in_1_feature'] in features_in_category else 0
         )
     st.session_state['selected_28_in_1_feature'] = selected_feature
 
     st.markdown("---")
 
+    # The rest of the function remains the same (Input/Image/Generate button/Output display)
     user_input_placeholder = "Enter your request here..."
     if selected_feature == "9. Image-to-Calorie Estimate":
         user_input_placeholder = "Describe the food in the image (optional)."
@@ -467,8 +486,8 @@ def render_utility_hub_content(can_interact, universal_error_msg):
 
                     st.session_state['28_in_1_output'] = ai_output
 
-                    # Save the interaction as a 'utility_db' item
-                    save_size = calculate_mock_save_size(ai_output + user_input) # Count both input and output size
+                    # Save the interaction as a 'utility_db' item (Mock save logic)
+                    save_size = calculate_mock_save_size(ai_output + user_input)
                     new_item = {
                         "name": f"{selected_feature} ({user_input[:50]}...)" if len(user_input) > 50 else f"{selected_feature} ({user_input})",
                         "category": selected_category,
@@ -498,7 +517,7 @@ def render_utility_hub_content(can_interact, universal_error_msg):
 
     st.markdown("---")
     st.info(f"Storage Status: Used {st.session_state.storage.get('utility_used_mb', 0.0):.2f} MB of {utility_limit:.0f} MB in 28-in-1 Utility Data.")
-    
+
     # Back to Dashboard button
     if st.button("← Back to Dashboard", key="utility_back_btn"):
         st.session_state['app_mode'] = "Dashboard"
