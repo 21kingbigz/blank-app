@@ -263,7 +263,7 @@ UTILITY_CATEGORIES = {
     "Cognitive & Productivity": {
         "1. Daily Schedule Optimizer": daily_schedule_optimizer,
         "2. Task Deconstruction Expert": task_deconstruction_expert,
-        "3. 'Get Unstuck" Prompter": get_unstuck_prompter,
+        "3. 'Get Unstuck' Prompter": get_unstuck_prompter, # <--- FIXED HERE
         "4. Habit Breaker": habit_breaker,
         "5. One-Sentence Summarizer": one_sentence_summarizer,
     },
@@ -310,7 +310,7 @@ UTILITY_CATEGORIES = {
 FEATURE_EXAMPLES = {
     "1. Daily Schedule Optimizer": "I have 4 hours for work, 1 hour for lunch, and need to read a report.",
     "2. Task Deconstruction Expert": "My goal is to 'start a small online business'.",
-    "3. 'Get Unstuck' Prompter": "I can't figure out the opening paragraph for my essay.",
+    "3. 'Get Unstuck' Prompter": "I can't figure out the opening paragraph for my essay.", # <--- FIXED HERE
     "4. Habit Breaker": "I want to stop checking social media first thing in the morning.",
     "5. One-Sentence Summarizer": "The theory of relativity, developed by Albert Einstein, fundamentally changed physics...",
     "6. Tip & Split Calculator": "Bill: $75.50, Tip: 20%, People: 4",
