@@ -41,19 +41,61 @@ try:
 except Exception:
     client = None
 
-try:
-    with open("system_instruction.txt", "r") as f:
-        SYSTEM_INSTRUCTION = f.read()
-except FileNotFoundError:
-    # NOTE: This is the system instruction required for the 28-in-1 mode
-    SYSTEM_INSTRUCTION = """
+# --- SYSTEM INSTRUCTION CONTENT (Hardcoded as per request, linked to previous system_instruction.txt content) ---
+SYSTEM_INSTRUCTION = """
 You are the "28-in-1 Stateless AI Utility Hub," a multi-modal tool built to handle 28 distinct tasks. Your primary directive is to immediately identify the user's intent and execute the exact, single function required, without engaging in conversation, retaining memory, or asking follow-up questions. Your response MUST be the direct result of the selected function.
 
 **ROUTING DIRECTIVE:**
 1. Analyze the User Input: Determine which of the 28 numbered features the user is requesting.
 2. Assume the Role: Adopt the corresponding expert persona (e.g., Mathematics Expert AI) for features 22-28.
 3. Execute & Output: Provide the immediate, concise, and definitive result. If the request is ambiguous, default to Feature #15 (Email/Text Reply Generator).
+
+**THE 28 FUNCTION LIST:**
+### I. Cognitive & Productivity (5)
+1. Daily Schedule Optimizer: (Input: Tasks, time) Output: Time-blocked schedule.
+2. Task Deconstruction Expert: (Input: Vague goal) Output: 3-5 concrete steps.
+3. "Get Unstuck" Prompter: (Input: Problem) Output: 1 critical next-step question.
+4. Habit Breaker: (Input: Bad habit) Output: 3 environmental changes for friction.
+5. One-Sentence Summarizer: (Input: Long text) Output: Core idea in 1 sentence.
+
+### II. Finance & Math (3)
+6. Tip & Split Calculator: (Input: Bill, tip %, people) Output: Per-person cost.
+7. Unit Converter: (Input: Value, units) Output: Precise conversion result.
+8. Priority Spending Advisor: (Input: Goal, purchase) Output: Conflict analysis.
+
+### III. Health & Multi-Modal (3)
+9. Image-to-Calorie Estimate: (Input: Image of food) Output: A detailed nutritional analysis. You MUST break down the response into three sections: **A) Portion Estimate**, **B) Itemized Calorie Breakdown** (e.g., 4 oz chicken, 1 cup rice), and **C) Final Total**. Justify your portion sizes based on the visual data. **(Requires image input.)**
+10. Recipe Improver: (Input: 3-5 ingredients) Output: Simple recipe instructions.
+11. Symptom Clarifier: (Input: Non-emergency symptoms) Output: 3 plausible benign causes.
+
+### IV. Communication & Writing (4)
+12. Tone Checker & Rewriter: (Input: Text, desired tone) Output: Rewritten text.
+13. Contextual Translator: (Input: Phrase, context) Output: Translation that matches the social register.
+14. Metaphor Machine: (Input: Topic) Output: 3 creative analogies.
+15. Email/Text Reply Generator: (Input: Message, points) Output: Drafted concise reply.
+
+### V. Creative & Entertainment (3)
+16. Idea Generator/Constraint Solver: (Input: Idea type, constraints) Output: List of unique options.
+17. Random Fact Generator: (Input: Category) Output: 1 surprising, verified fact.
+18. "What If" Scenario Planner": (Input: Hypothetical) Output: 3 pros and 3 cons analysis.
+
+### VI. Tech & Logic (2)
+19. Concept Simplifier: (Input: Complex topic) Output: Explanation using simple analogy.
+20. Code Explainer: (Input: Code snippet) Output: Plain-language explanation of function.
+
+### VII. Travel & Utility (1)
+21. Packing List Generator: (Input: Trip details) Output: Categorized checklist.
+
+### VIII. School Answers AI (8 Consolidated Experts)
+22. Mathematics Expert AI: Answers, solves, and explains any problem or concept in the subject.
+23. English & Literature Expert AI: Critiques writing, analyzes literature, and explains grammar, rhetoric, and composition.
+24. History & Social Studies Expert AI: Provides comprehensive answers, context, and analysis for any event, figure, or social science theory.
+25. Foreign Language Expert AI: Provides translations, conjugation, cultural context, vocabulary, and grammar.
+26. Science Expert AI: Explains concepts, analyzes data, and answers questions across Physics, Chemistry, Biology, and Earth Science.
+27. Vocational & Applied Expert AI: Acts as an expert for applied subjects like Computer Science (coding help), Business, Economics, and Trade skills.
+28. Grade Calculator: (Input: Scores, weights) Output: Calculated final grade.
 """
+
 
 TIER_PRICES = {
     "Free Tier": "Free", "28/1 Pro": "$7/month", "Teacher Pro": "$7/month",
@@ -73,7 +115,7 @@ st.markdown(
         margin-top: -15px;
         margin-bottom: 20px;
     }
-    /* Ensure vertical radio buttons are not forced horizontal by previous CSS */
+    /* Custom styling for vertical radio buttons (categories) */
     .stRadio {
         display: flex;
         flex-direction: column;
@@ -446,11 +488,62 @@ def render_utility_hub_content(can_interact, universal_error_msg):
         )
         st.session_state['selected_28_in_1_feature'] = selected_feature
 
+        # --- Dynamic Placeholder Examples for each of the 28 features ---
         user_input_placeholder = "Enter your request here..."
-        if selected_feature == "9. Image-to-Calorie Estimate":
-            user_input_placeholder = "Describe the food in the image (optional)."
+        if selected_feature == "1. Daily Schedule Optimizer":
+            user_input_placeholder = "Tasks: client meeting, report writing, gym. Time: 9 AM - 5 PM"
+        elif selected_feature == "2. Task Deconstruction Expert":
+            user_input_placeholder = "Goal: Write a novel."
+        elif selected_feature == "3. 'Get Unstuck' Prompter":
+            user_input_placeholder = "Problem: I can't start my essay."
+        elif selected_feature == "4. Habit Breaker":
+            user_input_placeholder = "Bad habit: Excessive phone scrolling before bed."
+        elif selected_feature == "5. One-Sentence Summarizer":
+            user_input_placeholder = "The cat, an ancient creature with wisdom flowing through its whiskers like a silent river, surveyed its domain from atop the sun-drenched windowsill, contemplating the mysteries of the dust motes dancing in the golden light."
         elif selected_feature == "6. Tip & Split Calculator":
-            user_input_placeholder = "e.g., Bill: $50, Tip: 18%, People: 3"
+            user_input_placeholder = "Bill: $75.50, Tip: 20%, People: 4"
+        elif selected_feature == "7. Unit Converter":
+            user_input_placeholder = "Convert 500 grams to ounces."
+        elif selected_feature == "8. Priority Spending Advisor":
+            user_input_placeholder = "Goal: Save for a down payment. Purchase: New gaming PC."
+        elif selected_feature == "9. Image-to-Calorie Estimate":
+            user_input_placeholder = "Describe the food in the image (optional). For example: A plate of pasta with red sauce and some meatballs."
+        elif selected_feature == "10. Recipe Improver":
+            user_input_placeholder = "Ingredients: Chicken breast, spinach, garlic, pasta, tomatoes."
+        elif selected_feature == "11. Symptom Clarifier":
+            user_input_placeholder = "Symptoms: Persistent mild headache, occasional dizziness, slight fatigue."
+        elif selected_feature == "12. Tone Checker & Rewriter":
+            user_input_placeholder = "Text: 'Hey, I need that report ASAP!' Desired tone: Polite and professional."
+        elif selected_feature == "13. Contextual Translator":
+            user_input_placeholder = "Phrase: 'How are you?' Context: Speaking to a new acquaintance in French."
+        elif selected_feature == "14. Metaphor Machine":
+            user_input_placeholder = "Topic: Artificial Intelligence."
+        elif selected_feature == "15. Email/Text Reply Generator":
+            user_input_placeholder = "Message: 'Can you work late tonight?' Points to include: Already have plans, can start early tomorrow."
+        elif selected_feature == "16. Idea Generator/Constraint Solver":
+            user_input_placeholder = "Idea type: New app feature. Constraints: Must increase user engagement, easy to implement."
+        elif selected_feature == "17. Random Fact Generator":
+            user_input_placeholder = "Category: Animals"
+        elif selected_feature == "18. 'What If' Scenario Planner":
+            user_input_placeholder = "Hypothetical: What if dinosaurs never went extinct?"
+        elif selected_feature == "19. Concept Simplifier":
+            user_input_placeholder = "Complex topic: Blockchain technology."
+        elif selected_feature == "20. Code Explainer":
+            user_input_placeholder = "Code snippet: `def factorial(n): if n == 0: return 1 else: return n * factorial(n-1)`"
+        elif selected_feature == "21. Packing List Generator":
+            user_input_placeholder = "Trip details: 5-day business trip to London in winter."
+        elif selected_feature == "22. Mathematics Expert AI":
+            user_input_placeholder = "Problem: Solve for x: 3x^2 - 7x + 2 = 0"
+        elif selected_feature == "23. English & Literature Expert AI":
+            user_input_placeholder = "Query: Analyze the theme of isolation in 'Frankenstein'."
+        elif selected_feature == "24. History & Social Studies Expert AI":
+            user_input_placeholder = "Query: Explain the causes and effects of the Great Depression."
+        elif selected_feature == "25. Foreign Language Expert AI":
+            user_input_placeholder = "Query: Translate 'I love to learn new languages' into Spanish and explain the grammar."
+        elif selected_feature == "26. Science Expert AI":
+            user_input_placeholder = "Query: Describe the process of cellular respiration."
+        elif selected_feature == "27. Vocational & Applied Expert AI":
+            user_input_placeholder = "Query: Explain the concept of 'agile methodology' in software development."
         elif selected_feature == "28. Grade Calculator":
             user_input_placeholder = "e.g., Quiz 80 (20%), Midterm 75 (30%), Final 90 (50%)"
 
@@ -610,18 +703,177 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
 
 
         if generate_button and topic:
-            full_prompt = (
-                f"Generate a detailed, ready-to-use {resource_type} for a {grade}th grade class "
-                f"on the topic of '{topic}'. Specific requirements: {details}"
-            )
+            # Dynamically build prompt based on the detailed directives in SYSTEM_INSTRUCTION
+            if resource_type == "Lesson Plan":
+                full_prompt = (
+                    f"Generate a detailed Lesson Plan for a {grade}th grade class on the topic of '{topic}'. "
+                    "The output MUST follow this structure: A) Objective, B) Materials, C) Procedure (Warm-up, Main Activity, Wrap-up), and D) Assessment Strategy. "
+                    f"Specific requirements: {details}"
+                )
+            elif resource_type == "Unit Outline":
+                 full_prompt = (
+                    f"Generate a detailed Unit Outline for a {grade}th grade class on the topic of '{topic}'. "
+                    "The output MUST include four sections: A) Unit Objectives, B) Key Topics/Subtopics, C) Suggested Activities (3-5), and D) Assessment Overview. "
+                    f"Specific requirements: {details}"
+                )
+            elif resource_type == "Vocabulary List":
+                 full_prompt = (
+                    f"Generate a Vocabulary List for a {grade}th grade class on the topic of '{topic}'. "
+                    "The output MUST be a list of terms, each entry containing: A) Term, B) Concise Definition, and C) Example Sentence relevant to the topic. "
+                    f"Specific requirements: {details}"
+                )
+            elif resource_type == "Worksheet":
+                 full_prompt = (
+                    f"Generate a Worksheet for a {grade}th grade class on the topic of '{topic}'. "
+                    "The output MUST be a numbered list of 10 varied questions (e.g., matching, short answer, fill-in-the-blank) followed by a separate Answer Key. "
+                    f"Specific requirements: {details}"
+                )
+            elif resource_type == "Quiz":
+                 full_prompt = (
+                    f"Generate a 5-question Multiple Choice Quiz for a {grade}th grade class on the topic of '{topic}'. "
+                    "Each question MUST have four options, followed by a separate Answer Key. "
+                    f"Specific requirements: {details}"
+                )
+            elif resource_type == "Test":
+                 full_prompt = (
+                    f"Generate a Test for a {grade}th grade class on the topic of '{topic}'. "
+                    "The output MUST be organized into two main sections: A) Multiple Choice (15 Questions) and B) Short/Long Answer (4 Questions), followed by a detailed Answer Key/Rubric. "
+                    f"Specific requirements: {details}"
+                )
+            else:
+                full_prompt = (
+                    f"Generate a detailed, ready-to-use {resource_type} for a {grade}th grade class "
+                    f"on the topic of '{topic}'. Specific requirements: {details}"
+                )
+
 
             with st.spinner(f"Generating {resource_type} for {topic}..."):
                 # NOTE: Using a generic AI run for the Teacher Aid mode
                 # For teacher aid, we do not need the specific 28-in-1 function mapping
                 # Assuming a separate, generic LLM call for this part of the app.
                 # If a real client exists, this would be client.models.generate_content(...)
-                # For now, it's a mocked response.
-                ai_output = f"**Generated {resource_type} for {topic} (Grade {grade})**\n\n{details}\n\n[...detailed content for the resource...]"
+                # For now, it's a mocked response that tries to mimic the structure.
+
+                # Mocked output that *attempts* to follow the structure based on resource_type
+                if resource_type == "Lesson Plan":
+                    ai_output = f"""
+**Generated Lesson Plan for {topic} (Grade {grade})**
+
+**A) Objective:** Students will be able to describe the main processes involved in {topic} and identify key components.
+**B) Materials:** Whiteboard, markers, handouts, internet access (optional for videos).
+**C) Procedure:**
+    * **Warm-up (5 min):** Ask students what they already know about {topic}.
+    * **Main Activity (30 min):** Lecture with interactive Q&A, group discussion on specific aspects of {topic}.
+    * **Wrap-up (10 min):** Quick quiz or exit ticket on key vocabulary.
+**D) Assessment Strategy:** Observe student participation, review quiz/exit ticket responses.
+"""
+                elif resource_type == "Unit Outline":
+                    ai_output = f"""
+**Generated Unit Outline for {topic} (Grade {grade})**
+
+**A) Unit Objectives:**
+    1. Students will comprehend the historical context of {topic}.
+    2. Students will analyze the impact of {topic} on society.
+    3. Students will evaluate primary and secondary sources related to {topic}.
+**B) Key Topics/Subtopics:**
+    * Introduction to {topic}
+    * Major events and figures
+    * Long-term consequences
+**C) Suggested Activities (3-5):**
+    1. Documentary viewing and discussion.
+    2. Group research project on a specific aspect.
+    3. Debate on a controversial element of {topic}.
+**D) Assessment Overview:** Essay (20%), Project (30%), Final Exam (50%).
+"""
+                elif resource_type == "Vocabulary List":
+                    ai_output = f"""
+**Generated Vocabulary List for {topic} (Grade {grade})**
+
+**A) Term:** Photosynthesis
+**B) Concise Definition:** The process by which green plants and some other organisms use sunlight to synthesize foods with the aid of chlorophyll.
+**C) Example Sentence:** During photosynthesis, plants absorb carbon dioxide and release oxygen.
+
+**A) Term:** Chlorophyll
+**B) Concise Definition:** A green pigment present in all green plants and in cyanobacteria, responsible for the absorption of light to provide energy for photosynthesis.
+**C) Example Sentence:** The vibrant green leaves owe their color to chlorophyll.
+"""
+                elif resource_type == "Worksheet":
+                    ai_output = f"""
+**Generated Worksheet for {topic} (Grade {grade})**
+
+**Questions:**
+1. Short Answer: Briefly explain the main event that triggered {topic}.
+2. Fill-in-the-blank: The primary cause of {topic} was ______.
+3. Matching: Match the following historical figures to their roles in {topic}.
+4. True/False: (Statement about {topic})
+5. Multiple Choice: Which of the following was a major consequence of {topic}?
+6. ... (5 more varied questions) ...
+
+**Answer Key:**
+1. [Answer 1]
+2. [Answer 2]
+3. [Answer 3]
+4. [Answer 4]
+5. [Answer 5]
+6. ... (Answers for 5 more questions) ...
+"""
+                elif resource_type == "Quiz":
+                    ai_output = f"""
+**Generated Quiz for {topic} (Grade {grade})**
+
+**1. Which of the following is considered a primary cause of {topic}?**
+    a) Option A
+    b) Option B
+    c) Option C
+    d) Option D
+
+**2. Who was a key figure during {topic}?**
+    a) Option A
+    b) Option B
+    c) Option C
+    d) Option D
+
+**3. ... (3 more multiple choice questions) ...**
+
+**Answer Key:**
+1. Correct Answer: [a/b/c/d]
+2. Correct Answer: [a/b/c/d]
+3. Correct Answer: [a/b/c/d]
+4. Correct Answer: [a/b/c/d]
+5. Correct Answer: [a/b/c/d]
+"""
+                elif resource_type == "Test":
+                    ai_output = f"""
+**Generated Test for {topic} (Grade {grade})**
+
+**A) Multiple Choice (15 Questions):**
+1. Question 1... (a, b, c, d)
+2. Question 2... (a, b, c, d)
+...
+15. Question 15... (a, b, c, d)
+
+**B) Short/Long Answer (4 Questions):**
+1. Explain the immediate and long-term consequences of {topic}.
+2. Discuss the role of [Specific Figure] in {topic}.
+3. Compare and contrast [Concept A] and [Concept B] as they relate to {topic}.
+4. Evaluate the effectiveness of [Specific Action] during {topic}.
+
+**Answer Key/Rubric:**
+**Multiple Choice:**
+1. [Answer]
+2. [Answer]
+...
+15. [Answer]
+
+**Short/Long Answer:**
+1. [Detailed Rubric/Expected Answer for Q1]
+2. [Detailed Rubric/Expected Answer for Q2]
+3. [Detailed Rubric/Expected Answer for Q3]
+4. [Detailed Rubric/Expected Answer for Q4]
+"""
+                else:
+                    ai_output = f"**Generated {resource_type} for {topic} (Grade {grade})**\n\n{details}\n\n[...detailed content for the resource based on '{full_prompt}'...]"
+
 
             st.session_state['teacher_gen_output'] = ai_output
             st.session_state['teacher_gen_resource_type'] = resource_type
@@ -633,281 +885,4 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
             st.subheader("Generated Resource")
             st.markdown(current_output)
 
-            if st.button("Save Resource", key="save_teacher_btn", disabled=not can_save_teacher):
-
-                can_save, error_msg, _ = check_storage_limit(st.session_state.storage, 'teacher_save')
-                if not can_save:
-                    st.error(error_msg)
-                    st.rerun()
-
-                save_size = calculate_mock_save_size(current_output)
-                resource_key = st.session_state['teacher_gen_resource_type'].lower().replace(" ", "")
-
-                resource_db_key = {
-                    'lessonplan': 'lessons', 'unitoutline': 'units', 'vocabularylist': 'vocab',
-                    'worksheet': 'worksheets', 'quiz': 'quizzes', 'test': 'tests'
-                }.get(resource_key, 'lessons')
-
-                new_resource = {
-                    "name": f"{st.session_state['teacher_gen_topic']} - {st.session_state['teacher_gen_resource_type']}",
-                    "topic": st.session_state['teacher_gen_topic'],
-                    "content": current_output,
-                    "size_mb": save_size
-                }
-                st.session_state.teacher_db[resource_db_key].append(new_resource)
-                save_db_file(st.session_state.teacher_db, get_file_path("teacher_data_", st.session_state.current_user))
-
-                st.session_state.storage['teacher_used_mb'] += save_size
-                st.session_state.storage['total_used_mb'] += save_size
-                save_storage_tracker(st.session_state.storage, st.session_state.current_user)
-
-                st.success(f"Resource saved! Used {save_size:.1f} MB.")
-                st.rerun()
-
-
-def render_usage_dashboard():
-    """Renders the main landing page structure with functional storage graphs."""
-
-    st.title("📊 Usage Dashboard")
-    st.caption("Monitor your storage usage and plan benefits.")
-    st.markdown("---")
-
-    storage = st.session_state.storage
-
-    current_tier = storage['tier']
-
-    # --- Prepare Data for Charts ---
-    total_used = storage['total_used_mb']
-
-    if current_tier == 'Unlimited':
-        used_percent = 0
-        remaining_mb_display = "Unlimited"
-        total_limit_display = "Unlimited"
-        universal_limit_for_calc = 10000.0
-    else:
-        if current_tier == 'Universal Pro':
-            limit = TIER_LIMITS['Universal Pro']
-        elif current_tier in ['28/1 Pro', 'Teacher Pro', 'Free Tier']:
-            limit = TIER_LIMITS['Free Tier']
-        else:
-            limit = TIER_LIMITS['Free Tier']
-
-        universal_limit_for_calc = limit
-        used_percent = min(100, (total_used / universal_limit_for_calc) * 100)
-        remaining_mb_display = f"{max(0, universal_limit_for_calc - total_used):.2f}"
-        total_limit_display = f"{universal_limit_for_calc}"
-
-    used_mb_display = f"{total_used:.2f}"
-
-    data_area = pd.DataFrame({
-        'Category': ['28/1 Utilities', 'Teacher Aid', 'General App Data'],
-        'Used (MB)': [
-            storage['utility_used_mb'],
-            storage['teacher_used_mb'],
-            storage['general_used_mb']
-        ]
-    }).set_index('Category')
-
-    all_data_list = []
-    # Utility DB (old structure - kept for compatibility)
-    if st.session_state.utility_db and 'saved_items' in st.session_state.utility_db:
-        for i, item in enumerate(st.session_state.utility_db['saved_items']):
-            all_data_list.append({"name": item.get('name', f"Utility Item #{i+1}"), "size_mb": item.get('size_mb', 0.0), "category": f"28/1 ({item.get('category', 'N/A')})", "db_key": "utility_db", "index": i})
-
-    # Teacher DB
-    if st.session_state.teacher_db:
-        for db_key, resources in st.session_state.teacher_db.items():
-            for i, resource in enumerate(resources):
-                all_data_list.append({"name": resource.get('name', f"{db_key.title()} #{i+1}"), "size_mb": resource.get('size_mb', 0.0), "category": f"Teacher ({db_key.title()})", "db_key": db_key, "index": i})
-
-    all_data_list_sorted = sorted(all_data_list, key=lambda x: x['size_mb'], reverse=True)
-
-
-    # --- MAIN STRUCTURE ---
-    col1, col2 = st.columns(2)
-
-    with col1:
-        with st.container(border=True):
-            st.markdown("##### 🌍 Storage Used by Area")
-            st.bar_chart(data_area, use_container_width=True, height=250)
-
-    with col2:
-        with st.container(border=True):
-            st.markdown("##### 💾 Universal Storage Overview")
-
-            col_metric, col_donut = st.columns([0.4, 0.6])
-
-            with col_metric:
-                st.metric("Total Used", f"{used_mb_display} MB")
-                st.metric("Total Limit", f"{total_limit_display} MB")
-
-            with col_donut:
-                if storage['tier'] == 'Unlimited':
-                    st.success("You have **Unlimited Storage**! No limits to track.")
-                    st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        f"""
-                        <div style="display: flex; align-items: center; justify-content: center; height: 100px;">
-                            <div style="width: 100px; height: 100px; position: relative;">
-                                <div style="width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(
-                                    #2D6BBE 0% {used_percent}%,
-                                    #E0E0E0 {used_percent}% 100%
-                                ); position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; font-size: 1.2em;">
-                                    <div style="width: 60%; height: 60%; border-radius: 50%; background: white; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; font-size: 1.2em;">
-                                        {round(used_percent)}%
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    st.markdown(f"<p style='text-align: center; font-size: 0.9em; color: #888;'>Remaining: **{remaining_mb_display} MB**</p>", unsafe_allow_html=True)
-
-
-    col3, col4 = st.columns(2)
-
-    with col3:
-        with st.container(border=True):
-            st.markdown("##### 🗑️ Top Storage Consumers (Click to Delete)")
-            if not all_data_list_sorted:
-                st.info("No saved data found.")
-            else:
-                st.markdown("---")
-                for i, item in enumerate(all_data_list_sorted[:10]):
-                    col_item, col_size, col_delete = st.columns([0.5, 0.25, 0.25])
-
-                    col_item.caption(f"{item['category']}")
-                    col_item.markdown(f"**{item['name']}**")
-                    col_size.write(f"{item['size_mb']:.1f} MB")
-
-                    if col_delete.button("Delete", key=f"cleanup_del_{item['db_key']}_{item['index']}_{i}", use_container_width=True):
-                        deleted_size = item['size_mb']
-                        user_email = st.session_state.current_user
-
-                        # Reload DBs to ensure consistency before deletion
-                        st.session_state['utility_db'] = load_db_file(get_file_path("utility_data_", user_email), UTILITY_DB_INITIAL)
-                        st.session_state['teacher_db'] = load_db_file(get_file_path("teacher_data_", user_email), TEACHER_DB_INITIAL)
-
-                        # Perform deletion based on DB key
-                        if item['db_key'] == 'utility_db':
-                            if item['index'] < len(st.session_state.utility_db.get('saved_items', [])):
-                                st.session_state.utility_db['saved_items'].pop(item['index'])
-                                save_db_file(st.session_state.utility_db, get_file_path("utility_data_", user_email))
-                                st.session_state.storage['utility_used_mb'] = max(0.0, st.session_state.storage['utility_used_mb'] - deleted_size)
-                            else:
-                                st.error(f"Error: Utility item index {item['index']} out of range.")
-
-                        else: # Teacher DB deletion
-                            if item['db_key'] in st.session_state.teacher_db and item['index'] < len(st.session_state.teacher_db[item['db_key']]):
-                                st.session_state.teacher_db[item['db_key']].pop(item['index'])
-                                save_db_file(st.session_state.teacher_db, get_file_path("teacher_data_", user_email))
-                                st.session_state.storage['teacher_used_mb'] = max(0.0, st.session_state.storage['teacher_used_mb'] - deleted_size)
-                            else:
-                                st.error(f"Error: Teacher item index {item['index']} out of range for key {item['db_key']}.")
-
-                        st.session_state.storage['total_used_mb'] = max(0.0, st.session_state.storage['total_used_mb'] - deleted_size)
-                        save_storage_tracker(st.session_state.storage, user_email)
-                        st.toast(f"🗑️ Deleted {item['name']}!")
-                        st.rerun()
-
-    with col4:
-        with st.container(border=True):
-            st.markdown("##### 📝 Plan Benefits Overview")
-            st.markdown("---")
-
-            PLAN_EXPLANATIONS = {
-                "Free Tier": "500 MB **Universal Storage** across all features.",
-                "28/1 Pro": "3 GB **Dedicated Storage** for 28/1 Utilities (Free Tier for Teacher Aid and General Data).",
-                "Teacher Pro": "3 GB **Dedicated Storage** for Teacher Aid (Free Tier for 28/1 Utilities and General Data).",
-                "Universal Pro": "5 GB **Total Storage** for all tools combined.",
-                "Unlimited": "Truly **Unlimited Storage** and all features enabled."
-            }
-
-            for tier, benefit in PLAN_EXPLANATIONS.items():
-                st.info(f"**{tier}:** {benefit}")
-
-
-def render_plan_manager():
-    st.title("💳 Plan Manager")
-    st.caption("Upgrade or manage your subscription plan.")
-    st.markdown("---")
-
-    current_tier = st.session_state.storage['tier']
-
-    st.subheader(f"Your Current Plan: **{current_tier}**")
-    st.markdown(f"**Monthly Price:** {TIER_PRICES.get(current_tier, 'N/A')}")
-    st.markdown("---")
-
-    st.subheader("Upgrade Options")
-
-    tier_order = ["Free Tier", "28/1 Pro", "Teacher Pro", "Universal Pro", "Unlimited"]
-
-    for i, tier in enumerate(tier_order):
-        price = TIER_PRICES[tier]
-        limit_mb = TIER_LIMITS.get(tier, 0)
-
-        if tier == 'Unlimited':
-            limit_display = "Truly Unlimited Storage"
-            benefit_detail = "All features enabled with no storage limits."
-        else:
-            limit_display = f"{limit_mb} MB"
-            benefit_detail = f"Dedicated storage for {tier.split(' ')[0]} features."
-
-        is_current = tier == current_tier
-
-        with st.expander(f"**{tier}** - {price} {'(Current Plan)' if is_current else ''}", expanded=True):
-
-            st.markdown(f"**Storage Limit:** *{limit_display}*")
-            st.markdown(f"**Key Benefit:** {benefit_detail}")
-
-            if is_current:
-                st.success("This is your active plan.")
-            else:
-                st.button("Select Plan", key=f"select_plan_{tier}", disabled=True, help="Billing integration coming soon.")
-
-
-def render_data_cleanup():
-    st.title("🧹 Data Clean Up")
-    st.caption("Review your saved data items for deletion.")
-    st.markdown("---")
-
-    st.info("To clean up specific data items and immediately reduce your storage usage, please navigate to the **📊 Usage Dashboard** and use the **🗑️ Top Storage Consumers** panel.")
-    st.markdown("This section will be used for future bulk deletion and automated cleanup tools.")
-
-# --- MAIN APP EXECUTION ---
-
-if not st.session_state.logged_in:
-    render_login_page()
-else:
-    render_main_navigation_sidebar()
-
-    current_tier = st.session_state.storage.get('tier', 'Free Tier')
-    universal_error_msg = None
-
-    # Check if interaction is universally possible based on total storage usage
-    if current_tier == "Unlimited":
-        can_interact_universally = True
-    else:
-        # check_storage_limit returns (False, error_msg, limit) if limit is reached
-        universal_limit_reached, universal_error_msg, _ = check_storage_limit(st.session_state.storage, 'universal')
-        can_interact_universally = not universal_limit_reached
-
-    st.markdown(f'<p class="tier-label">Current Plan: {current_tier}</p>', unsafe_allow_html=True)
-
-    if st.session_state['app_mode'] == "Usage Dashboard":
-        render_usage_dashboard()
-
-    elif st.session_state['app_mode'] == "Dashboard":
-        render_main_dashboard()
-
-    elif st.session_state['app_mode'] == "Teacher Aid":
-        render_teacher_aid_content(can_interact_universally, universal_error_msg)
-
-    elif st.session_state['app_mode'] == "28-in-1 Utilities":
-        render_utility_hub_content(can_interact_universally, universal_error_msg)
-
-    elif st.session_state['app_mode'] == "Plan Manager":
-        render_plan_manager()
-
-    elif st.session_state['app_mode'] == "Data Clean Up":
-        render_data_cleanup()
+            if st.button("Save Resource", key="save_teacher_btn", disabled=not can_
