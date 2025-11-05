@@ -129,9 +129,9 @@ def check_storage_limit(storage: Dict, action_area: str) -> Tuple[bool, Optional
     """Checks if the user can perform an action based on their tier and usage.
     Returns (can_proceed: bool, error_message: str, effective_limit_mb: float).
     """
-    current_tier = storage['tier']
+    current_tier = storage.get('tier') # Use .get for robustness
     
-    # FIX: Unlimited users ALWAYS pass the check, using a large limit for math.
+    # FINAL CRITICAL FIX: Unlimited users ALWAYS pass the check, regardless of how other values loaded.
     if current_tier == "Unlimited":
         return True, None, 100000000.0 
         
