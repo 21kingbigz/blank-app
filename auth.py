@@ -2,13 +2,12 @@ import streamlit as st
 import json
 import os
 import hashlib
-import pandas as pd # <-- NEW: Import pandas for CSV reading
+import pandas as pd
 from typing import Dict, Any
 
 # --- Constants ---
 USERS_FILE = "users.json"
-# Changed to CSV file
-PLAN_OVERRIDES_FILE = "plan_overrides.csv" # <-- CHANGED: Now looking for CSV
+PLAN_OVERRIDES_FILE = "plan_overrides.csv" # Looking for CSV
 
 # Mapping for abbreviations in the CSV to full tier names
 TIER_ABBREVIATION_MAP = {
@@ -16,7 +15,7 @@ TIER_ABBREVIATION_MAP = {
     "tpro": "Teacher Pro",
     "28pro": "28/1 Pro",
     "univ": "Universal Pro",
-    "free": "Free Tier" # Added for completeness
+    "free": "Free Tier"
 }
 
 # --- Helper Functions ---
@@ -44,21 +43,17 @@ def load_plan_overrides() -> Dict[str, str]:
     overrides = {}
     if os.path.exists(PLAN_OVERRIDES_FILE):
         try:
-            # Read CSV without header, assuming first column is email, second is tier abbreviation
             df = pd.read_csv(PLAN_OVERRIDES_FILE, header=None, names=['email', 'tier_abbr'])
             for _, row in df.iterrows():
                 email = str(row['email']).strip().lower()
                 tier_abbr = str(row['tier_abbr']).strip().lower()
-                
-                # Map abbreviation to full tier name
-                full_tier_name = TIER_ABBREVIATION_MAP.get(tier_abbr, "Free Tier") # Default to Free Tier if abbr not recognized
+                full_tier_name = TIER_ABBREVIATION_MAP.get(tier_abbr, "Free Tier")
                 overrides[email] = full_tier_name
-            st.success("Plan overrides loaded from CSV.", icon="✅") # Confirmation for debugging
+            st.toast("Plan overrides loaded from CSV.", icon="✅") 
         except Exception as e:
             st.error(f"Error loading plan overrides from CSV: {e}", icon="🚫")
             return {}
     return overrides
-
 
 # --- Authentication Functions ---
 def render_login_page():
@@ -83,21 +78,19 @@ def render_login_page():
                     st.session_state.logged_in = True
                     st.session_state.current_user = email
                     
-                    # Load plan overrides for the user
+                    # Load plan overrides here to ensure it's fresh
                     plan_overrides = load_plan_overrides()
                     
-                    # CRITICAL: Apply the override to the user's session state storage
-                    if 'storage' not in st.session_state:
-                        # Only import storage_logic here to avoid circular dependency
-                        from storage_logic import load_storage_tracker
-                        st.session_state['storage'] = load_storage_tracker(email)
+                    # Import storage_logic here to avoid circular dependency
+                    from storage_logic import load_storage_tracker
+                    st.session_state['storage'] = load_storage_tracker(email)
                     
+                    # Apply override or default tier from users.json
                     if email in plan_overrides:
                         new_tier = plan_overrides[email]
                         st.session_state['storage']['tier'] = new_tier
                         st.toast(f"Your plan has been overridden to: {new_tier}", icon="👑")
                     else:
-                        # Ensure the tier from users.json is loaded if no override
                         st.session_state['storage']['tier'] = users[email].get('tier', 'Free Tier')
                         
                     st.success("Logged in successfully!")
@@ -135,11 +128,9 @@ def render_login_page():
                         st.session_state.logged_in = True
                         st.session_state.current_user = new_email
                         
-                        # Ensure new user's storage is initialized and tier is set
-                        from storage_logic import load_storage_tracker # Import here
+                        from storage_logic import load_storage_tracker 
                         st.session_state['storage'] = load_storage_tracker(new_email)
                         
-                        # Check if a plan override exists even for a brand new user
                         plan_overrides = load_plan_overrides()
                         if new_email in plan_overrides:
                             st.session_state['storage']['tier'] = plan_overrides[new_email]
