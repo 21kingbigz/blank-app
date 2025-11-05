@@ -6,6 +6,7 @@ from io import BytesIO
 import json
 import re
 import random
+import traceback # Import traceback for detailed error logging
 
 # --- Ensure you have google-genai installed and configured if you want real AI calls ---
 from google import genai
@@ -33,39 +34,44 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# --- INITIALIZE GEMINI CLIENT (FINAL ROBUST FIX) ---
+# --- INITIALIZE GEMINI CLIENT (FINAL, MOST ROBUST FIX) ---
 client = None # Default to None
+api_key_source = "None"
 
 try:
     api_key = None
     
-    # 1. Prioritize Streamlit secrets, checking for key existence first
+    # CRITICAL FIX: Directly check st.secrets, which is the expected location.
     if "GEMINI_API_KEY" in st.secrets:
         api_key = st.secrets["GEMINI_API_KEY"]
-    else:
-        # 2. Fallback to os.getenv (for local env or other setups)
+        api_key_source = "Streamlit Secrets"
+    # Fallback, just in case
+    elif os.getenv("GEMINI_API_KEY"):
         api_key = os.getenv("GEMINI_API_KEY")
+        api_key_source = "Environment Variable"
 
     if api_key and api_key.strip():
-        # Force set environment variable and initialize
+        # Set the environment variable explicitly before configuring, even if from secrets
         os.environ["GEMINI_API_KEY"] = api_key 
         genai.configure(api_key=api_key)
         client = genai.GenerativeModel(MODEL)
-        # Success message in the sidebar for visible confirmation
-        st.sidebar.success("✅ Gemini Client Initialized.")
+        st.sidebar.success(f"✅ Gemini Client Initialized (Key from {api_key_source}).")
     else:
-        # Key not found or empty
-        # A warning will be displayed if the client is still None later in run_ai_generation
-        pass
-
+        st.sidebar.warning("⚠️ Gemini API Key not found or is empty. Running in MOCK MODE.")
+        
 except APIError as e:
     client = None
-    st.sidebar.error("❌ Gemini API Setup Error.")
+    st.sidebar.error(f"❌ Gemini API Setup Error: {e}")
+    st.sidebar.info("Please ensure your Gemini API Key is valid and active.")
 except Exception as e:
     client = None
-    st.sidebar.error("❌ Unexpected Setup Error.")
+    # This block now uses st.exception() to send the full Python traceback
+    # to the Streamlit app logs, and provides a generic error message in the app.
+    st.sidebar.error(f"❌ Unexpected Setup Error during Gemini client initialization. See Streamlit logs for details.")
+    # Log the full exception for remote debugging via Streamlit Cloud's logs
+    st.exception(e)
     
-# --- END INITIALIZE GEMINI CLIENT (FINAL ROBUST FIX) ---
+# --- END INITIALIZE GEMINI CLIENT ---
 
 
 # --- SYSTEM INSTRUCTION LOADING (RAW CONTENT) ---
