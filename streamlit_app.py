@@ -11,7 +11,7 @@ import random
 from google import genai
 from google.genai.errors import APIError
 
-# Import custom modules (Assume these files exist and are correct)
+# Import custom modules (Assuming these files exist and are correct)
 from auth import render_login_page, logout, load_users, load_plan_overrides
 from storage_logic import (
     load_storage_tracker, save_storage_tracker, check_storage_limit,
@@ -352,33 +352,48 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 
 # --- INITIALIZATION BLOCK ---
 
+# Check for 'logged_in' state
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
+# FIX: Ensure a user is logged in before attempting to access user-specific files or state
 if st.session_state.logged_in:
     user_email = st.session_state.current_user
 
-    user_profile = load_users().get(user_email, {})
+    # --- Load Storage Tracker (Ensures Tier/User data is consistent) ---
+    # We always reload the tracker on app start to ensure persistent data is loaded
+    storage_data = load_storage_tracker(user_email)
+    
+    # Apply plan override if available
+    plan_overrides = load_plan_overrides()
+    if user_email in plan_overrides:
+        storage_data['tier'] = plan_overrides[user_email]
 
-    if 'storage' not in st.session_state or st.session_state.storage.get('user_email') != user_email:
-        storage_data = load_storage_tracker(user_email)
+    storage_data['user_email'] = user_email
+    st.session_state['storage'] = storage_data
+    save_storage_tracker(st.session_state.storage, user_email)
 
-        # Apply plan override if available
-        plan_overrides = load_plan_overrides()
-        if user_email in plan_overrides:
-            storage_data['tier'] = plan_overrides[user_email]
 
-        # Ensure user_email is saved in storage for consistency
-        storage_data['user_email'] = user_email
-        st.session_state['storage'] = storage_data
-        save_storage_tracker(st.session_state.storage, user_email)
+    # --- CRITICAL FIX: Load DBs and ensure structure on every run ---
+    # This prevents the AttributeError from the previous error and ensures file persistence data is loaded.
+    
+    # 1. Utility DB
+    db_file_path_utility = get_file_path("utility_data_", user_email)
+    st.session_state['utility_db'] = load_db_file(db_file_path_utility, UTILITY_DB_INITIAL)
+    
+    # Safety Check: Guarantee 'history' is a list
+    if 'history' not in st.session_state['utility_db'] or not isinstance(st.session_state['utility_db']['history'], list):
+         st.session_state['utility_db']['history'] = UTILITY_DB_INITIAL.get('history', [])
+         
+    # 2. Teacher DB
+    db_file_path_teacher = get_file_path("teacher_data_", user_email)
+    st.session_state['teacher_db'] = load_db_file(db_file_path_teacher, TEACHER_DB_INITIAL)
 
-    # CRITICAL: Load DBs into session state upon login/initialization
-    if 'utility_db' not in st.session_state:
-        st.session_state['utility_db'] = load_db_file(get_file_path("utility_data_", user_email), UTILITY_DB_INITIAL)
-    if 'teacher_db' not in st.session_state:
-        st.session_state['teacher_db'] = load_db_file(get_file_path("teacher_data_", user_email), TEACHER_DB_INITIAL)
+    # Safety Check: Guarantee 'history' is a list
+    if 'history' not in st.session_state['teacher_db'] or not isinstance(st.session_state['teacher_db']['history'], list):
+         st.session_state['teacher_db']['history'] = TEACHER_DB_INITIAL.get('history', [])
 
+    # --- Standard App State Initialization ---
     if 'app_mode' not in st.session_state:
         st.session_state['app_mode'] = "Dashboard"
     if 'utility_view' not in st.session_state:
@@ -588,6 +603,7 @@ def render_utility_hub_content(can_interact, universal_error_msg):
                             "output_content": generated_output
                         }
                         
+                        # FIX APPLIED HERE: st.session_state.utility_db is guaranteed to have 'history' as a list now
                         st.session_state.utility_db['history'].append(data_to_save)
                         save_db_file(get_file_path("utility_data_", st.session_state.current_user), st.session_state.utility_db)
                         
