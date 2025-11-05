@@ -240,8 +240,7 @@ UTILITY_CATEGORIES = {
     "Creative & Entertainment": {
         "16. Idea Generator/Constraint Solver": idea_generator_constraint_solver,
         "17. Random Fact Generator": random_fact_generator,
-        "18. "What If" Scenario Planner": What if humanity successfully colonized Mars in the next 10 years?,    },
-    "Tech & Logic": {
+        '18. "What If" Scenario Planner': "What if humanity successfully colonized Mars in the next 10 years?",    "Tech & Logic": {
         "19. Concept Simplifier": concept_simplifier,
         "20. Code Explainer": code_explainer,
     },
