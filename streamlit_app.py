@@ -130,25 +130,20 @@ try:
         genai.configure(api_key=api_key) 
         
         # CRITICAL FIX: Pass system instruction at model instantiation.
-        # This works because SYSTEM_INSTRUCTION is now DEFINED above this block.
-if api_key and api_key.strip():
-        # Use the standard, modern configuration method
-        genai.configure(api_key=api_key) 
-        
-        # CRITICAL FIX: Pass system instruction at model instantiation.
-        # This works because SYSTEM_INSTRUCTION is now DEFINED above this block.
         client = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_INSTRUCTION) 
-        # Success message 'st.sidebar.success(...)' removed to display nothing on successful connection, as requested.
+        # Success message REMOVED as requested. Nothing is displayed on successful connection.
     else:
+        # Failure: Key not found or is empty
         st.sidebar.warning("⚠️ Gemini API Key not found or is empty. Running in MOCK MODE.")
         
 except APIError as e:
     client = None
+    # Failure: API connection error
     st.sidebar.error(f"❌ Gemini API Setup Error: {e}")
     st.sidebar.info("Please ensure your Gemini API Key is valid and active.")
 except Exception as e:
     client = None
-    # Log the full exception for remote debugging via Streamlit Cloud's logs
+    # Failure: Other unexpected error
     st.sidebar.error(f"❌ Unexpected Setup Error during Gemini client initialization. See Streamlit logs for details.")
     st.exception(e)
     
