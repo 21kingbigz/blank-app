@@ -110,6 +110,7 @@ st.markdown(
 
 # --- 1. THE 28 FUNCTION LIST (Internal Mapping for Mocking) ---
 # NOTE: Mock functions remain the same as previous iterations.
+# (Removed mock functions for brevity in this final response, assuming they were kept intact from previous steps)
 
 def daily_schedule_optimizer(tasks_time: str) -> str:
     return f"**Feature 1: Daily Schedule Optimizer**\nTime-blocked schedule for: {tasks_time}\n9:00 AM - Focus Work, 11:00 AM - Meeting, 1:00 PM - Deep Dive Task."
@@ -215,6 +216,7 @@ def grade_calculator(scores_weights: str) -> str:
         final_grade = (total_score / total_weight) if total_weight <= 1.0 else total_score
         return f"**Feature 28: Grade Calculator**\nBased on input, your final calculated grade is: **{final_grade:.2f}%**"
     return f"**Feature 28: Grade Calculator**\nInput data for calculation missing or invalid. Please provide Scores and Weights (e.g., Quiz 80 (20%))."
+
 
 # --- CATEGORY AND FEATURE MAPPING ---
 UTILITY_CATEGORIES = {
@@ -331,23 +333,22 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 
 ---
 
-### **A) Unit Objectives**
-1. Students will be able to identify the primary causes of the requested topic.
-2. Students will analyze conflicting viewpoints or components of the subject.
-3. Students will synthesize the information to form a cohesive conclusion.
+### **Unit Overview**
+1.  **Unit Objectives:** The unit aims to have students analyze the causes, consequences, and global impact of the requested topic.
+2.  **Key Topics/Subtopics:** Context, Major Events, Key Figures, and Long-Term Effects.
+3.  **Suggested Activities (3-5):** Primary source analysis, debate simulation, and concept mapping.
+4.  **Assessment Overview:** Final assessment includes a short-answer test and a presentation.
 
-### **B) Key Topics/Subtopics**
-* **Topic 1:** Historical/Foundational Context
-* **Topic 2:** Core Mechanics/Theories involved
-* **Topic 3:** Real-world Applications/Impact
+---
 
-### **C) Suggested Activities (3-5)**
-1.  **Warm-up (5 min):** Quick 2-question quiz on prerequisite knowledge.
-2.  **Main Activity (30 min):** Group debate on a core controversy related to the topic.
-3.  **Wrap-up (10 min):** Individual summary of three key takeaways posted to a digital board.
-
-### **D) Assessment Overview**
-A 10-question mixed-format (MC and Short Answer) quiz will be administered at the end of the lesson to test both recall and synthesis skills.
+### **Lesson Plan**
+* **Objective:** Students will be able to explain the core concepts of the requested topic in detail.
+* **Materials:** Whiteboard, markers, assigned reading material.
+* **Procedure:**
+    * **Warm-up (5 min):** Quick write on prior knowledge.
+    * **Main Activity (30 min):** Teacher-led discussion followed by small group problem-solving.
+    * **Wrap-up (10 min):** Exit ticket defining a key term.
+* **Assessment Strategy:** Observe participation and review exit tickets.
 """
         else:
             return "Error: Feature not found or not yet implemented."
@@ -427,8 +428,8 @@ if st.session_state.logged_in:
         st.session_state['28_in_1_output'] = ""
     if 'teacher_output' not in st.session_state:
         st.session_state['teacher_output'] = ""
-    if 'selected_teacher_tab' not in st.session_state: # New state for tab persistence
-        st.session_state['selected_teacher_tab'] = "Resource Generation"
+    if 'teacher_view' not in st.session_state: # Use this for teacher sub-view
+        st.session_state['teacher_view'] = 'generation' 
 
 
     if 'selected_28_in_1_category' not in st.session_state:
@@ -458,10 +459,9 @@ def render_main_navigation_sidebar():
         st.markdown(f"**Plan:** *{st.session_state.storage['tier']}*")
         st.markdown("---")
 
+        # CRITICAL FIX: Removed 28-in-1 and Teacher Aid from sidebar.
         menu_options = [
             {"label": "🖥️ Dashboard", "mode": "Dashboard"},
-            {"label": "💡 28-in-1 Utilities", "mode": "28-in-1 Utilities"},
-            {"label": "🎓 Teacher Aid", "mode": "Teacher Aid"},
             {"label": "📊 Usage Dashboard", "mode": "Usage Dashboard"},
             {"label": "💳 Plan Manager", "mode": "Plan Manager"},
             {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"},
@@ -494,6 +494,7 @@ def render_main_dashboard():
             st.markdown("Access curriculum planning tools, resource generation, and student management features.")
             if st.button("Launch Teacher Aid", key="launch_teacher_btn", use_container_width=True):
                 st.session_state['app_mode'] = "Teacher Aid"
+                st.session_state['teacher_view'] = 'generation' # Reset teacher view on launch
                 st.rerun()
 
     with col_utility:
@@ -623,27 +624,29 @@ def render_utility_hub_content(can_interact, universal_error_msg):
         st.markdown(st.session_state['28_in_1_output'])
 
 
-# --- TEACHER AID RENDERERS ---
+# --- TEACHER AID RENDERERS (FIXED TO SIMPLE TABS) ---
 def render_teacher_aid_content(can_interact, universal_error_msg):
     st.title("🎓 Teacher Aid Hub")
-    st.caption("Access curriculum planning tools. The AI follows strict formatting rules.")
+    st.caption("Generate specialized educational resources. Use the highlighted **Resource Tags** in your prompt.")
     st.markdown("---")
 
     if not can_interact:
         st.error(f"🛑 **ACCESS BLOCKED:** {universal_error_msg}. Cannot interact.")
         return
 
-    # Use Streamlit Tabs for the requested layout
-    tab_gen, tab_plan, tab_student = st.tabs(
-        ["📝 Resource Generation", "🗓️ Curriculum Planner (Stub)", "👥 Student Manager (Stub)"]
+    # Use Streamlit Tabs for the requested layout: Generation and History
+    tab_gen, tab_history = st.tabs(
+        ["📝 Resource Generation", "📚 Saved History"]
     )
 
     # Pass the save check results to the generation tab
     can_save_teacher, teacher_error_msg, teacher_limit = check_storage_limit(st.session_state.storage, 'teacher_save')
 
     with tab_gen:
-        st.subheader("Generate Specialized Resource")
-
+        st.subheader("Generate Resource")
+        
+        # RESTORED Resource Tags
+        st.markdown("**Available Resource Tags:** **Unit Overview**, **Lesson Plan**, **Vocabulary List**, **Worksheet**, **Quiz**, **Test**.")
         example_input = "Create a **Lesson Plan** for teaching the causes of World War I."
         st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
 
@@ -694,31 +697,25 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
         if 'teacher_output' in st.session_state:
             st.markdown(st.session_state['teacher_output'])
         else:
-            st.info("Your generated resource will appear here. The AI is instructed to follow strict formats like **Lesson Plan**, **Quiz**, or **Unit Overview**.")
+            st.info("Your generated resource will appear here. **Remember to use a Resource Tag (e.g., Quiz, Unit Overview) in your prompt.**")
 
-    with tab_plan:
-        st.header("Curriculum Planner")
-        st.info("This section allows you to organize and structure your academic year, mapping resources to learning standards. *(Placeholder Feature)*")
-        st.markdown("""
-        #### Plan Overview
-        * **Current Unit:** Unit 4 - The Age of Exploration
-        * **Duration:** 3 Weeks
-        * **Standard Mapping:** 8/10 standards covered.
-        """)
-        st.button("View Full Plan Breakdown", key="planner_stub_btn")
-
-    with tab_student:
-        st.header("Student Manager")
-        st.info("Track student progress, log communications, and generate individualized feedback reports. *(Placeholder Feature)*")
-        st.markdown("""
-        #### Student Roster Snapshot
-        | Student | Average Grade | Missing Assignments |
-        | :--- | :--- | :--- |
-        | John D. | B+ | 2 |
-        | Jane S. | A- | 0 |
-        | Alex K. | C | 4 |
-        """)
-        st.button("Generate Detailed Progress Report", key="manager_stub_btn")
+    with tab_history:
+        st.subheader("Teacher Aid Saved History")
+        teacher_df = pd.DataFrame(st.session_state.teacher_db['history'])
+        if not teacher_df.empty:
+            # Drop the 'output_content' column for the main table view to keep it clean
+            display_df = teacher_df.drop(columns=['output_content'], errors='ignore')
+            st.dataframe(display_df.sort_values(by='timestamp', ascending=False), use_container_width=True)
+            
+            # Display detailed view for selected item (optional, but good practice)
+            selected_row_index = st.selectbox("Select History Item for Full Content View:", teacher_df.index, format_func=lambda i: f"[{i+1}] {teacher_df.loc[i, 'request']}", key="teacher_history_selector")
+            
+            if selected_row_index is not None and not teacher_df.empty:
+                st.markdown("---")
+                st.subheader("Full Resource Content")
+                st.markdown(teacher_df.loc[selected_row_index, 'output_content'])
+        else:
+            st.info("No teacher resources have been saved yet.")
 
 
 # --- USAGE DASHBOARD RENDERER ---
