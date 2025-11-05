@@ -8,8 +8,9 @@ import re
 import random
 import traceback # Import traceback for detailed error logging
 
-# --- CRITICAL FIX: Ensure you have google-generativeai installed ---
+# --- Ensure you have google-genai installed and configured if you want real AI calls ---
 import google.generativeai as genai
+from google.generativeai.errors import APIError
 
 # Attempt to import necessary components from their most likely locations,
 # providing fallbacks in case of version mismatch/conflicts.
@@ -58,41 +59,32 @@ st.set_page_config(
 )
 
 # --- INITIALIZE GEMINI CLIENT (FINAL, CORRECT FIX) ---
+# --- INITIALIZE GEMINI CLIENT ---
 client = None # Default to None
-api_key_source = "None"
 
 try:
-    api_key = None
-    
-    # 1. Prioritize Streamlit secrets
-    if "GEMINI_API_KEY" in st.secrets:
-        api_key = st.secrets["GEMINI_API_KEY"]
-        api_key_source = "Streamlit Secrets"
-    # 2. Fallback to os.getenv 
-    elif os.getenv("GEMINI_API_KEY"):
-        api_key = os.getenv("GEMINI_API_KEY")
-        api_key_source = "Environment Variable"
+    # 1. Safely retrieve the API key first
+    api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
 
-if api_key and api_key.strip():
-        # Use the standard, modern configuration method
-        genai.configure(api_key=api_key) 
+    # Check if a key was found and is not just empty whitespace
+    if api_key and api_key.strip():
+        # 2. Only proceed to configure and initialize if the key is found
+        genai.configure(api_key=api_key)
         
-        # Instantiate GenerativeModel, passing the SYSTEM_INSTRUCTION here.
-        # This is the format required by SDK versions that reject it later.
-        client = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_INSTRUCTION) 
-        st.sidebar.success(f"✅ Gemini Client Initialized (Key from {api_key_source}).")
+        # CRITICAL FIX (Functional): Pass system instruction at model instantiation 
+        # This is the ONLY method accepted by your installed SDK version, resolving 
+        # the 'unexpected keyword argument system_instruction' errors.
+        client = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_INSTRUCTION)
+        # st.success("Gemini Client successfully initialized!") 
     else:
-        st.sidebar.warning("⚠️ Gemini API Key not found or is empty. Running in MOCK MODE.")
-        
-except APIError as e:
-    client = None
-    st.sidebar.error(f"❌ Gemini API Setup Error: {e}")
-    st.sidebar.info("Please ensure your Gemini API Key is valid and active.")
+        # Key not found, client remains None.
+        pass
+
 except Exception as e:
     client = None
-    # Log the full exception for remote debugging via Streamlit Cloud's logs
-    st.sidebar.error(f"❌ Unexpected Setup Error during Gemini client initialization. See Streamlit logs for details.")
-    st.exception(e)
+    # Report setup errors in the sidebar without crashing the main application
+    st.sidebar.error(f"Gemini API Setup Error: {e}") 
+
     
 # --- END INITIALIZE GEMINI CLIENT ---
 
@@ -336,8 +328,14 @@ FEATURE_EXAMPLES = {
 }
 
 # --- AI GENERATION FUNCTION (MODIFIED WARNING) ---
-def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_image: Image.Image = None) -> str:
-    """
+# System instruction is now set at model instantiation (in the setup block). 
+        # Create an empty config object to satisfy the required argument.
+        generation_config = genai.types.GenerationConfig()
+
+        response = client.generate_content(
+            contents=contents,
+            generation_config=generation_config
+        )    """
     Executes the selected feature function. Uses the real Gemini API if available,
     otherwise falls back to the mock functions.
     """
