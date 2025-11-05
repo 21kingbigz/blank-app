@@ -3,3 +3,4 @@ Pillow
 streamlit
 sift-stack-py
 passlib
+pandas
