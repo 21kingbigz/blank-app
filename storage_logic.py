@@ -55,7 +55,7 @@ def save_db_file(data: Dict, filename: str):
     except Exception as e:
         st.error(f"Error saving {filename}: {e}")
 
-# --- Core Storage Logic (The Fix) ---
+# --- Core Storage Logic ---
 
 def load_storage_tracker(user_email: str) -> Dict:
     """Loads user tier and usage stats and applies daily cost."""
@@ -77,17 +77,16 @@ def load_storage_tracker(user_email: str) -> Dict:
     
     if days_passed >= 1 and data['tier'] != 'Unlimited':
         
-        # 2. Update utility items' size
+        # 2. Update utility items' size (daily cost application)
         all_utility_items = current_utility_db['saved_items']
         total_utility_items = len(all_utility_items)
         if total_utility_items > 0:
             total_cost_to_apply = days_passed * DAILY_SAVED_DATA_COST_MB 
             daily_cost_per_utility_item = total_cost_to_apply / total_utility_items
             for item in all_utility_items:
-                # Ensure size_mb exists, default to 0.0 if not (safety net)
                 item['size_mb'] = item.get('size_mb', 0.0) + daily_cost_per_utility_item
         
-        # 3. Update teacher items' size
+        # 3. Update teacher items' size (daily cost application)
         all_teacher_items_flat = []
         for db_key in current_teacher_db.keys():
             all_teacher_items_flat.extend(current_teacher_db[db_key])
@@ -135,16 +134,18 @@ def check_storage_limit(storage: Dict, action_area: str) -> Tuple[bool, Optional
     """
     current_tier = storage['tier']
     
+    # --- FIX: Unlimited users proceed with no limit check ---
     if current_tier == "Unlimited":
-        return True, None, float('inf')
+        # Return effective_limit as a large, non-inf number for clean math if needed
+        return True, None, 100000000.0 # Use a huge number instead of 'inf' for display calculations
         
+    # --- Non-Unlimited Tier Logic ---
     effective_limit = TIER_LIMITS['Free Tier'] # Default limit
     used_mb = 0.0
     
     if action_area == 'universal':
         used_mb = storage['total_used_mb']
         if current_tier in ['Universal Pro', '28/1 Pro', 'Teacher Pro']:
-             # Universal Pro uses the highest limit, others use Free Tier limit for total check
             effective_limit = TIER_LIMITS[current_tier] if current_tier == 'Universal Pro' else TIER_LIMITS['Free Tier']
             
         if used_mb >= effective_limit:
@@ -179,6 +180,5 @@ def check_storage_limit(storage: Dict, action_area: str) -> Tuple[bool, Optional
 
 def calculate_mock_save_size(content: str) -> float:
     """Calculates a save size based on content length, with a minimum base cost."""
-    # Ensure minimum size is NEW_SAVE_COST_BASE_MB
     size = NEW_SAVE_COST_BASE_MB + (len(content) / 5000.0)
     return round(size, 2)
