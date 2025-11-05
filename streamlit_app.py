@@ -7,7 +7,7 @@ from google import genai
 from google.genai.errors import APIError 
 
 # Import custom modules
-from auth import render_login_page, logout, load_users
+from auth import render_login_page, logout, load_users, load_plan_overrides
 from storage_logic import (
     load_storage_tracker, save_storage_tracker, check_storage_limit, 
     calculate_mock_save_size, get_file_path, save_db_file, 
@@ -17,9 +17,16 @@ from storage_logic import (
 # --- 0. CONFIGURATION AND CONSTANTS ---
 WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash'
-# Note: Ensure this image file exists, otherwise Streamlit will use the default icon.
 LOGO_FILENAME = "image_fd0b7e.png" 
-ICON_SETTING = LOGO_FILENAME if os.path.exists(LOGO_FILENAME) else "💡"
+ICON_SETTING = "💡" # Fallback icon if logo fails
+
+# Set browser tab title, favicon, and layout.
+st.set_page_config(
+    page_title=WEBSITE_TITLE,
+    page_icon=ICON_SETTING,
+    layout="wide",
+    initial_sidebar_state="auto"
+)
 
 # AI client setup (Assume client setup is correct)
 try:
@@ -45,23 +52,11 @@ TIER_PRICES = {
     "Universal Pro": "$12/month", "Unlimited": "$18/month"
 }
 
-# Set browser tab title, favicon, and layout.
-st.set_page_config(
-    page_title=WEBSITE_TITLE,
-    page_icon=ICON_SETTING,
-    layout="wide",
-    initial_sidebar_state="auto"
-)
-
 # --- CRITICAL CSS FOR LAYOUT FIXES (Simplified) ---
 st.markdown(
     """
     <style>
-    /* Ensure Streamlit's default style doesn't break custom components */
-    .stButton>button {
-        /* Standardize button appearance */
-    }
-    .css-1d391kg { /* Target for the main app container for responsive padding */
+    .css-1d391kg { 
         padding-top: 2rem;
     }
     .tier-label {
@@ -115,7 +110,7 @@ if 'logged_in' not in st.session_state:
 if st.session_state.logged_in:
     user_email = st.session_state.current_user
     
-    # FIX: 1. Load user's profile FIRST to ensure we have the correct tier
+    # 1. Load user's profile FIRST to ensure we have the correct tier
     user_profile = load_users().get(user_email, {})
     
     # 2. Load user-specific DBs and Storage 
@@ -123,7 +118,7 @@ if st.session_state.logged_in:
         
         storage_data = load_storage_tracker(user_email)
         
-        # FIX: Force the tier from the users.json profile, which was set by auth.py
+        # Force the tier from the users.json profile, which was set by auth.py
         if user_profile.get('tier'):
             storage_data['tier'] = user_profile['tier']
         
@@ -138,7 +133,7 @@ if st.session_state.logged_in:
         st.session_state['teacher_mode'] = "Resource Dashboard" 
 
 
-# --- NAVIGATION RENDERER (Updated - REMOVED Teacher Aid and 28/1 Utilities tabs) ---
+# --- NAVIGATION RENDERER (Fixed Image Loading) ---
 
 def render_main_navigation_sidebar():
     """Renders the main navigation using Streamlit's sidebar for responsiveness."""
@@ -146,7 +141,11 @@ def render_main_navigation_sidebar():
         # Logo and Title
         col_logo, col_title = st.columns([0.25, 0.75])
         with col_logo:
-            st.image(LOGO_FILENAME, width=30)
+            # FIX: Only try to display the image if the file exists to prevent crashing
+            if os.path.exists(LOGO_FILENAME): 
+                st.image(LOGO_FILENAME, width=30)
+            else:
+                st.markdown(f"**{ICON_SETTING}**") # Use text icon as fallback
         with col_title:
             st.markdown(f"**{WEBSITE_TITLE}**")
         
@@ -159,7 +158,8 @@ def render_main_navigation_sidebar():
             {"label": "📊 Usage Dashboard", "mode": "Usage Dashboard"},
             {"label": "🖥️ Dashboard", "mode": "Dashboard"}, # This is the hub
             {"label": "💳 Plan Manager", "mode": "Plan Manager"},
-            {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"}
+            {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"},
+            {"label": "🚪 Logout", "mode": "Logout"} # Add Logout option
         ]
         
         # Use native st.button, and apply CSS class based on active mode
@@ -168,11 +168,14 @@ def render_main_navigation_sidebar():
             button_id = f"sidebar_nav_button_{mode.replace(' ', '_')}"
             
             if st.button(item["label"], key=button_id, use_container_width=True):
-                st.session_state['app_mode'] = mode
-                # Reset internal views when switching main mode
-                st.session_state.pop('utility_view', None)
-                st.session_state['teacher_mode'] = "Resource Dashboard"
-                st.rerun()
+                if mode == "Logout":
+                    logout() # Call the logout function
+                else:
+                    st.session_state['app_mode'] = mode
+                    # Reset internal views when switching main mode
+                    st.session_state.pop('utility_view', None)
+                    st.session_state['teacher_mode'] = "Resource Dashboard"
+                    st.rerun()
 
 
 # --- APPLICATION PAGE RENDERERS ---
@@ -213,7 +216,6 @@ def render_utility_hub_content(can_interact, universal_error_msg):
     st.markdown("---")
     
     if not can_interact:
-        # FIX: Check if universal_error_msg is None before using it.
         display_msg = universal_error_msg if universal_error_msg else "Storage limit reached or plan data loading error."
         st.error(f"🛑 **ACCESS BLOCKED:** {display_msg}. Cannot interact with the application while over your universal limit.")
         if st.button("← Back to Dashboard", key="utility_back_btn_blocked"):
@@ -221,12 +223,10 @@ def render_utility_hub_content(can_interact, universal_error_msg):
             st.rerun()
         return
 
-    # Check for dedicated Utility save limit
     can_save_utility, utility_error_msg, utility_limit = check_storage_limit(st.session_state.storage, 'utility_save')
 
     col_category, col_main = st.columns([0.3, 0.7])
     
-    # --- Category Selector (Left Sidebar) ---
     with col_category:
         st.subheader("Categories")
         category_options = list(CATEGORIES_FEATURES.keys())
@@ -238,25 +238,21 @@ def render_utility_hub_content(can_interact, universal_error_msg):
         )
         
         st.markdown("---")
-        # Utility Saved Items Viewer (always visible)
         st.subheader("Saved Items")
         if st.session_state.utility_db['saved_items']:
             st.info(f"Using {st.session_state.storage['utility_used_mb']:.2f} MB of {utility_limit:.0f} MB")
             
-            # Simple list of saved items with view/delete
             for i, item in reversed(list(enumerate(st.session_state.utility_db['saved_items']))):
                 
                 with st.expander(f"**{item['name']}** - {item['size_mb']:.1f} MB"):
                     st.caption(f"Category: {item['category']}")
                     st.text_area("Saved Output", item['output'], height=150, disabled=True)
                     
-                    # Delete button for saved item
                     if st.button("Delete This Item", key=f"del_util_{i}"):
                         deleted_size = item['size_mb']
                         st.session_state.utility_db['saved_items'].pop(i)
                         save_db_file(st.session_state.utility_db, get_file_path("utility_data_", st.session_state.current_user))
                         
-                        # Update storage tracker
                         st.session_state.storage['utility_used_mb'] = max(0.0, st.session_state.storage['utility_used_mb'] - deleted_size)
                         st.session_state.storage['total_used_mb'] = max(0.0, st.session_state.storage['total_used_mb'] - deleted_size)
                         save_storage_tracker(st.session_state.storage, st.session_state.current_user)
@@ -266,7 +262,6 @@ def render_utility_hub_content(can_interact, universal_error_msg):
             st.info("No items saved yet.")
 
 
-    # --- Main Content Area (Right) ---
     with col_main:
         category = st.session_state.utility_active_category
         st.header(f"{CATEGORIES_FEATURES[category]['icon']} {category}")
@@ -296,14 +291,12 @@ def render_utility_hub_content(can_interact, universal_error_msg):
             col_gen, col_save_status = st.columns([0.5, 0.5])
             generate_button = col_gen.form_submit_button("🚀 Generate Response", use_container_width=True)
             
-            # Display save status
             if not can_save_utility:
                 col_save_status.error(f"Save Blocked: {utility_error_msg.split(' ')[0]} limit reached.")
             else:
                 col_save_status.success(f"Saving is enabled. Next save cost: {calculate_mock_save_size('MOCK'):.1f} MB")
         
         
-        # --- Output and Saving Logic ---
         if generate_button:
             
             full_prompt = f"{prompt_prefix} {input_text}"
@@ -324,13 +317,11 @@ def render_utility_hub_content(can_interact, universal_error_msg):
             
             if st.button("Save Output", key=f"save_util_btn_{selected_feature}", disabled=not can_save_utility):
                 
-                # Check limit again before final save
                 can_save, error_msg, _ = check_storage_limit(st.session_state.storage, 'utility_save')
                 if not can_save:
                     st.error(error_msg)
-                    st.rerun() # Rerun to refresh status
+                    st.rerun() 
                 
-                # Perform Save
                 save_size = calculate_mock_save_size(current_output)
                 
                 new_item = {
@@ -343,7 +334,6 @@ def render_utility_hub_content(can_interact, universal_error_msg):
                 st.session_state.utility_db['saved_items'].append(new_item)
                 save_db_file(st.session_state.utility_db, get_file_path("utility_data_", st.session_state.current_user))
                 
-                # Update storage tracker
                 st.session_state.storage['utility_used_mb'] += save_size
                 st.session_state.storage['total_used_mb'] += save_size
                 save_storage_tracker(st.session_state.storage, st.session_state.current_user)
@@ -360,7 +350,6 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
     st.markdown("---")
     
     if not can_interact:
-        # FIX: Check if universal_error_msg is None before using it.
         display_msg = universal_error_msg if universal_error_msg else "Storage limit reached or plan data loading error."
         st.error(f"🛑 **ACCESS BLOCKED:** {display_msg}. Cannot interact with the application while over your universal limit.")
         if st.button("← Back to Dashboard", key="teacher_back_btn_blocked"):
@@ -368,36 +357,30 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
             st.rerun()
         return
 
-    # Check for dedicated Teacher save limit
     can_save_teacher, teacher_error_msg, teacher_limit = check_storage_limit(st.session_state.storage, 'teacher_save')
 
-    # --- Sidebar for Navigation ---
     teacher_nav = st.radio(
         "Teacher Tools",
         ["Resource Dashboard", "Generate New Resource"],
         key="teacher_mode_radio",
         index=0 if st.session_state['teacher_mode'] == "Resource Dashboard" else 1,
-        format_func=lambda x: x.split(" ")[0], # Use only the first word for compact display
+        format_func=lambda x: x.split(" ")[0], 
         horizontal=True
     )
     st.session_state['teacher_mode'] = teacher_nav
     st.markdown("---")
     
-    # Display save status
     if not can_save_teacher:
         st.error(f"Save Blocked: {teacher_error_msg.split(' ')[0]} limit reached.")
     else:
         st.success(f"Saving is enabled. Next save cost: {calculate_mock_save_size('MOCK'):.1f} MB")
 
     
-    # --- Content Dispatch ---
-    
     if st.session_state['teacher_mode'] == "Resource Dashboard":
         st.subheader("Resource Dashboard")
         st.caption("Review, edit, and delete your saved teaching resources.")
         st.markdown(f"**Total Used for Teacher Aid:** {st.session_state.storage['teacher_used_mb']:.2f} MB of {teacher_limit:.0f} MB")
         
-        # Resource Types: units, lessons, vocab, worksheets, quizzes, tests
         for resource_type in st.session_state.teacher_db.keys():
             if st.session_state.teacher_db[resource_type]:
                 st.subheader(f"📁 {resource_type.title()}")
@@ -407,13 +390,11 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
                         st.caption(f"Topic: {resource['topic']}")
                         st.text_area("Content", resource['content'], height=200, disabled=True)
                         
-                        # Delete button
                         if st.button("Delete Resource", key=f"del_teacher_{resource_type}_{i}"):
                             deleted_size = resource['size_mb']
                             st.session_state.teacher_db[resource_type].pop(i)
                             save_db_file(st.session_state.teacher_db, get_file_path("teacher_data_", st.session_state.current_user))
                             
-                            # Update storage tracker
                             st.session_state.storage['teacher_used_mb'] = max(0.0, st.session_state.storage['teacher_used_mb'] - deleted_size)
                             st.session_state.storage['total_used_mb'] = max(0.0, st.session_state.storage['total_used_mb'] - deleted_size)
                             save_storage_tracker(st.session_state.storage, st.session_state.current_user)
@@ -443,7 +424,6 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
             generate_button = st.form_submit_button("🎓 Generate Resource", use_container_width=True)
 
         
-        # --- Generation and Save Logic ---
         if generate_button and topic:
             full_prompt = (
                 f"Generate a detailed, ready-to-use {resource_type} for a {grade}th grade class "
@@ -465,21 +445,18 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
             
             if st.button("Save Resource", key="save_teacher_btn", disabled=not can_save_teacher):
                 
-                # Check limit again before final save
                 can_save, error_msg, _ = check_storage_limit(st.session_state.storage, 'teacher_save')
                 if not can_save:
                     st.error(error_msg)
                     st.rerun() 
                     
-                # Perform Save
                 save_size = calculate_mock_save_size(current_output)
                 resource_key = st.session_state['teacher_gen_resource_type'].lower().replace(" ", "")
                 
-                # Map to correct DB key (lessons/units/vocab/worksheets/quizzes/tests)
                 resource_db_key = {
                     'lessonplan': 'lessons', 'unitoutline': 'units', 'vocabularylist': 'vocab', 
                     'worksheet': 'worksheets', 'quiz': 'quizzes', 'test': 'tests'
-                }.get(resource_key, 'lessons') # Default to lessons
+                }.get(resource_key, 'lessons') 
                 
                 new_resource = {
                     "name": f"{st.session_state['teacher_gen_topic']} - {st.session_state['teacher_gen_resource_type']}",
@@ -490,7 +467,6 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
                 st.session_state.teacher_db[resource_db_key].append(new_resource)
                 save_db_file(st.session_state.teacher_db, get_file_path("teacher_data_", st.session_state.current_user))
                 
-                # Update storage tracker
                 st.session_state.storage['teacher_used_mb'] += save_size
                 st.session_state.storage['total_used_mb'] += save_size
                 save_storage_tracker(st.session_state.storage, st.session_state.current_user)
@@ -508,20 +484,17 @@ def render_usage_dashboard():
     
     storage = st.session_state.storage
     
-    # Check the universal limit for the current tier
     can_proceed, _, universal_limit_for_calc = check_storage_limit(storage, 'universal')
     
     # --- Prepare Data for Charts ---
     total_used = storage['total_used_mb']
     
-    # FIX: Handle Unlimited tier correctly for display
     if storage['tier'] == 'Unlimited':
         used_percent = 0 
         remaining_mb_display = "Unlimited"
         total_limit_display = "Unlimited"
         universal_limit_for_calc = 10000.0 
     else:
-        # Calculate the correct universal limit based on the actual tier
         current_tier = storage['tier']
         if current_tier == 'Universal Pro':
              limit = TIER_LIMITS['Universal Pro']
@@ -537,7 +510,6 @@ def render_usage_dashboard():
     
     used_mb_display = f"{total_used:.2f}"
 
-    # 2. Top Left Bar Chart Data (Usage by Area - LIVE DATA)
     data_area = pd.DataFrame({
         'Category': ['28/1 Utilities', 'Teacher Aid', 'General App Data'],
         'Used (MB)': [
@@ -547,30 +519,24 @@ def render_usage_dashboard():
         ]
     }).set_index('Category')
     
-    # 3. Bottom Left List Data (Specific Data Consumers)
     all_data_list = []
-    # Utility data
     for i, item in enumerate(st.session_state.utility_db['saved_items']):
         all_data_list.append({"name": item.get('name', f"Utility Item #{i+1}"), "size_mb": item.get('size_mb', 0.0), "category": f"28/1 ({item.get('category', 'N/A')})", "db_key": "utility_db", "index": i})
-    # Teacher data
     for db_key, resources in st.session_state.teacher_db.items():
         for i, resource in enumerate(resources):
             all_data_list.append({"name": resource.get('name', f"{db_key.title()} #{i+1}"), "size_mb": resource.get('size_mb', 0.0), "category": f"Teacher ({db_key.title()})", "db_key": db_key, "index": i})
             
-    # Sort by size descending
     all_data_list_sorted = sorted(all_data_list, key=lambda x: x['size_mb'], reverse=True)
 
 
     # --- MAIN STRUCTURE ---
     col1, col2 = st.columns(2)
     
-    # --- TOP LEFT: Usage by Area ---
     with col1:
         with st.container(border=True):
             st.markdown("##### 🌍 Storage Used by Area")
             st.bar_chart(data_area, use_container_width=True, height=250)
 
-    # --- TOP RIGHT: Storage Left/Used Doughnut Chart ---
     with col2:
         with st.container(border=True):
             st.markdown("##### 💾 Universal Storage Overview")
@@ -582,7 +548,6 @@ def render_usage_dashboard():
                 st.metric("Total Limit", f"{total_limit_display} MB")
 
             with col_donut:
-                # Doughnut chart implementation (CSS visualization)
                 if storage['tier'] == 'Unlimited':
                     st.success("You have **Unlimited Storage**! No limits to track.")
                     st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
@@ -605,10 +570,8 @@ def render_usage_dashboard():
                     st.markdown(f"<p style='text-align: center; font-size: 0.9em; color: #888;'>Remaining: **{remaining_mb_display} MB**</p>", unsafe_allow_html=True)
 
 
-    # --- BOTTOM ROW ---
     col3, col4 = st.columns(2)
 
-    # --- BOTTOM LEFT: List of Specific Data Consumers (Delete Option) ---
     with col3:
         with st.container(border=True):
             st.markdown("##### 🗑️ Top Storage Consumers (Click to Delete)")
@@ -616,21 +579,17 @@ def render_usage_dashboard():
                 st.info("No saved data found.")
             else:
                 st.markdown("---")
-                # Max 10 items for display
                 for i, item in enumerate(all_data_list_sorted[:10]):
                     col_item, col_size, col_delete = st.columns([0.5, 0.25, 0.25])
                     
-                    # Display item details
                     col_item.caption(f"{item['category']}")
                     col_item.markdown(f"**{item['name']}**")
                     col_size.write(f"{item['size_mb']:.1f} MB")
 
-                    # Delete logic 
                     if col_delete.button("Delete", key=f"cleanup_del_{item['db_key']}_{item['index']}_{i}", use_container_width=True):
                         deleted_size = item['size_mb']
                         user_email = st.session_state.current_user
                         
-                        # Re-load DB for thread safety before pop, as index might change on a fresh load
                         st.session_state['utility_db'] = load_db_file(get_file_path("utility_data_", user_email), UTILITY_DB_INITIAL)
                         st.session_state['teacher_db'] = load_db_file(get_file_path("teacher_data_", user_email), TEACHER_DB_INITIAL)
                         
@@ -638,7 +597,7 @@ def render_usage_dashboard():
                             st.session_state.utility_db['saved_items'].pop(item['index'])
                             save_db_file(st.session_state.utility_db, get_file_path("utility_data_", user_email))
                             st.session_state.storage['utility_used_mb'] = max(0.0, st.session_state.storage['utility_used_mb'] - deleted_size)
-                        else: # Teacher DB
+                        else: 
                             if item['index'] < len(st.session_state.teacher_db[item['db_key']]):
                                 st.session_state.teacher_db[item['db_key']].pop(item['index'])
                                 save_db_file(st.session_state.teacher_db, get_file_path("teacher_data_", user_email))
@@ -646,13 +605,11 @@ def render_usage_dashboard():
                             else:
                                 st.error(f"Error: Could not find item to delete: {item['name']}")
                             
-                        # Update universal usage and save tracker
                         st.session_state.storage['total_used_mb'] = max(0.0, st.session_state.storage['total_used_mb'] - deleted_size)
                         save_storage_tracker(st.session_state.storage, user_email)
                         st.toast(f"🗑️ Deleted {item['name']}!")
                         st.rerun()
 
-    # --- BOTTOM RIGHT: Plan Explanations (Remains the same) ---
     with col4:
         with st.container(border=True):
             st.markdown("##### 📝 Plan Benefits Overview")
@@ -681,12 +638,10 @@ def render_plan_manager():
     st.markdown(f"**Monthly Price:** {TIER_PRICES.get(current_tier, 'N/A')}")
     st.markdown("---")
     
-    # Simple list of upgrade options
     st.subheader("Upgrade Options")
     
     tier_order = ["Free Tier", "28/1 Pro", "Teacher Pro", "Universal Pro", "Unlimited"]
     
-    # FIX: Use expander to ensure content is visible and structured
     for i, tier in enumerate(tier_order):
         price = TIER_PRICES[tier]
         limit_mb = TIER_LIMITS.get(tier, 0)
@@ -716,7 +671,6 @@ def render_data_cleanup():
     st.caption("Review your saved data items for deletion.")
     st.markdown("---")
     
-    # FIX: Direct user to the correct, single location for deletion
     st.info("To clean up specific data items and immediately reduce your storage usage, please navigate to the **📊 Usage Dashboard** and use the **🗑️ Top Storage Consumers** panel.")
     st.markdown("This section will be used for future bulk deletion and automated cleanup tools.")
 
@@ -725,26 +679,20 @@ def render_data_cleanup():
 if not st.session_state.logged_in:
     render_login_page()
 else:
-    # 1. RENDER MAIN NAVIGATION IN STREAMLIT'S SIDEBAR
     render_main_navigation_sidebar()
 
-    # --- GLOBAL TIER RESTRICTION CHECK ---
-    # This checks the total usage against the overall tier limit (Free Tier limit or Universal Pro limit)
     universal_limit_reached, universal_error_msg, _ = check_storage_limit(st.session_state.storage, 'universal')
     can_interact_universally = not universal_limit_reached
 
-    # Render the tier label at the top of the main content area
     st.markdown(f'<p class="tier-label">Current Plan: {st.session_state.storage["tier"]}</p>', unsafe_allow_html=True)
 
 
-    # --- RENDERER DISPATCHER ---
     if st.session_state['app_mode'] == "Usage Dashboard":
         render_usage_dashboard()
         
     elif st.session_state['app_mode'] == "Dashboard":
         render_main_dashboard()
         
-    # NOTE: The following two modes are only reached via buttons on the Main Dashboard
     elif st.session_state['app_mode'] == "Teacher Aid":
         render_teacher_aid_content(can_interact_universally, universal_error_msg)
     
