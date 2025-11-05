@@ -5,7 +5,7 @@ import math
 import pandas as pd
 from typing import Tuple, Optional, Dict
 
-# --- Configuration Constants (Must match main app) ---
+# --- Configuration Constants ---
 TEACHER_DATA_FILE_BASE = "teacher_data_"
 UTILITY_DATA_FILE_BASE = "utility_data_"
 STORAGE_TRACKER_FILE_BASE = "storage_tracker_"
@@ -17,14 +17,14 @@ TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [],
 
 TIER_LIMITS = {
     "Free Tier": 500, "28/1 Pro": 3000, "Teacher Pro": 3000, 
-    "Universal Pro": 5000, "Unlimited": float('inf')
+    "Universal Pro": 5000, "Unlimited": float('inf') # Inf is for internal logic, not check_storage_limit
 }
 STORAGE_INITIAL = {
-    "tier": "Free Tier", 
+    "tier": "Free Tier", # This will be overwritten by the tier in users.json
     "total_used_mb": 0.0,
     "utility_used_mb": 0.0, 
     "teacher_used_mb": 0.0,
-    "general_used_mb": 0.0, # Overhead not affected by daily cost
+    "general_used_mb": 0.0, 
     "last_load_timestamp": pd.Timestamp.now().isoformat()
 }
 
@@ -41,7 +41,6 @@ def load_db_file(filename: str, initial_data: Dict) -> Dict:
         try:
             with open(filename, 'r') as f:
                 data = json.load(f)
-                # Simple check to prevent loading corrupted data structure
                 return data if isinstance(data, dict) else initial_data
         except (json.JSONDecodeError, FileNotFoundError):
             return initial_data
@@ -52,8 +51,9 @@ def save_db_file(data: Dict, filename: str):
     try:
         with open(filename, 'w') as f:
             json.dump(data, f, indent=4)
-    except Exception as e:
-        st.error(f"Error saving {filename}: {e}")
+    except Exception:
+        # st.error(f"Error saving {filename}: {e}") # Commented out to prevent Streamlit error during non-run
+        pass
 
 # --- Core Storage Logic ---
 
@@ -73,8 +73,7 @@ def load_storage_tracker(user_email: str) -> Dict:
     time_delta = pd.Timestamp.now() - last_load
     days_passed = math.floor(time_delta.total_seconds() / (24 * 3600))
     
-    # --- CRITICAL FIX: ACCURATE RECALCULATION ---
-    
+    # Apply daily cost only if not Unlimited
     if days_passed >= 1 and data['tier'] != 'Unlimited':
         
         # 2. Update utility items' size (daily cost application)
@@ -104,13 +103,11 @@ def load_storage_tracker(user_email: str) -> Dict:
         
         # 5. RECALCULATE ALL TOTALS by summing the *actual* saved item sizes
         data['utility_used_mb'] = sum(item.get('size_mb', 0.0) for item in current_utility_db['saved_items'])
-        
         data['teacher_used_mb'] = sum(
             item.get('size_mb', 0.0)
             for db_key in current_teacher_db.keys() 
             for item in current_teacher_db[db_key]
         )
-        
         data['total_used_mb'] = data['utility_used_mb'] + data['teacher_used_mb'] + data['general_used_mb']
         
     # Update timestamp for next load calculation
@@ -134,10 +131,9 @@ def check_storage_limit(storage: Dict, action_area: str) -> Tuple[bool, Optional
     """
     current_tier = storage['tier']
     
-    # --- FIX: Unlimited users proceed with no limit check ---
+    # FIX: Unlimited users ALWAYS pass the check, using a large limit for math.
     if current_tier == "Unlimited":
-        # Return effective_limit as a large, non-inf number for clean math if needed
-        return True, None, 100000000.0 # Use a huge number instead of 'inf' for display calculations
+        return True, None, 100000000.0 
         
     # --- Non-Unlimited Tier Logic ---
     effective_limit = TIER_LIMITS['Free Tier'] # Default limit
@@ -145,8 +141,11 @@ def check_storage_limit(storage: Dict, action_area: str) -> Tuple[bool, Optional
     
     if action_area == 'universal':
         used_mb = storage['total_used_mb']
-        if current_tier in ['Universal Pro', '28/1 Pro', 'Teacher Pro']:
-            effective_limit = TIER_LIMITS[current_tier] if current_tier == 'Universal Pro' else TIER_LIMITS['Free Tier']
+        # Universal limit applies to Free and Universal Pro (Dedicated tiers use Free for Universal)
+        if current_tier == 'Universal Pro':
+            effective_limit = TIER_LIMITS['Universal Pro'] 
+        else:
+            effective_limit = TIER_LIMITS['Free Tier'] # Dedicated tiers fall back to Free Tier's overall limit
             
         if used_mb >= effective_limit:
             return False, f"Total storage limit reached ({used_mb:.2f}MB / {effective_limit}MB). Please upgrade or clean up data.", effective_limit
