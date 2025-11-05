@@ -93,36 +93,32 @@ st.markdown(
         padding-top: 20px; /* Adjust padding */
     }}
 
-    /* Navigation Button Styling (Main Nav in Sidebar) */
-    .st-emotion-cache-1jmve36.e1f1d6z41 {{ /* Target the specific button container in sidebar */
-        background-color: transparent;
-        border: none;
-        padding: 0;
-        margin-bottom: 5px;
-        width: 100%;
-    }}
-
-    .nav-button {{
+    /* Target st.button elements within the sidebar for navigation buttons */
+    [data-testid="stSidebar"] .stButton > button {{
         width: 100%;
         text-align: left;
-        padding: 12px 15px; /* Adjust padding for sidebar buttons */
+        padding: 12px 15px;
         border-radius: 8px;
         border: none;
-        background-color: transparent;
+        background-color: transparent; /* Default for non-active */
         color: #333333;
         font-weight: 600;
         cursor: pointer;
         transition: background-color 0.2s, color 0.2s;
-        display: block; /* Ensure it takes full width */
-    }}
-    .nav-button:hover {{
-        background-color: #E0E0E0;
-    }}
-    .nav-button.active {{
-        background-color: #2D6BBE !important;
-        color: white !important;
+        margin-bottom: 5px; /* Spacing between nav items */
     }}
     
+    [data-testid="stSidebar"] .stButton > button:hover:not(.active) {{
+        background-color: #E0E0E0;
+        color: #333333;
+    }}
+    
+    /* Active button styling in sidebar */
+    [data-testid="stSidebar"] .stButton > button.active {{
+        background-color: #2D6BBE !important; /* Specific blue */
+        color: white !important;
+    }}
+
     /* Card-like containers for the Usage Dashboard and general use */
     div[data-testid="stVerticalBlock"] > div > div:nth-child(1) > div:has([data-testid="stMarkdownContainer"]) > div:first-child,
     div[data-testid="stColumn"] > div:nth-child(1) > [data-testid="stVerticalBlock"] > div > div:nth-child(1) {{
@@ -135,7 +131,7 @@ st.markdown(
         height: 100%; 
     }}
 
-    /* Standard App Buttons (Primary/Darker Blue) */
+    /* Standard App Buttons (Primary/Darker Blue) - outside sidebar */
     .stButton>button {{
         background-color: #2D6BBE;
         color: white;
@@ -185,7 +181,8 @@ st.markdown(
     }}
     
     /* Hide Streamlit footer and default menu button (we'll keep the sidebar's expander) */
-    #MainMenu, footer, header {{visibility: hidden;}}
+    #MainMenu, footer {{visibility: hidden;}}
+    header {{visibility: hidden; height: 0;}} /* Ensure header is truly gone to reclaim space */
 
     </style>
     """,
@@ -331,8 +328,9 @@ if 'app_mode' not in st.session_state:
 if 'utility_view' not in st.session_state:
     st.session_state['utility_view'] = 'main'
     
-if 'teacher_mode' not in st.session_state: # Initialize teacher_mode for internal navigation
-    st.session_state['teacher_mode'] = "Resource Dashboard"
+# `teacher_mode` now stores the *selected tab title*
+if 'teacher_mode' not in st.session_state: 
+    st.session_state['teacher_mode'] = "Resource Dashboard" 
     
 # AI client setup (Assume system_instruction.txt exists or use default)
 try:
@@ -391,7 +389,7 @@ def calculate_mock_save_size(content: str) -> float:
     return round(size, 2)
 
 
-# --- NAVIGATION RENDERER (Now uses st.sidebar) ---
+# --- NAVIGATION RENDERER (Now uses st.sidebar with st.button) ---
 
 def render_main_navigation_sidebar():
     """Renders the main navigation using Streamlit's sidebar for responsiveness."""
@@ -414,36 +412,47 @@ def render_main_navigation_sidebar():
             {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"}
         ]
         
-        # Use HTML buttons for custom styling within the sidebar
+        # Use native st.button, and apply CSS class based on active mode
         for item in menu_options:
             mode = item["mode"]
-            active_class = " active" if st.session_state['app_mode'] == mode else ""
+            # Apply 'active' class via HTML to the button for styling
+            # This requires knowing the HTML structure Streamlit renders for buttons.
+            # We can inspect this with dev tools, but a direct class on the button itself is often simplest.
+            # Using a simple `st.button` and injecting the class via custom component or JS is complex.
+            # A more robust way, given Streamlit limitations, is to use a custom component, or
+            # use st.radio for selection, which is styled more easily.
+            # For direct st.button, we have to target its parent elements.
+
+            button_id = f"sidebar_nav_button_{mode.replace(' ', '_')}"
             
-            # This is a common Streamlit hack to make custom HTML buttons interact with session state.
-            # We render a hidden st.button or st.checkbox with a unique key and listen for its value.
-            # The actual visual button is rendered via markdown.
-            
-            # Create a unique key for the hidden component
-            button_key = f"sidebar_nav_button_{mode.replace(' ', '_')}"
-            
-            # Render the HTML button
-            st.markdown(
-                f'<button class="nav-button{active_class}" id="{button_key}" onclick="parent.postMessage({{streamlit: {{type: \'SET_WIDGET_VALUE\', value: true, id: \'{button_key}\'}}}}, \'*\')">{item["label"]}</button>',
-                unsafe_allow_html=True
-            )
-            
-            # Use a hidden button or checkbox to capture the click. 
-            # st.checkbox is often more robust for this hack.
-            # When the HTML button is clicked, it sends a message that sets the checkbox to True.
-            # We then check its value and reset it.
-            if st.session_state.get(button_key):
+            # This is a common pattern to apply custom CSS classes to Streamlit widgets
+            # by looking for their internal data-testid and then adding a class.
+            button_style = ""
+            if st.session_state['app_mode'] == mode:
+                button_style = "active"
+
+            if st.button(item["label"], key=button_id):
                 st.session_state['app_mode'] = mode
+                # Reset internal views when switching main mode
                 st.session_state.pop('utility_view', None)
                 st.session_state.pop('utility_active_category', None)
-                st.session_state.pop('teacher_mode', None) # Clear teacher internal nav
-                st.session_state[button_key] = False # Reset the checkbox
+                st.session_state['teacher_mode'] = "Resource Dashboard" # Reset teacher internal nav to default
                 st.rerun()
-
+            
+            # This hack injects the 'active' class using JavaScript after rendering.
+            # It's less ideal than pure CSS but works reliably for active state.
+            if button_style == "active":
+                st.markdown(
+                    f"""
+                    <script>
+                        var button = document.getElementById("{button_id}");
+                        if (button) {{
+                            button.parentElement.classList.add("active");
+                        }}
+                    </script>
+                    """,
+                    unsafe_allow_html=True
+                )
 
 # --- APPLICATION PAGE RENDERERS ---
 
@@ -473,12 +482,16 @@ def render_usage_dashboard():
         remaining_mb_display = f"{max(0, universal_limit - total_used):.2f}"
         used_mb_display = f"{total_used:.2f}"
 
-    # 2. Top Left Graph Data (Usage by Area)
+    # 2. Top Left Bar Chart Data (Usage by Area - LIVE DATA)
     data_area = pd.DataFrame({
         'Category': ['28/1 Utilities', 'Teacher Aid', 'General App Data'],
         'Used (MB)': [storage['utility_used_mb'], storage['teacher_used_mb'], storage['general_used_mb']]
     }).set_index('Category')
     
+    # Ensure all values start at 0 and go up
+    # Streamlit's bar_chart will handle the min/max of the y-axis itself based on data.
+    # Just need to make sure our data is correct.
+
     # 3. Bottom Left List Data (Specific Data Consumers)
     all_data_list = []
     # Utility data
@@ -500,6 +513,7 @@ def render_usage_dashboard():
     with col1:
         with st.container(border=True):
             st.markdown("##### 🌍 Storage Used by Area")
+            # Ensure the bar chart reflects live data. The DataFrame `data_area` is already prepared.
             st.bar_chart(data_area, use_container_width=True, height=250)
 
     # --- TOP RIGHT: Storage Left/Used Doughnut Chart ---
@@ -810,169 +824,186 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
     is_fully_blocked_for_generation_save = not can_interact or not can_save_dedicated
     block_message_for_generation_save = universal_error_msg if not can_interact else error_message_dedicated
     
-    # Internal navigation using st.tabs
+    # Internal navigation using st.tabs - Now correctly managing `teacher_mode`
     tab_titles = ["Resource Dashboard", "Saved Data", "Data Management"]
-    current_tab_index = tab_titles.index(st.session_state['teacher_mode']) if st.session_state['teacher_mode'] in tab_titles else 0
     
+    # Get the index of the currently active tab based on session state
+    initial_tab_index = tab_titles.index(st.session_state['teacher_mode']) if st.session_state['teacher_mode'] in tab_titles else 0
+    
+    # Create tabs and let Streamlit handle which one is active
     tabs = st.tabs(tab_titles)
 
-    # --- RENDER RESOURCE DASHBOARD ---
-    with tabs[tab_titles.index("Resource Dashboard")]:
-        st.session_state['teacher_mode'] = "Resource Dashboard" # Set state when this tab is active
-        st.header("Resource Generation Dashboard")
-        st.info("Generate new units, lessons, quizzes, and more. All resources are saved permanently.")
-        
-        if is_fully_blocked_for_generation_save:
-            st.error(f"🛑 **ACTION BLOCKED:** {block_message_for_generation_save} New generation and saving are disabled.")
+    # Use a dictionary to map tab titles to their content rendering functions
+    tab_content_map = {
+        "Resource Dashboard": lambda: render_teacher_resource_dashboard(is_fully_blocked_for_generation_save, can_save_dedicated, error_message_dedicated, block_message_for_generation_save),
+        "Saved Data": lambda: render_teacher_saved_data(can_interact, universal_error_msg),
+        "Data Management": lambda: render_teacher_data_management(can_interact, universal_error_msg)
+    }
 
-        RESOURCE_MAP = {
-            "Unit Overview": {"tag": "Unit Overview", "key": "units", "placeholder": "Generate a detailed unit plan for a 10th-grade World History class on the Renaissance."},
-            "Lesson Plan": {"tag": "Lesson Plan", "key": "lessons", "placeholder": "Create a 45-minute lesson plan on Newton's First Law of Motion for 9th-grade science."},
-            "Vocabulary List": {"tag": "Vocabulary List", "key": "vocab", "placeholder": "Generate 10 vocabulary words for a 5th-grade math lesson on fractions."},
-            "Worksheet": {"tag": "Worksheet", "key": "worksheets", "placeholder": "Create a 10-question worksheet on subject-verb agreement for 7th-grade English."},
-            "Quiz": {"tag": "Quiz", "key": "quizzes", "placeholder": "Generate a 5-question multiple-choice quiz on the causes of the American Civil War."},
-            "Test": {"tag": "Test", "key": "tests", "placeholder": "Design a comprehensive end-of-unit test for a high school economics class on supply and demand."}
-        }
-        
-        resource_tabs_inner = st.tabs(list(RESOURCE_MAP.keys()))
+    # Dispatch content based on the active tab
+    # The `selected_tab` from `st.tabs` will be the string title of the active tab.
+    # We use this to call the correct rendering function.
+    for i, tab_title in enumerate(tab_titles):
+        with tabs[i]:
+            # Directly call the rendering function for the active tab
+            # Ensure `st.session_state['teacher_mode']` is updated *before* rendering the content
+            # or in a way that doesn't conflict with st.tabs' internal state management.
+            # A simple assignment here works for displaying which tab is conceptually active.
+            st.session_state['teacher_mode'] = tab_title 
+            tab_content_map[tab_title]()
 
-        def generate_and_save_resource(tab_object, tab_name, ai_tag, db_key, ai_instruction_placeholder, can_save_flag, error_msg_flag, is_blocked_for_gen_save_inner):
-            with tab_object:
-                st.subheader(f"1. Generate {tab_name}")
-                prompt = st.text_area(
-                    f"Enter details for the {tab_name.lower()}:",
-                    placeholder=ai_instruction_placeholder,
-                    key=f"{db_key}_prompt",
-                    height=150,
-                    disabled=is_blocked_for_gen_save_inner 
-                )
-                if st.button(f"Generate {tab_name}", key=f"generate_{db_key}_btn", disabled=is_blocked_for_gen_save_inner):
-                    if prompt:
-                        final_prompt = f"TEACHER'S AID RESOURCE TAG: {ai_tag}: {prompt}"
-                        with st.spinner(f'Building {tab_name} using tag "{ai_tag}"...'):
-                            result = run_ai_generation(final_prompt)
-                            save_size = calculate_mock_save_size(result)
 
-                            if can_save_flag and not is_blocked_for_gen_save_inner: # Re-check dedicated save limit right before saving
-                                st.session_state['teacher_db'][db_key].append({
-                                    "name": f"{tab_name} from '{prompt[:20]}...' - {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}",
-                                    "content": result,
-                                    "size_mb": save_size
-                                })
-                                st.session_state.storage['teacher_used_mb'] += save_size
-                                st.session_state.storage['total_used_mb'] += save_size
-                                save_db_file(st.session_state['teacher_db'], TEACHER_DATA_FILE)
-                                save_storage_tracker(st.session_state.storage)
-                                st.success(f"{tab_name} Generated and Saved Permanently! ({save_size:.1f}MB)!")
-                                st.rerun()
-                            elif is_blocked_for_gen_save_inner:
-                                st.error(f"🛑 Generation Blocked: {block_message_for_generation_save}")
-                            else:
-                                st.error(f"🛑 Cannot save {tab_name}: {error_msg_flag}")
-                    else:
-                        st.warning("Please provide a prompt to generate.")
+def render_teacher_resource_dashboard(is_fully_blocked_for_generation_save, can_save_dedicated, error_message_dedicated, block_message_for_generation_save):
+    """Renders the content for the 'Resource Dashboard' tab."""
+    st.header("Resource Generation Dashboard")
+    st.info("Generate new units, lessons, quizzes, and more. All resources are saved permanently.")
+    
+    if is_fully_blocked_for_generation_save:
+        st.error(f"🛑 **ACTION BLOCKED:** {block_message_for_generation_save} New generation and saving are disabled.")
 
-        for i, (name, data) in enumerate(RESOURCE_MAP.items()):
-            generate_and_save_resource(resource_tabs_inner[i], name, data["tag"], data["key"], data["placeholder"], can_save_dedicated, error_message_dedicated, is_fully_blocked_for_generation_save)
+    RESOURCE_MAP = {
+        "Unit Overview": {"tag": "Unit Overview", "key": "units", "placeholder": "Generate a detailed unit plan for a 10th-grade World History class on the Renaissance."},
+        "Lesson Plan": {"tag": "Lesson Plan", "key": "lessons", "placeholder": "Create a 45-minute lesson plan on Newton's First Law of Motion for 9th-grade science."},
+        "Vocabulary List": {"tag": "Vocabulary List", "key": "vocab", "placeholder": "Generate 10 vocabulary words for a 5th-grade math lesson on fractions."},
+        "Worksheet": {"tag": "Worksheet", "key": "worksheets", "placeholder": "Create a 10-question worksheet on subject-verb agreement for 7th-grade English."},
+        "Quiz": {"tag": "Quiz", "key": "quizzes", "placeholder": "Generate a 5-question multiple-choice quiz on the causes of the American Civil War."},
+        "Test": {"tag": "Test", "key": "tests", "placeholder": "Design a comprehensive end-of-unit test for a high school economics class on supply and demand."}
+    }
+    
+    resource_tabs_inner = st.tabs(list(RESOURCE_MAP.keys()))
 
-    # --- RENDER SAVED DATA VIEW ---
-    with tabs[tab_titles.index("Saved Data")]:
-        st.session_state['teacher_mode'] = "Saved Data" # Set state when this tab is active
-        st.header("Saved Resources Manager")
-        st.info("View, edit, or delete all your generated Teacher Aid resources.")
-        
-        if not can_interact: # Can't even see saved data if universal limit hit
-            st.error(f"🛑 {universal_error_msg} Cannot access saved items.")
-        else:
-            # Dropdown menu to select category (as requested)
-            category_options = list(st.session_state['teacher_db'].keys())
-            selected_category = st.selectbox("Choose a resource category:", category_options, key="teacher_saved_data_category")
-            
-            resources = st.session_state['teacher_db'].get(selected_category, [])
+    def generate_and_save_resource(tab_object, tab_name, ai_tag, db_key, ai_instruction_placeholder, can_save_flag, error_msg_flag, is_blocked_for_gen_save_inner):
+        with tab_object:
+            st.subheader(f"1. Generate {tab_name}")
+            prompt = st.text_area(
+                f"Enter details for the {tab_name.lower()}:",
+                placeholder=ai_instruction_placeholder,
+                key=f"{db_key}_prompt",
+                height=150,
+                disabled=is_blocked_for_gen_save_inner 
+            )
+            if st.button(f"Generate {tab_name}", key=f"generate_{db_key}_btn", disabled=is_blocked_for_gen_save_inner):
+                if prompt:
+                    final_prompt = f"TEACHER'S AID RESOURCE TAG: {ai_tag}: {prompt}"
+                    with st.spinner(f'Building {tab_name} using tag "{ai_tag}"...'):
+                        result = run_ai_generation(final_prompt)
+                        save_size = calculate_mock_save_size(result)
 
-            if not resources:
-                st.info(f"No saved {selected_category.title()} data found.")
-                # If the current category is empty, default to "Resource Dashboard" on next rerun.
-                if st.session_state['teacher_mode'] == "Saved Data":
-                    st.session_state['teacher_mode'] = "Resource Dashboard"
-                return
-
-            # Display saved items
-            for i in range(len(resources)):
-                resource_item = resources[i]
-                current_index = i
-                expander_label = f"**{resource_item.get('name', f'{selected_category.title()} #{i+1}')}** - {resource_item.get('size_mb', 0):.1f}MB"
-                with st.expander(expander_label):
-                    # Blocking data display if universal limit hit (only for content, names are fine)
-                    if not can_interact: 
-                        st.warning("Data content hidden while over universal storage limit.")
-                    else:
-                        st.code(resource_item['content'], language='markdown')
-                        
-                        # Editable Save Name (as requested)
-                        new_name = st.text_input("Edit Save Name:", value=resource_item.get('name', ''), key=f"edit_saved_teacher_name_{selected_category}_{current_index}", disabled=not can_interact)
-                        
-                        if new_name != resource_item.get('name', '') and st.button("Update Name", key=f"update_teacher_name_btn_{selected_category}_{current_index}", disabled=not can_interact):
-                            st.session_state['teacher_db'][selected_category][current_index]['name'] = new_name
-                            save_db_file(st.session_state['teacher_db'], TEACHER_DATA_FILE)
-                            st.toast("Name updated!")
-                            st.rerun()
-                        
-                        if st.button("🗑️ Delete This Save", key=f"delete_saved_teacher_{selected_category}_{current_index}"):
-                            deleted_size = st.session_state['teacher_db'][selected_category][current_index]['size_mb']
-                            st.session_state.storage['teacher_used_mb'] = max(0, st.session_state.storage['teacher_used_mb'] - deleted_size)
-                            st.session_state.storage['total_used_mb'] = max(0, st.session_state.storage['total_used_mb'] - deleted_size)
-                            st.session_state['teacher_db'][selected_category].pop(current_index)
+                        if can_save_flag and not is_blocked_for_gen_save_inner: # Re-check dedicated save limit right before saving
+                            st.session_state['teacher_db'][db_key].append({
+                                "name": f"{tab_name} from '{prompt[:20]}...' - {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}",
+                                "content": result,
+                                "size_mb": save_size
+                            })
+                            st.session_state.storage['teacher_used_mb'] += save_size
+                            st.session_state.storage['total_used_mb'] += save_size
                             save_db_file(st.session_state['teacher_db'], TEACHER_DATA_FILE)
                             save_storage_tracker(st.session_state.storage)
-                            st.toast("Resource deleted!")
+                            st.success(f"{tab_name} Generated and Saved Permanently! ({save_size:.1f}MB)!")
                             st.rerun()
-
-    # --- RENDER DATA MANAGEMENT VIEW ---
-    with tabs[tab_titles.index("Data Management")]:
-        st.session_state['teacher_mode'] = "Data Management" # Set state when this tab is active
-        st.header("Data Management & Cleanup")
-        st.info("Manage what's taking up the most space in your Teacher Aid section.")
-        
-        if not can_interact: # Can't even see data management if universal limit hit
-            st.error(f"🛑 {universal_error_msg} Cannot access data management.")
-        else:
-            teacher_data_list = []
-            for db_key, resources in st.session_state['teacher_db'].items():
-                for i, resource in enumerate(resources):
-                    teacher_data_list.append({
-                        "name": resource.get('name', f"{db_key.title()} #{i+1}"),
-                        "size_mb": resource.get('size_mb', 0),
-                        "category": db_key,
-                        "index": i 
-                    })
-            
-            teacher_data_list_sorted = sorted(teacher_data_list, key=lambda x: x['size_mb'], reverse=True)
-            total_teacher_mb = sum(item['size_mb'] for item in teacher_data_list_sorted)
-
-            st.metric("Total Teacher Aid Usage", f"{total_teacher_mb:.2f} MB")
-            
-            if teacher_data_list_sorted:
-                st.subheader("All Teacher Aid Data Consumers")
-                for i, item in enumerate(teacher_data_list_sorted):
-                    col_item, col_size, col_delete = st.columns([0.6, 0.2, 0.2])
-                    col_item.write(f"*{item['category'].title()}:* **{item['name']}**")
-                    col_size.write(f"{item['size_mb']:.1f} MB")
-
-                    if col_delete.button("Delete", key=f"clean_teacher_{item['category']}_{item['index']}_{i}"):
-                        if item['index'] < len(st.session_state['teacher_db'][item['category']]):
-                            deleted_size = item['size_mb']
-                            st.session_state.storage['teacher_used_mb'] = max(0, st.session_state.storage['teacher_used_mb'] - deleted_size)
-                            st.session_state.storage['total_used_mb'] = max(0, st.session_state.storage['total_used_mb'] - deleted_size)
-                            st.session_state['teacher_db'][item['category']].pop(item['index'])
-                            save_db_file(st.session_state['teacher_db'], TEACHER_DATA_FILE)
-                            save_storage_tracker(st.session_state.storage)
-                            st.toast(f"🗑️ Deleted {item['name']}!")
-                            st.rerun()
+                        elif is_blocked_for_gen_save_inner:
+                            st.error(f"🛑 Generation Blocked: {block_message_for_generation_save}")
                         else:
-                            st.error(f"Error finding item for deletion: {item['name']}")
-            else:
-                st.info("No saved Teacher Aid data to manage.")
+                            st.error(f"🛑 Cannot save {tab_name}: {error_msg_flag}")
+                else:
+                    st.warning("Please provide a prompt to generate.")
+
+    for i, (name, data) in enumerate(RESOURCE_MAP.items()):
+        generate_and_save_resource(resource_tabs_inner[i], name, data["tag"], data["key"], data["placeholder"], can_save_dedicated, error_message_dedicated, is_fully_blocked_for_generation_save)
+
+def render_teacher_saved_data(can_interact, universal_error_msg):
+    """Renders the content for the 'Saved Data' tab."""
+    st.header("Saved Resources Manager")
+    st.info("View, edit, or delete all your generated Teacher Aid resources.")
+    
+    if not can_interact: # Can't even see saved data if universal limit hit
+        st.error(f"🛑 {universal_error_msg} Cannot access saved items.")
+    else:
+        # Dropdown menu to select category (as requested)
+        category_options = list(st.session_state['teacher_db'].keys())
+        selected_category = st.selectbox("Choose a resource category:", category_options, key="teacher_saved_data_category")
+        
+        resources = st.session_state['teacher_db'].get(selected_category, [])
+
+        if not resources:
+            st.info(f"No saved {selected_category.title()} data found.")
+            return
+
+        # Display saved items
+        for i in range(len(resources)):
+            resource_item = resources[i]
+            current_index = i
+            expander_label = f"**{resource_item.get('name', f'{selected_category.title()} #{i+1}')}** - {resource_item.get('size_mb', 0):.1f}MB"
+            with st.expander(expander_label):
+                # Blocking data display if universal limit hit (only for content, names are fine)
+                if not can_interact: 
+                    st.warning("Data content hidden while over universal storage limit.")
+                else:
+                    st.code(resource_item['content'], language='markdown')
+                    
+                    # Editable Save Name (as requested)
+                    new_name = st.text_input("Edit Save Name:", value=resource_item.get('name', ''), key=f"edit_saved_teacher_name_{selected_category}_{current_index}", disabled=not can_interact)
+                    
+                    if new_name != resource_item.get('name', '') and st.button("Update Name", key=f"update_teacher_name_btn_{selected_category}_{current_index}", disabled=not can_interact):
+                        st.session_state['teacher_db'][selected_category][current_index]['name'] = new_name
+                        save_db_file(st.session_state['teacher_db'], TEACHER_DATA_FILE)
+                        st.toast("Name updated!")
+                        st.rerun()
+                    
+                    if st.button("🗑️ Delete This Save", key=f"delete_saved_teacher_{selected_category}_{current_index}"):
+                        deleted_size = st.session_state['teacher_db'][selected_category][current_index]['size_mb']
+                        st.session_state.storage['teacher_used_mb'] = max(0, st.session_state.storage['teacher_used_mb'] - deleted_size)
+                        st.session_state.storage['total_used_mb'] = max(0, st.session_state.storage['total_used_mb'] - deleted_size)
+                        st.session_state['teacher_db'][selected_category].pop(current_index)
+                        save_db_file(st.session_state['teacher_db'], TEACHER_DATA_FILE)
+                        save_storage_tracker(st.session_state.storage)
+                        st.toast("Resource deleted!")
+                        st.rerun()
+
+def render_teacher_data_management(can_interact, universal_error_msg):
+    """Renders the content for the 'Data Management' tab."""
+    st.header("Data Management & Cleanup")
+    st.info("Manage what's taking up the most space in your Teacher Aid section.")
+    
+    if not can_interact: # Can't even see data management if universal limit hit
+        st.error(f"🛑 {universal_error_msg} Cannot access data management.")
+    else:
+        teacher_data_list = []
+        for db_key, resources in st.session_state['teacher_db'].items():
+            for i, resource in enumerate(resources):
+                teacher_data_list.append({
+                    "name": resource.get('name', f"{db_key.title()} #{i+1}"),
+                    "size_mb": resource.get('size_mb', 0),
+                    "category": db_key,
+                    "index": i 
+                })
+        
+        teacher_data_list_sorted = sorted(teacher_data_list, key=lambda x: x['size_mb'], reverse=True)
+        total_teacher_mb = sum(item['size_mb'] for item in teacher_data_list_sorted)
+
+        st.metric("Total Teacher Aid Usage", f"{total_teacher_mb:.2f} MB")
+        
+        if teacher_data_list_sorted:
+            st.subheader("All Teacher Aid Data Consumers")
+            for i, item in enumerate(teacher_data_list_sorted):
+                col_item, col_size, col_delete = st.columns([0.6, 0.2, 0.2])
+                col_item.write(f"*{item['category'].title()}:* **{item['name']}**")
+                col_size.write(f"{item['size_mb']:.1f} MB")
+
+                if col_delete.button("Delete", key=f"clean_teacher_{item['category']}_{item['index']}_{i}"):
+                    if item['index'] < len(st.session_state['teacher_db'][item['category']]):
+                        deleted_size = item['size_mb']
+                        st.session_state.storage['teacher_used_mb'] = max(0, st.session_state.storage['teacher_used_mb'] - deleted_size)
+                        st.session_state.storage['total_used_mb'] = max(0, st.session_state.storage['total_used_mb'] - deleted_size)
+                        st.session_state['teacher_db'][item['category']].pop(item['index'])
+                        save_db_file(st.session_state['teacher_db'], TEACHER_DATA_FILE)
+                        save_storage_tracker(st.session_state.storage)
+                        st.toast(f"🗑️ Deleted {item['name']}!")
+                        st.rerun()
+                    else:
+                        st.error(f"Error finding item for deletion: {item['name']}")
+        else:
+            st.info("No saved Teacher Aid data to manage.")
 
 
 def render_plan_manager():
