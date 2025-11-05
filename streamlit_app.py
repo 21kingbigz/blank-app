@@ -47,14 +47,41 @@ st.set_page_config(
 )
 
 # --- INITIALIZE GEMINI CLIENT (FINAL, MOST ROBUST FIX) ---
-if api_key and api_key.strip():
-        # Directly initialize the client with the API key
-        # This is a more direct way for older versions or if 'configure' isn't there.
-        client = genai.GenerativeModel(MODEL, api_key=api_key) # Initialize with API key directly
+# --- INITIALIZE GEMINI CLIENT ---
+client = None # Default to None
+api_key_source = "None"
+
+try:
+    api_key = None
+    
+    # 1. Prioritize Streamlit secrets
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        api_key_source = "Streamlit Secrets"
+    # 2. Fallback to os.getenv (for local env or other setups)
+    elif os.getenv("GEMINI_API_KEY"):
+        api_key = os.getenv("GEMINI_API_KEY")
+        api_key_source = "Environment Variable"
+
+    if api_key and api_key.strip():
+        # Directly initialize the client with the API key 
+        # (Needed because 'configure' is causing errors with your installed 'google-genai' version)
+        client = genai.GenerativeModel(MODEL, api_key=api_key) 
         st.sidebar.success(f"✅ Gemini Client Initialized (Key from {api_key_source}).")
     else:
         st.sidebar.warning("⚠️ Gemini API Key not found or is empty. Running in MOCK MODE.")
+        
+except APIError as e:
+    client = None
+    st.sidebar.error(f"❌ Gemini API Setup Error: {e}")
+    st.sidebar.info("Please ensure your Gemini API Key is valid and active.")
+except Exception as e:
+    client = None
+    # Log the full exception for remote debugging via Streamlit Cloud's logs
+    st.sidebar.error(f"❌ Unexpected Setup Error during Gemini client initialization. See Streamlit logs for details.")
+    st.exception(e)
     
+# --- END INITIALIZE GEMINI CLIENT ---
 # --- END INITIALIZE GEMINI CLIENT ---
 
 
