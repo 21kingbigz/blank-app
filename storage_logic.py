@@ -1,17 +1,15 @@
 import streamlit as st
 import json
-import os  # <-- MUST BE ADDED
+import os
 import pandas as pd
 
 # --- Configuration for storage limits ---
-# ... (rest of TIER_LIMITS) ...
 TIER_LIMITS = {
     "Free Tier": {
         "max_utility_saves": 5, "utility_storage_limit_bytes": 10 * 1024,
         "max_teacher_saves": 2, "teacher_storage_limit_bytes": 5 * 1024,
         "universal_storage_limit_bytes": 15 * 1024
     },
-    # ... (other tiers) ...
     "28/1 Pro": {
         "max_utility_saves": 500, "utility_storage_limit_bytes": 500 * 1024,
         "max_teacher_saves": 0, "teacher_storage_limit_bytes": 0, 
@@ -38,11 +36,11 @@ TIER_LIMITS = {
 UTILITY_DB_INITIAL = {"history": []}
 TEACHER_DB_INITIAL = {"history": []}
 
-# --- File Path Management (FIXED) ---
+# --- File Path Management (FIXED to use /tmp) ---
 def get_file_path(prefix: str, user_email: str) -> str:
     """
     Generates a unique file path for a user's data file.
-    FIX: Uses the /tmp directory for write access in Streamlit Cloud.
+    Uses the /tmp directory for write access in Streamlit Cloud.
     """
     safe_email = user_email.replace('@', '_at_').replace('.', '_dot_')
     file_name = f"{prefix}{safe_email}.json"
@@ -72,8 +70,6 @@ def save_db_file(file_path: str, data: dict):
         with open(file_path, "w") as f:
             json.dump(data, f, indent=4)
     except IOError as e:
-        # Note: In production, this error might indicate a file system issue, 
-        # but in Streamlit Cloud, the /tmp fix should resolve the PermissionError.
         st.error(f"Error saving file {file_path}: {e}")
 
 # --- Storage Tracker Management ---
@@ -112,7 +108,7 @@ def save_storage_tracker(tracker_data: dict, user_email: str):
     except IOError as e:
         st.error(f"Error saving storage tracker for {user_email}: {e}")
 
-# --- Storage Limit Checks ---
+# --- Storage Limit Checks (FIXED) ---
 def calculate_mock_save_size(content: str) -> int:
     """Calculates a mock size for saved content based on string length."""
     return len(content.encode('utf-8')) + 100 # Add a small overhead
@@ -123,19 +119,19 @@ def check_storage_limit(storage_data: dict, check_type: str) -> tuple[bool, str,
     check_type can be 'utility_save', 'teacher_save', or 'universal_storage'.
     Returns (can_save: bool, error_message: str, limit: int).
     """
-    # NOTE: This function assumes st.session_state.utility_db and st.session_state.teacher_db 
-    # are already initialized and validated (which is handled in streamlit_app.py)
     
     user_tier = storage_data.get('tier', 'Free Tier')
     tier_limits = TIER_LIMITS.get(user_tier, TIER_LIMITS['Free Tier'])
 
     can_save = True
     error_msg = ""
-    limit_value = 0 # Default limit_value
+    # FIX: Initialize limit_value to 0 (a number)
+    limit_value = 0 
 
     if check_type == 'utility_save':
-        # Safely access history length
+        # Safely access history length (ensured to be list in streamlit_app.py init)
         current_saves = len(st.session_state.get('utility_db', {}).get('history', []))
+        # Use .get() with a numeric fallback for safety
         max_saves = tier_limits.get('max_utility_saves', 0)
         current_storage = storage_data.get('current_utility_storage', 0)
         storage_limit = tier_limits.get('utility_storage_limit_bytes', 0)
@@ -147,10 +143,10 @@ def check_storage_limit(storage_data: dict, check_type: str) -> tuple[bool, str,
             can_save = False
             error_msg = f"Utility storage limit ({storage_limit / 1024:.1f}KB) reached for your '{user_tier}' plan."
         
-        limit_value = storage_limit # Set relevant limit for display
+        limit_value = storage_limit # Update limit_value with the guaranteed number
+
             
     elif check_type == 'teacher_save':
-        # Safely access history length
         current_saves = len(st.session_state.get('teacher_db', {}).get('history', []))
         max_saves = tier_limits.get('max_teacher_saves', 0)
         current_storage = storage_data.get('current_teacher_storage', 0)
@@ -163,7 +159,7 @@ def check_storage_limit(storage_data: dict, check_type: str) -> tuple[bool, str,
             can_save = False
             error_msg = f"Teacher storage limit ({storage_limit / 1024:.1f}KB) reached for your '{user_tier}' plan."
         
-        limit_value = storage_limit
+        limit_value = storage_limit # Update limit_value with the guaranteed number
 
     elif check_type == 'universal_storage':
         current_storage = storage_data.get('current_universal_storage', 0)
@@ -173,9 +169,11 @@ def check_storage_limit(storage_data: dict, check_type: str) -> tuple[bool, str,
             can_save = False
             error_msg = f"Universal storage limit ({storage_limit / 1024:.1f}KB) reached for your '{user_tier}' plan."
         
-        limit_value = storage_limit
+        limit_value = storage_limit # Update limit_value with the guaranteed number
+
 
     # Special case: If a feature type has 0 max saves or 0 storage limit, it means no access
+    # (Checking limits with numeric fallbacks is key here)
     if (check_type == 'utility_save' and tier_limits.get('max_utility_saves', 1) == 0) or \
        (check_type == 'teacher_save' and tier_limits.get('max_teacher_saves', 1) == 0):
         if tier_limits.get('max_utility_saves', 1) == 0:
@@ -186,4 +184,5 @@ def check_storage_limit(storage_data: dict, check_type: str) -> tuple[bool, str,
             error_msg = f"Your '{user_tier}' plan does not include access to Teacher Aid."
 
 
+    # FINAL CAST: limit_value is now guaranteed to be a number (float or int), making this safe.
     return can_save, error_msg, int(limit_value)
