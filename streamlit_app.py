@@ -12,6 +12,7 @@ from google import genai
 from google.genai.errors import APIError
 
 # Import custom modules (Assuming these files exist and are correct)
+# NOTE: The persistence of login requires proper implementation in auth.py
 from auth import render_login_page, logout, load_users, load_plan_overrides
 from storage_logic import (
     load_storage_tracker, save_storage_tracker, check_storage_limit,
@@ -32,12 +33,20 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# --- INITIALIZE GEMINI CLIENT ---
+# --- INITIALIZE GEMINI CLIENT (FIXED LOGIC) ---
 client = None # Default to None
 
 try:
-    # 1. Safely retrieve the API key first
-    api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
+    # 1. Safely retrieve the API key first from various common Streamlit locations
+    api_key = st.secrets.get("GEMINI_API_KEY") # Try user's stated direct key name
+    
+    if not api_key and "gemini" in st.secrets and isinstance(st.secrets["gemini"], dict):
+        # Try common nested structure: [gemini] api_key = "..."
+        api_key = st.secrets["gemini"].get("api_key")
+
+    # Fallback to environment variable if secrets didn't yield a key
+    if not api_key:
+        api_key = os.getenv("GEMINI_API_KEY")
 
     if api_key:
         # 2. Only proceed to configure and initialize if the key is found
@@ -45,7 +54,7 @@ try:
         client = genai.GenerativeModel(MODEL)
         # st.success("Gemini Client successfully initialized!") # Optional feedback for debugging
     else:
-        # Key not found, client remains None. The warning will be shown in run_ai_generation.
+        # Key not found, client remains None. The run_ai_generation function handles the error message.
         pass
 
 except Exception as e:
@@ -106,69 +115,114 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 1. THE 28 FUNCTION LIST (MOCK/EXAMPLE PLACEHOLDERS) ---
-# NOTE: These mock functions are kept for the sake of code structure/data mapping, 
-# but they are NOT used in run_ai_generation anymore.
+# --- 1. THE 28 FUNCTION LIST (Internal Mapping for Mocking) ---
 def daily_schedule_optimizer(tasks_time: str) -> str:
-    return f"**Feature 1: Daily Schedule Optimizer**\nTime-blocked schedule for: {tasks_time}"
+    return f"**Feature 1: Daily Schedule Optimizer**\nTime-blocked schedule for: {tasks_time}\n9:00 AM - Focus Work, 11:00 AM - Meeting, 1:00 PM - Deep Dive Task."
 def task_deconstruction_expert(vague_goal: str) -> str:
-    return f"**Feature 2: Task Deconstruction Expert**\n3 Concrete Steps for '{vague_goal}':"
+    return f"**Feature 2: Task Deconstruction Expert**\n3 Concrete Steps for '{vague_goal}':\n* Define scope and audience.\n* Gather resources and outline structure.\n* Draft first section and seek feedback."
 def get_unstuck_prompter(problem: str) -> str:
-    return f"**Feature 3: 'Get Unstuck' Prompter**\nCritical Next-Step Question for '{problem}':"
+    return f"**Feature 3: 'Get Unstuck' Prompter**\nCritical Next-Step Question for '{problem}': **What is the single, 5-minute action that moves you forward right now?**"
 def habit_breaker(bad_habit: str) -> str:
-    return f"**Feature 4: Habit Breaker**\n3 Environmental Changes for friction against '{bad_habit}':"
+    return f"**Feature 4: Habit Breaker**\n3 Environmental Changes for friction against '{bad_habit}':\n1. Move the trigger object out of sight.\n2. Set a digital blocker or reminder.\n3. Identify a healthy replacement activity."
 def one_sentence_summarizer(long_text: str) -> str:
-    return f"**Feature 5: One-Sentence Summarizer**\nCore Idea: {long_text}"
+    return f"**Feature 5: One-Sentence Summarizer**\nCore Idea: The provided text discusses complex topics and requires concise distillation of its main argument."
+
 def tip_split_calculator(bill_tip_people: str) -> str:
-    return f"**Feature 6: Tip & Split Calculator**\nCost per person calculated for: {bill_tip_people}"
+    bill_match = re.search(r'bill:\s*[\$\s]*([\d\.]+)', bill_tip_people, re.IGNORECASE)
+    tip_match = re.search(r'tip:\s*([\d\.]+)\s*%', bill_tip_people, re.IGNORECASE)
+    people_match = re.search(r'people:\s*(\d+)', bill_tip_people, re.IGNORECASE)
+
+    bill = float(bill_match.group(1)) if bill_match else 50.0
+    tip_percent = float(tip_match.group(1)) if tip_match else 18.0
+    people = int(people_match.group(1)) if people_match else 2
+
+    total_bill = bill * (1 + (tip_percent / 100))
+    per_person = total_bill / people
+    return f"**Feature 6: Tip & Split Calculator**\nFor Bill: ${bill:.2f}, Tip: {tip_percent:.0f}%, People: {people}\n**Total Per Person Cost: ${per_person:.2f}**"
 def unit_converter(value_units: str) -> str:
-    return f"**Feature 7: Unit Converter**\nPrecise conversion of '{value_units}':"
+    return f"**Feature 7: Unit Converter**\nPrecise conversion of '{value_units}':\n*10 miles is 16.0934 kilometers.*"
 def priority_spending_advisor(goal_purchase: str) -> str:
-    return f"**Feature 8: Priority Spending Advisor**\nConflict Analysis for '{goal_purchase}':"
+    return f"**Feature 8: Priority Spending Advisor**\nConflict Analysis for '{goal_purchase}':\nThis purchase conflicts directly with your goal, delaying achievement by an estimated 6 weeks due to the opportunity cost."
+
 def image_to_calorie_estimate(image: Image.Image, user_input: str) -> str:
-    return f"**Feature 9: Image-to-Calorie Estimate**\nNutritional analysis for uploaded image and request: {user_input}"
+    st.warning("Feature 9: Image processing is mocked. A real implementation would use a vision AI model.")
+    return f"""
+**Feature 9: Image-to-Calorie Estimate**
+(Analysis for uploaded image: {image.filename if image else 'N/A'})
+**A) Portion Estimate:** One medium patty, two slices of bread, side salad.
+**B) Itemized Calorie Breakdown:**
+* Beef Patty (4oz, lean): ~200 cal
+* Whole Wheat Bread (2 slices): ~160 cal
+* Lettuce/Tomato/Dressing: ~50 cal
+**C) Final Total:** **~410 calories**
+"""
 def recipe_improver(ingredients: str) -> str:
-    return f"**Feature 10: Recipe Improver**\nSimple recipe instructions for: {ingredients}"
+    return f"**Feature 10: Recipe Improver**\nSimple recipe instructions for: {ingredients}\n1. Sauté the chicken and onions until browned. 2. Add vegetables and stock. 3. Simmer for 20 minutes and serve with rice."
 def symptom_clarifier(symptoms: str) -> str:
-    return f"**Feature 11: Symptom Clarifier**\n3 plausible benign causes for '{symptoms}':"
+    return f"**Feature 11: Symptom Clarifier**\n3 plausible benign causes for '{symptoms}':\n1. Common seasonal allergies (pollen/dust).\n2. Mild fatigue due to poor sleep.\n3. Dehydration or temporary low blood sugar."
+
 def tone_checker_rewriter(text_tone: str) -> str:
-    return f"**Feature 12: Tone Checker & Rewriter**\nRewritten text (Desired tone): {text_tone}"
+    return f"**Feature 12: Tone Checker & Rewriter**\nRewritten text (Desired tone: Professional):\n'I acknowledge receipt of your request and will provide the deliverable by the end of business tomorrow.'"
 def contextual_translator(phrase_context: str) -> str:
-    return f"**Feature 13: Contextual Translator**\nTranslation that matches social register for: {phrase_context}"
+    return f"**Feature 13: Contextual Translator**\nTranslation (French, Formal Register): **'Pourriez-vous, s'il vous plaît, me donner les détails?'** (Could you, please, give me the details?)"
 def metaphor_machine(topic: str) -> str:
-    return f"**Feature 14: Metaphor Machine**\n3 Creative Analogies for '{topic}':"
+    return f"**Feature 14: Metaphor Machine**\n3 Creative Analogies for '{topic}':\n1. The cloud is a global, shared library.\n2. Information flow is like an ocean tide.\n3. The network is a massive spider web."
 def email_text_reply_generator(message_points: str) -> str:
-    return f"**Feature 15: Email/Text Reply Generator**\nDrafted concise reply for: {message_points}"
+    return f"**Feature 15: Email/Text Reply Generator**\nDrafted concise reply for: {message_points}\n'Thank you for bringing this up. I will review the documents immediately and ensure the changes are implemented by 3 PM today.'"
+
 def idea_generator_constraint_solver(idea_constraints: str) -> str:
-    return f"**Feature 16: Idea Generator/Constraint Solver**\nUnique options for '{idea_constraints}':"
+    return f"**Feature 16: Idea Generator/Constraint Solver**\nUnique options for '{idea_constraints}':\n- Idea A: Eco-friendly delivery service using electric bikes.\n- Idea B: Subscription box for local, artisanal products.\n- Idea C: Micro-consulting for remote teams."
 def random_fact_generator(category: str) -> str:
-    return f"**Feature 17: Random Fact Generator**\nCategory: {category if category else 'General'}\nFact: A true random fact."
+    facts = ["A single cloud can weigh more than 1 million pounds.", "The shortest war in history lasted only 38 to 45 minutes.", "The smell of rain is called petrichor."]
+    return f"**Feature 17: Random Fact Generator**\nCategory: {category if category else 'General'}\n**Fact:** {random.choice(facts)}"
 def what_if_scenario_planner(hypothetical: str) -> str:
-    return f"**Feature 18: 'What If' Scenario Planner**\nAnalysis for: {hypothetical}"
+    return f"""
+**Feature 18: 'What If' Scenario Planner**
+Analysis for: What if global internet access was free?
+Pros: 1. Unprecedented educational equity. 2. Massive economic growth in developing nations. 3. Accelerated scientific collaboration.
+Cons: 1. Overwhelming infrastructure cost/upkeep. 2. Exponential increase in cyber-security threats. 3. Collapse of existing telecommunication revenue models.
+"""
+
 def concept_simplifier(complex_topic: str) -> str:
-    return f"**Feature 19: Concept Simplifier**\nExplanation of '{complex_topic}' using simple analogy."
+    return f"**Feature 19: Concept Simplifier**\nExplanation of '{complex_topic}' using simple analogy:\nQuantum entanglement is like having two special coins that always land on the opposite side, no matter how far apart you take them. Observing one instantly tells you the state of the other."
 def code_explainer(code_snippet: str) -> str:
-    return f"**Feature 20: Code Explainer**\nPlain-language explanation of function for: {code_snippet}"
+    return f"**Feature 20: Code Explainer**\nPlain-language explanation of function:\nThis Python code snippet defines a function that takes a list of numbers, filters out any duplicates, sorts the remaining unique numbers, and returns the result."
+
 def packing_list_generator(trip_details: str) -> str:
-    return f"**Feature 21: Packing List Generator**\nChecklist for: {trip_details}"
+    return f"""
+**Feature 21: Packing List Generator**
+Checklist for: {trip_details}
+**Clothes:** 3 Shirts, 2 Pants, 1 Jacket, 1 Pair of Formal Shoes.
+**Essentials:** Passport, Wallet, Adapter, Phone Charger, Medications.
+**Toiletries:** Toothbrush, Paste, Shampoo (Travel size).
+"""
+
 def mathematics_expert_ai(problem: str) -> str:
-    return f"**Feature 22: Mathematics Expert AI**\nAnswer, Solve, and Explain: {problem}"
+    return f"**Feature 22: Mathematics Expert AI**\nAnswer, Solve, and Explain: The solution to the equation **2x + 5 = 15** is **x = 5**. (The explanation involves isolating the variable by subtracting 5 and then dividing by 2)."
 def english_literature_expert_ai(query: str) -> str:
-    return f"**Feature 23: English & Literature Expert AI**\nCritique/Analysis for '{query}':"
+    return f"**Feature 23: English & Literature Expert AI**\nCritique/Analysis for '{query}':\nThe use of the color green in *The Great Gatsby* symbolizes the unattainable American Dream and Jay Gatsby's eternal hope for the past."
 def history_social_studies_expert_ai(query: str) -> str:
-    return f"**Feature 24: History & Social Studies Expert AI**\nComprehensive Answer/Analysis for '{query}':"
+    return f"**Feature 24: History & Social Studies Expert AI**\nComprehensive Answer/Analysis for '{query}':\nThe major cause of the French Revolution was the stark inequality between the wealthy aristocracy and the impoverished Third Estate, exacerbated by famine and enlightenment ideas."
 def foreign_language_expert_ai(query: str) -> str:
-    return f"**Feature 25: Foreign Language Expert AI**\nTranslation/Context for '{query}':"
+    return f"**Feature 25: Foreign Language Expert AI**\nTranslation/Context for '{query}':\n*German:* **Guten Tag! Wie geht es Ihnen?** (Formal: Hello! How are you?). *Context:* Use 'Ihnen' when speaking to strangers or elders."
 def science_expert_ai(query: str) -> str:
-    return f"**Feature 26: Science Expert AI**\nExplanation/Analysis for '{query}':"
+    return f"**Feature 26: Science Expert AI**\nExplanation/Analysis for '{query}':\nPhotosynthesis is the process by which plants convert light energy, carbon dioxide, and water into glucose (food) and oxygen. Its chemical formula is **6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂**."
 def vocational_applied_expert_ai(query: str) -> str:
-    return f"**Feature 27: Vocational & Applied Expert AI**\nExpert Answer for '{query}':"
+    return f"**Feature 27: Vocational & Applied Expert AI**\nExpert Answer for '{query}':\nPolymorphism in Python allows objects of different classes to be treated as objects of a common interface (the same function name can be used on different types of objects)."
 def grade_calculator(scores_weights: str) -> str:
-    return f"**Feature 28: Grade Calculator**\nCalculated final grade based on: {scores_weights}"
+    score_weight_pattern = re.compile(r'(\w+)\s*(\d+)\s*\((\d+)%\)')
+    matches = score_weight_pattern.findall(scores_weights)
+
+    total_score = sum(float(s) * (float(w) / 100) for _, s, w in matches)
+    total_weight = sum(float(w) / 100 for _, _, w in matches)
+
+    if total_weight > 0:
+        final_grade = (total_score / total_weight) if total_weight <= 1.0 else total_score
+        return f"**Feature 28: Grade Calculator**\nBased on input, your final calculated grade is: **{final_grade:.2f}%**"
+    return f"**Feature 28: Grade Calculator**\nInput data for calculation missing or invalid. Please provide Scores and Weights (e.g., Quiz 80 (20%))."
 
 
 # --- CATEGORY AND FEATURE MAPPING ---
-# Maps the UI selection to the function names (the AI uses the prompt content for routing)
 UTILITY_CATEGORIES = {
     "Cognitive & Productivity": {
         "1. Daily Schedule Optimizer": daily_schedule_optimizer,
@@ -248,17 +302,299 @@ FEATURE_EXAMPLES = {
     "28. Grade Calculator": "Quiz 80 (20%), Midterm 75 (30%), Final 90 (50%)",
 }
 
-# --- AI GENERATION FUNCTION (MOCK LOGIC REMOVED) ---
+# --- AI GENERATION FUNCTION ---
 def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_image: Image.Image = None) -> str:
     """
-    Executes the selected feature function using the real Gemini API.
-    All mock responses are removed, forcing an API call or an error.
+    Executes the selected feature function. Uses the real Gemini API if available,
+    otherwise falls back to the mock functions.
     """
 
-    # CRITICAL: If client is not initialized, return a clear error instead of a mock response.
+    # 1. Fallback/Mock execution
     if client is None:
-        return "🛑 **AI Client Error:** The Gemini API Key is not configured. Please set the **GEMINI_API_KEY** in your environment or Streamlit secrets to enable AI generation."
+        st.warning("Gemini Client is NOT initialized. Using Mock Response.")
+        selected_function = None
+        
+        # Check Utility Mappings
+        for category_features in UTILITY_CATEGORIES.values():
+            if feature_function_key in category_features:
+                selected_function = category_features[feature_function_key]
+                break
+        
+        is_teacher_aid_proxy = feature_function_key == "Teacher_Aid_Routing"
+        
+        if selected_function:
+            if feature_function_key == "9. Image-to-Calorie Estimate":
+                return selected_function(uploaded_image, prompt_text)
+            else:
+                return selected_function(prompt_text)
+        elif is_teacher_aid_proxy:
+            # --- CRITICAL FIX: Detailed Mock Responses for Teacher Aid Resources ---
+            if "Unit Overview" in prompt_text:
+                topic = prompt_text.replace("Unit Overview", "").strip() or "a new unit"
+                return f"""
+**Teacher Aid Resource: Unit Overview**
+**Request:** *{prompt_text}*
 
+---
+
+### Unit Overview: {topic.title()}
+
+**A) Unit Objectives:**
+1.  Students will be able to identify key concepts and theories related to {topic}.
+2.  Students will be able to analyze the impact of {topic} on real-world scenarios.
+3.  Students will be able to critically evaluate different perspectives on {topic}.
+
+**B) Key Topics/Subtopics:**
+* Introduction to {topic}
+* Historical Context and Development
+* Major Theories and Principles
+* Applications and Case Studies
+* Future Implications
+
+**C) Suggested Activities (3-5):**
+1.  **Debate:** Organize a classroom debate on a controversial aspect of {topic}.
+2.  **Research Project:** Assign small groups to research and present on a specific subtopic.
+3.  **Concept Mapping:** Students create visual concept maps connecting key terms.
+4.  **Guest Speaker:** Invite an expert in the field to speak to the class.
+5.  **Field Trip:** Visit a relevant museum or institution (if applicable).
+
+**D) Assessment Overview:**
+* Formative: Quizzes after each subtopic, participation in discussions.
+* Summative: A final essay (25%), a group presentation (25%), and a comprehensive test (50%).
+"""
+            elif "Lesson Plan" in prompt_text:
+                topic = prompt_text.replace("Lesson Plan", "").strip() or "a specific lesson"
+                return f"""
+**Teacher Aid Resource: Lesson Plan**
+**Request:** *{prompt_text}*
+
+---
+
+### Lesson Plan: Introduction to {topic.title()}
+
+**A) Objective:**
+* Students will be able to define {topic} and explain its basic principles.
+* Students will be able to provide at least two examples of {topic} in daily life.
+
+**B) Materials:**
+* Whiteboard or projector
+* Markers/pens
+* Handout with key terms
+* Short video clip (5 minutes) related to {topic}
+
+**C) Procedure:**
+* **Warm-up (10 min):** Ask students to brainstorm what they already know about {topic}. Write ideas on the board.
+* **Main Activity (30 min):**
+    * Teacher explains core concepts using visual aids.
+    * Show video clip and discuss.
+    * Students work in pairs to answer questions on the handout.
+* **Wrap-up (10 min):** Review answers as a class. Assign a quick write for homework: "What is one new thing you learned about {topic} today?"
+
+**D) Assessment Strategy:**
+* Informal: Observe student participation in discussions and pair work.
+* Formative: Collect and review quick writes for understanding.
+"""
+            elif "Vocabulary List" in prompt_text:
+                topic = prompt_text.replace("Vocabulary List", "").strip() or "general science"
+                return f"""
+**Teacher Aid Resource: Vocabulary List**
+**Request:** *{prompt_text}*
+
+---
+
+### Vocabulary List: {topic.title()}
+
+1.  **Term:** Photosynthesis
+    * **Concise Definition:** The process by which green plants and some other organisms use sunlight to synthesize foods from carbon dioxide and water.
+    * **Example Sentence:** During **photosynthesis**, plants absorb carbon dioxide from the atmosphere.
+2.  **Term:** Ecosystem
+    * **Concise Definition:** A biological community of interacting organisms and their physical environment.
+    * **Example Sentence:** The rainforest is a complex **ecosystem** teeming with biodiversity.
+3.  **Term:** Hypothesis
+    * **Concise Definition:** A proposed explanation made on the basis of limited evidence as a starting point for further investigation.
+    * **Example Sentence:** Her **hypothesis** was that increased sunlight would lead to faster plant growth.
+4.  **Term:** Molecule
+    * **Concise Definition:** A group of atoms bonded together, representing the smallest fundamental unit of a chemical compound that can take part in a chemical reaction.
+    * **Example Sentence:** A water **molecule** is made of two hydrogen atoms and one oxygen atom.
+5.  **Term:** Gravity
+    * **Concise Definition:** The force that attracts a body toward the center of the earth, or toward any other physical body having mass.
+    * **Example Sentence:** **Gravity** keeps our feet on the ground and planets in orbit.
+"""
+            elif "Worksheet" in prompt_text:
+                topic = prompt_text.replace("Worksheet", "").strip() or "basic math"
+                return f"""
+**Teacher Aid Resource: Worksheet**
+**Request:** *{prompt_text}*
+
+---
+
+### Worksheet: {topic.title()} Practice
+
+**Instructions:** Answer all questions to the best of your ability.
+
+1.  What is the capital city of France? (Short Answer)
+2.  Fill in the blank: The Earth orbits the ______.
+3.  Match the following:
+    a) Dog             i) Feline
+    b) Cat             ii) Canine
+4.  Solve: $5 \times 7 = $ _____.
+5.  List three primary colors.
+6.  True or False: Birds are mammals.
+7.  What is the main function of the heart?
+8.  If you have 12 apples and eat 3, how many are left?
+9.  Write a sentence using the word "magnificent."
+10. Name a famous scientist.
+
+---
+
+### Answer Key:
+1.  Paris
+2.  Sun
+3.  a) ii, b) i
+4.  35
+5.  Red, Yellow, Blue
+6.  False
+7.  To pump blood throughout the body.
+8.  9
+9.  (Accept any grammatically correct sentence using "magnificent")
+10. (Accept any famous scientist, e.g., Albert Einstein, Marie Curie)
+"""
+            elif "Quiz" in prompt_text:
+                topic = prompt_text.replace("Quiz", "").strip() or "general knowledge"
+                return f"""
+**Teacher Aid Resource: Quiz**
+**Request:** *{prompt_text}*
+
+---
+
+### Quiz: {topic.title()}
+
+**Instructions:** Choose the best answer for each question.
+
+1.  What is the largest ocean on Earth?
+    a) Atlantic Ocean
+    b) Indian Ocean
+    c) Arctic Ocean
+    d) Pacific Ocean
+2.  Who painted the Mona Lisa?
+    a) Vincent van Gogh
+    b) Pablo Picasso
+    c) Leonardo da Vinci
+    d) Claude Monet
+3.  Which planet is known as the "Red Planet"?
+    a) Venus
+    b) Mars
+    c) Jupiter
+    d) Saturn
+4.  What is the chemical symbol for water?
+    a) O2
+    b) CO2
+    c) H2O
+    d) NaCl
+5.  How many continents are there?
+    a) 5
+    b) 6
+    c) 7
+    d) 8
+
+---
+
+### Answer Key:
+1.  d) Pacific Ocean
+2.  c) Leonardo da Vinci
+3.  b) Mars
+4.  c) H2O
+5.  c) 7
+"""
+            elif "Test" in prompt_text:
+                topic = prompt_text.replace("Test", "").strip() or "comprehensive review"
+                return f"""
+**Teacher Aid Resource: Test**
+**Request:** *{prompt_text}*
+
+---
+
+### Test: {topic.title()} Comprehensive Exam
+
+**A) Multiple Choice (15 Questions):**
+*Instructions: Select the best answer for each question.*
+
+1.  Question 1 about {topic}?
+    a) Option A
+    b) Option B
+    c) Option C
+    d) Option D
+2.  Question 2 about {topic}?
+    a) Option A
+    b) Option B
+    c) Option C
+    d) Option D
+... (13 more multiple choice questions) ...
+15. Question 15 about {topic}?
+    a) Option A
+    b) Option B
+    c) Option C
+    d) Option D
+
+**B) Short/Long Answer (4 Questions):**
+*Instructions: Answer the following questions in complete sentences or paragraphs.*
+
+1.  Explain the primary causes and effects of [key event/concept in topic]. (Short Answer)
+2.  Compare and contrast two different perspectives on [another key concept in topic]. (Short Answer)
+3.  Describe in detail how [element A] influences [element B] within the context of {topic}. Provide specific examples. (Long Answer)
+4.  Propose a solution to a problem related to {topic} and justify your reasoning. (Long Answer)
+
+---
+
+### Answer Key/Rubric:
+
+**Multiple Choice Answers:**
+1.  [Correct Answer]
+2.  [Correct Answer]
+...
+15. [Correct Answer]
+
+**Short/Long Answer Rubric:**
+
+* **Question 1 (5 points):**
+    * 5 pts: Comprehensive explanation of both causes and effects with accurate details.
+    * 3 pts: Partial explanation or some inaccuracies.
+    * 1 pt: Minimal or incorrect information.
+* **Question 2 (5 points):**
+    * 5 pts: Clear comparison and contrast of two perspectives with supporting details.
+    * 3 pts: Adequate comparison but lacking depth or minor inaccuracies.
+    * 1 pt: Unclear or incorrect comparison.
+* **Question 3 (10 points):**
+    * 10 pts: Detailed description with relevant examples, demonstrating deep understanding.
+    * 6 pts: Good description, but examples may be weak or understanding is not fully demonstrated.
+    * 3 pts: Basic description with limited or no examples.
+* **Question 4 (10 points):**
+    * 10 pts: Well-reasoned solution with strong justification.
+    * 6 pts: Plausible solution with some justification, but may lack depth.
+    * 3 pts: Basic or unclear solution with weak justification.
+"""
+            else:
+                # Default generic response for Teacher Aid if no specific tag is found
+                return f"""
+**Teacher Aid Resource Generation (MOCK - Generic)**
+
+**Request:** *{prompt_text}*
+
+---
+
+### Generic Resource Output
+The system has received your request. For a more structured output, please include a specific **Resource Tag** in your prompt, such as: **Unit Overview**, **Lesson Plan**, **Vocabulary List**, **Worksheet**, **Quiz**, or **Test**.
+
+**Example:** "Create a **Lesson Plan** for teaching fractions."
+
+---
+*This is a mock response because the Gemini API is not connected or the request did not match a specific teacher resource tag.*
+"""
+            # --- END CRITICAL FIX FOR TEACHER AID MOCK RESPONSES ---
+        else:
+            return "Error: Feature not found or not yet implemented."
+
+    # 2. Real AI execution (if client is available)
     try:
         contents = []
         if feature_function_key == "9. Image-to-Calorie Estimate" and uploaded_image:
@@ -267,11 +603,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
             uploaded_image.save(img_byte_arr, format=uploaded_image.format or 'PNG')
             img_byte_arr = img_byte_arr.getvalue()
 
-            # For the real API call, the image must be converted to a Part object
-            contents.append(genai.types.Part.from_bytes(
-                data=img_byte_arr,
-                mime_type=uploaded_image.format.lower() if uploaded_image.format else "image/png"
-            ))
+            contents.append(genai.types.Blob(mime_type="image/jpeg", data=img_byte_arr))
 
         contents.append(prompt_text)
 
@@ -287,16 +619,15 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
         return response.text
 
     except APIError as e:
-        # Catch and display specific API errors
         return f"Gemini API Error: Could not complete request. Details: {e}"
     except Exception as e:
-        # Catch any other unexpected errors
         return f"An unexpected error occurred during AI generation: {e}"
 
 
 # --- INITIALIZATION BLOCK (CRITICAL FOR PERSISTENCE & ERROR FIXES) ---
 
 # Check for 'logged_in' state
+# This uses Streamlit's session_state for persistence across refreshes.
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -337,7 +668,8 @@ if st.session_state.logged_in:
         st.session_state['app_mode'] = "Dashboard"
     if '28_in_1_output' not in st.session_state:
         st.session_state['28_in_1_output'] = ""
-    # Removed generic 'teacher_output' since outputs are now per tab
+    if 'teacher_output' not in st.session_state:
+        st.session_state['teacher_output'] = ""
     if 'teacher_view' not in st.session_state: # Use this for teacher sub-view
         st.session_state['teacher_view'] = 'generation' 
 
@@ -415,6 +747,7 @@ def render_main_dashboard():
                 st.session_state['app_mode'] = "28-in-1 Utilities"
                 st.rerun()
 
+# --- MODIFIED: Added history tab for 28/1 Utilities ---
 def render_utility_hub_content(can_interact, universal_error_msg):
     """The 28-in-1 Stateless AI Utility Hub"""
 
@@ -429,227 +762,264 @@ def render_utility_hub_content(can_interact, universal_error_msg):
 
     can_save_utility, utility_error_msg, utility_limit = check_storage_limit(st.session_state.storage, 'utility_save')
 
-    col_left, col_right = st.columns([1, 2])
+    # Use Streamlit Tabs for the requested layout: Generation and History
+    tab_gen, tab_history = st.tabs(
+        ["📝 Generation Hub", "📚 Saved History"]
+    )
+    
+    # --- TAB: GENERATION HUB (The original content) ---
+    with tab_gen:
+        col_left, col_right = st.columns([1, 2])
 
-    # --- LEFT COLUMN: CATEGORY SELECTION ---
-    with col_left:
-        st.subheader("Select a Category:")
-        category_options = list(UTILITY_CATEGORIES.keys())
+        # --- LEFT COLUMN: CATEGORY SELECTION ---
+        with col_left:
+            st.subheader("Select a Category:")
+            category_options = list(UTILITY_CATEGORIES.keys())
 
-        if st.session_state['selected_28_in_1_category'] not in category_options:
-             st.session_state['selected_28_in_1_category'] = category_options[0]
+            if st.session_state['selected_28_in_1_category'] not in category_options:
+                 st.session_state['selected_28_in_1_category'] = category_options[0]
 
-        selected_category = st.radio(
-            "Category",
-            category_options,
-            key="28_in_1_category_radio",
-            index=category_options.index(st.session_state['selected_28_in_1_category']),
-            label_visibility="collapsed"
-        )
-        st.session_state['selected_28_in_1_category'] = selected_category
-
-    # --- RIGHT COLUMN: FEATURE SELECTION & INPUT ---
-    with col_right:
-        st.subheader("Select Feature & Input:")
-        features_in_category = UTILITY_CATEGORIES[selected_category]
-
-        if st.session_state['selected_28_in_1_feature'] not in features_in_category:
-            st.session_state['selected_28_in_1_feature'] = list(features_in_category.keys())[0]
-
-        selected_feature = st.selectbox(
-            "Select a Feature/Module:",
-            list(features_in_category.keys()),
-            key="28_in_1_feature_selector",
-            index=list(features_in_category.keys()).index(st.session_state['selected_28_in_1_feature'])
-        )
-        st.session_state['selected_28_in_1_feature'] = selected_feature
-
-        example_input = FEATURE_EXAMPLES.get(selected_feature, "Enter your request here...")
-        st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
-
-
-        user_input_placeholder = "Enter your request here..."
-        if selected_feature == "9. Image-to-Calorie Estimate":
-            user_input_placeholder = "Describe the food in the image and provide any specific details (e.g., '1 cup of rice with chicken')."
-
-        needs_image = selected_feature == "9. Image-to-Calorie Estimate"
-
-        uploaded_file = None
-        uploaded_image = None
-        if needs_image:
-            uploaded_file = st.file_uploader(
-                "Upload Image for Calorie Estimate (Feature 9 Only)",
-                type=["png", "jpg", "jpeg"],
-                key="28_in_1_image_uploader"
+            selected_category = st.radio(
+                "Category",
+                category_options,
+                key="28_in_1_category_radio",
+                index=category_options.index(st.session_state['selected_28_in_1_category']),
+                label_visibility="collapsed"
             )
-            if uploaded_file:
-                uploaded_image = Image.open(uploaded_file)
-                st.image(uploaded_image, caption="Uploaded Image", use_column_width=False, width=150)
+            st.session_state['selected_28_in_1_category'] = selected_category
+
+        # --- RIGHT COLUMN: FEATURE SELECTION & INPUT ---
+        with col_right:
+            st.subheader("Select Feature & Input:")
+            features_in_category = UTILITY_CATEGORIES[selected_category]
+
+            if st.session_state['selected_28_in_1_feature'] not in features_in_category:
+                st.session_state['selected_28_in_1_feature'] = list(features_in_category.keys())[0]
+
+            selected_feature = st.selectbox(
+                "Select a Feature/Module:",
+                list(features_in_category.keys()),
+                key="28_in_1_feature_selector",
+                index=list(features_in_category.keys()).index(st.session_state['selected_28_in_1_feature'])
+            )
+            st.session_state['selected_28_in_1_feature'] = selected_feature
+
+            example_input = FEATURE_EXAMPLES.get(selected_feature, "Enter your request here...")
+            st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
 
 
-        prompt_input = st.text_area(
-            "Your Request/Input:",
-            placeholder=user_input_placeholder,
-            height=150,
-            key="28_in_1_prompt_input"
-        )
+            user_input_placeholder = "Enter your request here..."
+            if selected_feature == "9. Image-to-Calorie Estimate":
+                user_input_placeholder = "Describe the food in the image and provide any specific details (e.g., '1 cup of rice with chicken')."
 
-        if st.button("Generate Result", key="28_in_1_generate_btn", use_container_width=True):
-            if not prompt_input and not (needs_image and uploaded_image): # Ensure input or image for feature 9
-                st.warning("Please enter a request or upload an image (for Feature 9).")
-            else:
-                with st.spinner(f"Running Feature: {selected_feature}..."):
-                    
-                    # CRITICAL: The prompt for the 28-in-1 hub includes the feature name 
-                    # for the AI to correctly route the request based on the system instructions.
-                    ai_prompt = f"Feature {selected_feature}: {prompt_input}"
+            needs_image = selected_feature == "9. Image-to-Calorie Estimate"
 
-                    generated_output = run_ai_generation(
-                        feature_function_key=selected_feature,
-                        prompt_text=ai_prompt,
-                        uploaded_image=uploaded_image
+            uploaded_file = None
+            uploaded_image = None
+            if needs_image:
+                uploaded_file = st.file_uploader(
+                    "Upload Image for Calorie Estimate (Feature 9 Only)",
+                    type=["png", "jpg", "jpeg"],
+                    key="28_in_1_image_uploader"
+                )
+                if uploaded_file:
+                    uploaded_image = Image.open(uploaded_file)
+                    st.image(uploaded_image, caption="Uploaded Image", use_column_width=False, width=150)
+
+
+            prompt_input = st.text_area(
+                "Your Request/Input:",
+                placeholder=user_input_placeholder,
+                height=150,
+                key="28_in_1_prompt_input"
+            )
+
+            if st.button("Generate Result", key="28_in_1_generate_btn", use_container_width=True):
+                if not prompt_input and not (needs_image and uploaded_image): # Ensure input or image for feature 9
+                    st.warning("Please enter a request or upload an image (for Feature 9).")
+                else:
+                    with st.spinner(f"Running Feature: {selected_feature}..."):
+
+                        generated_output = run_ai_generation(
+                            feature_function_key=selected_feature,
+                            prompt_text=prompt_input,
+                            uploaded_image=uploaded_image
+                        )
+
+                        st.session_state['28_in_1_output'] = generated_output
+
+                        if can_save_utility:
+                            data_to_save = {
+                                "timestamp": pd.Timestamp.now().isoformat(),
+                                "feature": selected_feature,
+                                "input": prompt_input[:100] + "..." if len(prompt_input) > 100 else prompt_input,
+                                "output_size_bytes": calculate_mock_save_size(generated_output),
+                                "output_content": generated_output
+                            }
+
+                            st.session_state.utility_db['history'].append(data_to_save)
+                            save_db_file(get_file_path("utility_data_", st.session_state.current_user), st.session_state.utility_db)
+
+                            mock_size = data_to_save["output_size_bytes"]
+                            st.session_state.storage['current_utility_storage'] += mock_size
+                            st.session_state.storage['current_universal_storage'] += mock_size
+                            save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+
+                            st.success(f"Result saved to Utility History (Mock Size: {mock_size} bytes).")
+                        else:
+                            st.error(f"⚠️ **Utility History Save Blocked:** {utility_error_msg}. Result is displayed below but not saved.")
+
+            st.markdown("---")
+            st.subheader("Output Result")
+            st.markdown(st.session_state['28_in_1_output'])
+
+    # --- TAB: SAVED HISTORY ---
+    with tab_history:
+        st.subheader("28-in-1 Utility Saved History")
+        utility_df = pd.DataFrame(st.session_state.utility_db['history'])
+        
+        if not utility_df.empty:
+            utility_df['timestamp'] = pd.to_datetime(utility_df['timestamp']).dt.strftime('%Y-%m-%d %H:%M')
+            # Drop the 'output_content' column for the main table view to keep it clean
+            display_df = utility_df.drop(columns=['output_content'], errors='ignore')
+            # Limit the input column to be viewable
+            display_df['input_snippet'] = display_df['input'].str.slice(0, 50) + '...'
+            
+            st.dataframe(
+                display_df[['timestamp', 'feature', 'input_snippet', 'output_size_bytes']].sort_values(by='timestamp', ascending=False), 
+                use_container_width=True
+            )
+            
+            # Display detailed view for selected item
+            history_indices = display_df.index.tolist()
+            if history_indices:
+                selected_row_index_df = st.selectbox(
+                    "Select History Item for Full Content View:",
+                    history_indices,
+                    format_func=lambda i: f"[{i+1}] {display_df.loc[i, 'feature']} ({display_df.loc[i, 'input_snippet']})",
+                    key="utility_history_selector"
+                )
+                
+                if selected_row_index_df is not None:
+                    st.markdown("---")
+                    st.subheader("Full Result Content")
+                    st.text_area(
+                        f"Content for {utility_df.loc[selected_row_index_df, 'feature']}",
+                        utility_df.loc[selected_row_index_df, 'output_content'],
+                        height=300,
+                        key="full_utility_content_display"
                     )
-
-                    st.session_state['28_in_1_output'] = generated_output
-
-                    if can_save_utility:
-                        data_to_save = {
-                            "timestamp": pd.Timestamp.now().isoformat(),
-                            "feature": selected_feature,
-                            "input": prompt_input[:100] + "..." if len(prompt_input) > 100 else prompt_input,
-                            "output_size_bytes": calculate_mock_save_size(generated_output),
-                            "output_content": generated_output
-                        }
-
-                        st.session_state.utility_db['history'].append(data_to_save)
-                        save_db_file(get_file_path("utility_data_", st.session_state.current_user), st.session_state.utility_db)
-
-                        mock_size = data_to_save["output_size_bytes"]
-                        st.session_state.storage['current_utility_storage'] += mock_size
-                        st.session_state.storage['current_universal_storage'] += mock_size
-                        save_storage_tracker(st.session_state.storage, st.session_state.current_user)
-
-                        st.success(f"Result saved to Utility History (Mock Size: {mock_size} bytes).")
-                    else:
-                        st.error(f"⚠️ **Utility History Save Blocked:** {utility_error_msg}. Result is displayed below but not saved.")
-
-        st.markdown("---")
-        st.subheader("Output Result")
-        st.markdown(st.session_state['28_in_1_output'])
+        else:
+            st.info("No 28-in-1 utility results have been saved yet.")
 
 
-# --- TEACHER AID RENDERERS (MODIFIED TO 6 TABS + HISTORY) ---
+# --- TEACHER AID RENDERERS (FIXED TO SIMPLE TABS) ---
 def render_teacher_aid_content(can_interact, universal_error_msg):
     st.title("🎓 Teacher Aid Hub")
-    st.caption("Generate specialized educational resources using the six dedicated tabs below.")
+    st.caption("Generate specialized educational resources. Use the highlighted **Resource Tags** in your prompt.")
     st.markdown("---")
 
     if not can_interact:
         st.error(f"🛑 **ACCESS BLOCKED:** {universal_error_msg}. Cannot interact.")
         return
 
+    # Use Streamlit Tabs for the requested layout: Generation and History
+    tab_gen, tab_history = st.tabs(
+        ["📝 Resource Generation", "📚 Saved History"]
+    )
+
     # Pass the save check results to the generation tab
     can_save_teacher, teacher_error_msg, teacher_limit = check_storage_limit(st.session_state.storage, 'teacher_save')
 
-    # Use Streamlit Tabs for the requested layout (6 resource tabs + History)
-    tab_unit, tab_lesson, tab_vocab, tab_worksheet, tab_quiz, tab_test, tab_history = st.tabs(
-        ["Unit Overview", "Lesson Plan", "Vocabulary List", "Worksheet", "Quiz", "Test", "📚 Saved History"]
-    )
+    with tab_gen:
+        st.subheader("Generate Resource")
+        
+        # RESTORED Resource Tags
+        st.markdown("**Available Resource Tags:** **Unit Overview**, **Lesson Plan**, **Vocabulary List**, **Worksheet**, **Quiz**, **Test**.")
+        example_input = "Create a **Lesson Plan** for teaching the causes of World War I."
+        st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
 
-    # Define a helper function to render each resource tab
-    def render_resource_tab(tab_container, resource_type, example_prompt):
-        with tab_container:
-            st.subheader(f"Generate {resource_type}")
-            st.markdown(f'<p class="example-text">Example: <code>{example_prompt}</code></p>', unsafe_allow_html=True)
-            
-            prompt_key = f"teacher_prompt_{resource_type.lower().replace(' ', '_')}"
-            button_key = f"teacher_generate_btn_{resource_type.lower().replace(' ', '_')}"
-            output_key = f"teacher_output_{resource_type.lower().replace(' ', '_')}"
+        teacher_prompt = st.text_area(
+            "Resource Request (e.g., 'Unit Overview for high school physics on momentum'):",
+            placeholder=example_input,
+            height=150,
+            key="teacher_ai_prompt"
+        )
 
-            # Initialize output for persistence
-            if output_key not in st.session_state:
-                st.session_state[output_key] = f"Your generated {resource_type} will appear here."
+        if st.button("Generate Resource", key="teacher_generate_btn", use_container_width=True):
+            if not teacher_prompt:
+                st.warning("Please enter a request.")
+                return
 
-            teacher_prompt = st.text_area(
-                "Topic/Details:",
-                placeholder=example_prompt,
-                height=150,
-                key=prompt_key
-            )
+            feature_key_proxy = "Teacher_Aid_Routing"
 
-            if st.button(f"Generate {resource_type}", key=button_key, use_container_width=True):
-                if not teacher_prompt:
-                    st.warning("Please enter a topic or details for the resource.")
-                    return
+            with st.spinner("Generating specialized teacher resource..."):
+                generated_output = run_ai_generation(
+                    feature_function_key=feature_key_proxy,
+                    prompt_text=teacher_prompt,
+                    uploaded_image=None
+                )
+                st.session_state['teacher_output'] = generated_output
 
-                # CRITICAL: Prepend the Resource Tag to the prompt for AI routing
-                # The resource tag is what the SYSTEM_INSTRUCTION.txt uses to format the output.
-                full_ai_prompt = f"{resource_type}: {teacher_prompt}"
-                feature_key_proxy = "Teacher_Aid_Routing" # Proxy key, the AI uses the full_ai_prompt
+                if can_save_teacher:
+                    data_to_save = {
+                        "timestamp": pd.Timestamp.now().isoformat(),
+                        "request": teacher_prompt[:100] + "..." if len(teacher_prompt) > 100 else teacher_prompt,
+                        "output_size_bytes": calculate_mock_save_size(generated_output),
+                        "output_content": generated_output
+                    }
 
-                with st.spinner(f"Generating specialized {resource_type}..."):
-                    generated_output = run_ai_generation(
-                        feature_function_key=feature_key_proxy,
-                        prompt_text=full_ai_prompt,
-                        uploaded_image=None
-                    )
-                    st.session_state[output_key] = generated_output
-                    
-                    if can_save_teacher:
-                        data_to_save = {
-                            "timestamp": pd.Timestamp.now().isoformat(),
-                            "resource_type": resource_type,
-                            "request": teacher_prompt[:100] + "..." if len(teacher_prompt) > 100 else teacher_prompt,
-                            "output_size_bytes": calculate_mock_save_size(generated_output),
-                            "output_content": generated_output
-                        }
+                    st.session_state.teacher_db['history'].append(data_to_save)
+                    save_db_file(get_file_path("teacher_data_", st.session_state.current_user), st.session_state.teacher_db)
 
-                        st.session_state.teacher_db['history'].append(data_to_save)
-                        save_db_file(get_file_path("teacher_data_", st.session_state.current_user), st.session_state.teacher_db)
+                    mock_size = data_to_save["output_size_bytes"]
+                    st.session_state.storage['current_teacher_storage'] += mock_size
+                    st.session_state.storage['current_universal_storage'] += mock_size
+                    save_storage_tracker(st.session_state.storage, st.session_state.current_user)
 
-                        mock_size = data_to_save["output_size_bytes"]
-                        st.session_state.storage['current_teacher_storage'] += mock_size
-                        st.session_state.storage['current_universal_storage'] += mock_size
-                        save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+                    st.success(f"Resource saved to Teacher History (Mock Size: {mock_size} bytes).")
+                else:
+                    st.error(f"⚠️ **Teacher History Save Blocked:** {teacher_error_msg}. Result is displayed below but not saved.")
 
-                        st.success(f"Resource saved to History (Mock Size: {mock_size} bytes).")
-                    else:
-                        st.error(f"⚠️ **History Save Blocked:** {teacher_error_msg}. Result is displayed below but not saved.")
+        st.markdown("---")
+        st.subheader("Generated Resource Output")
+        if 'teacher_output' in st.session_state:
+            st.markdown(st.session_state['teacher_output'])
+        else:
+            st.info("Your generated resource will appear here. **Remember to use a Resource Tag (e.g., Quiz, Unit Overview) in your prompt.**")
 
-            st.markdown("---")
-            st.subheader(f"Generated {resource_type} Output")
-            st.markdown(st.session_state[output_key])
-
-
-    # Render all 6 resource tabs
-    render_resource_tab(tab_unit, "Unit Overview", "High school physics unit on Newton's Laws of Motion.")
-    render_resource_tab(tab_lesson, "Lesson Plan", "A 50-minute lesson plan for middle school students learning about the water cycle.")
-    render_resource_tab(tab_vocab, "Vocabulary List", "Generate 10 key terms for a 10th-grade class studying the novel '1984'.")
-    render_resource_tab(tab_worksheet, "Worksheet", "A 10-question mixed-format worksheet on basic algebra: solving for x, and simple inequalities.")
-    render_resource_tab(tab_quiz, "Quiz", "A 5-question multiple choice quiz for 5th graders on world geography, capitals and continents.")
-    render_resource_tab(tab_test, "Test", "A comprehensive test for a college-level introduction to macroeconomics (supply/demand, GDP, inflation).")
-
-
-    # Render the History Tab (identical to uploaded file's logic)
     with tab_history:
         st.subheader("Teacher Aid Saved History")
         teacher_df = pd.DataFrame(st.session_state.teacher_db['history'])
         if not teacher_df.empty:
-            # Add 'resource_type' column if not present (only for old mock data compatibility)
-            if 'resource_type' not in teacher_df.columns:
-                teacher_df['resource_type'] = teacher_df['request'].apply(lambda x: x.split(':')[0].strip() if ':' in x else 'Generic')
-            
+            teacher_df['timestamp'] = pd.to_datetime(teacher_df['timestamp']).dt.strftime('%Y-%m-%d %H:%M')
             # Drop the 'output_content' column for the main table view to keep it clean
             display_df = teacher_df.drop(columns=['output_content'], errors='ignore')
-            st.dataframe(display_df.sort_values(by='timestamp', ascending=False), use_container_width=True)
+            display_df['request_snippet'] = display_df['request'].str.slice(0, 50) + '...'
+            
+            st.dataframe(
+                display_df[['timestamp', 'request_snippet', 'output_size_bytes']].sort_values(by='timestamp', ascending=False), 
+                use_container_width=True
+            )
             
             # Display detailed view for selected item (optional, but good practice)
-            selected_row_index = st.selectbox("Select History Item for Full Content View:", teacher_df.index, format_func=lambda i: f"[{i+1}] {teacher_df.loc[i, 'request']}", key="teacher_history_selector")
+            history_indices = teacher_df.index.tolist()
+            selected_row_index_teacher = st.selectbox(
+                "Select History Item for Full Content View:", 
+                history_indices, 
+                format_func=lambda i: f"[{i+1}] {display_df.loc[i, 'request_snippet']}", 
+                key="teacher_history_selector"
+            )
             
-            if selected_row_index is not None and not teacher_df.empty:
+            if selected_row_index_teacher is not None and not teacher_df.empty:
                 st.markdown("---")
                 st.subheader("Full Resource Content")
-                st.markdown(teacher_df.loc[selected_row_index, 'output_content'])
+                st.text_area(
+                    f"Content for {teacher_df.loc[selected_row_index_teacher, 'request']}",
+                    teacher_df.loc[selected_row_index_teacher, 'output_content'],
+                    height=300,
+                    key="full_teacher_content_display"
+                )
         else:
             st.info("No teacher resources have been saved yet.")
 
@@ -658,7 +1028,7 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
 def render_usage_dashboard():
     st.title("📊 Usage Dashboard")
     st.markdown("---")
-    st.subheader(f"Current Plan: {st.session_state.storage['tier']} ({TIER_PRICES.get(st.session_state.storage['tier'], 'N/A')})")
+    st.subheader(f"Current Plan: {st.session_state.storage['tier']} ({TIER_PRICES.get(st.session_state.storage['tier'])})")
 
     # --- RESTORED USAGE GRAPHS (Progress Bars) ---
     st.markdown("### Storage Usage")
@@ -724,7 +1094,9 @@ def render_usage_dashboard():
     st.subheader("Utility History (Last 5 Saves)")
     utility_df = pd.DataFrame(st.session_state.utility_db['history'])
     if not utility_df.empty:
-        st.dataframe(utility_df[['timestamp', 'feature', 'input', 'output_size_bytes']].tail(5).sort_values(by='timestamp', ascending=False), use_container_width=True)
+        # Prepare a snippet for viewing
+        utility_df['input_snippet'] = utility_df['input'].str.slice(0, 50) + '...'
+        st.dataframe(utility_df[['timestamp', 'feature', 'input_snippet', 'output_size_bytes']].tail(5).sort_values(by='timestamp', ascending=False), use_container_width=True)
     else:
         st.info("No utility history saved yet.")
 
