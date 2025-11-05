@@ -22,7 +22,6 @@ from storage_logic import (
 # --- 0. CONFIGURATION AND CONSTANTS ---
 WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash'
-# Note: Using image_ffd419.png as an example logo filename since it was uploaded
 LOGO_FILENAME = "image_ffd419.png" # Assuming this is the correct logo file name
 ICON_SETTING = "💡"
 
@@ -33,7 +32,7 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# --- INITIALIZE GEMINI CLIENT (CRITICAL FIX FOR API KEY RETRIEVAL) ---
+# --- INITIALIZE GEMINI CLIENT ---
 client = None # Default to None
 
 try:
@@ -44,13 +43,12 @@ try:
         # 2. Only proceed to configure and initialize if the key is found
         genai.configure(api_key=api_key)
         client = genai.GenerativeModel(MODEL)
-        # st.success("Gemini Client successfully initialized!") # Optional feedback
+        # st.success("Gemini Client successfully initialized!") # Optional feedback for debugging
     else:
-        # Key not found, client remains None.
-        pass # The "Using Mock Response" warning will handle this.
+        # Key not found, client remains None. The warning will be shown in run_ai_generation.
+        pass
 
 except Exception as e:
-    # If genai configuration or model initialization fails for any reason
     client = None
     # st.error(f"Gemini API Setup Error: {e}") # Optional detailed error for debugging
 
@@ -109,8 +107,6 @@ st.markdown(
 )
 
 # --- 1. THE 28 FUNCTION LIST (Internal Mapping for Mocking) ---
-# NOTE: Mock functions remain the same as previous iterations.
-
 def daily_schedule_optimizer(tasks_time: str) -> str:
     return f"**Feature 1: Daily Schedule Optimizer**\nTime-blocked schedule for: {tasks_time}\n9:00 AM - Focus Work, 11:00 AM - Meeting, 1:00 PM - Deep Dive Task."
 def task_deconstruction_expert(vague_goal: str) -> str:
@@ -289,4 +285,866 @@ FEATURE_EXAMPLES = {
     "20. Code Explainer": "Explain this Python code: `def sum_list(x): return sum(x)`",
     "21. Packing List Generator": "I'm taking a 5-day business trip to Chicago in December.",
     "22. Mathematics Expert AI": "Solve for X: $3(x-4) = 9$. Show your steps.",
-    "23. English & Literature Expert AI": "Analyze the theme of isolation in 'The
+    "23. English & Literature Expert AI": "Analyze the theme of isolation in 'The Catcher in the Rye'.",
+    "24. History & Social Studies Expert AI": "What were the primary economic effects of the Silk Road?",
+    "25. Foreign Language Expert AI": "What is the polite way to ask for the bill in Japanese?",
+    "26. Science Expert AI": "Describe the function of the Golgi apparatus in a cell.",
+    "27. Vocational & Applied Expert AI": "Explain how to properly ground an electrical outlet.",
+    "28. Grade Calculator": "Quiz 80 (20%), Midterm 75 (30%), Final 90 (50%)",
+}
+
+# --- AI GENERATION FUNCTION ---
+def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_image: Image.Image = None) -> str:
+    """
+    Executes the selected feature function. Uses the real Gemini API if available,
+    otherwise falls back to the mock functions.
+    """
+
+    # 1. Fallback/Mock execution
+    if client is None:
+        st.warning("Gemini Client is NOT initialized. Using Mock Response.")
+        selected_function = None
+        
+        # Check Utility Mappings
+        for category_features in UTILITY_CATEGORIES.values():
+            if feature_function_key in category_features:
+                selected_function = category_features[feature_function_key]
+                break
+        
+        is_teacher_aid_proxy = feature_function_key == "Teacher_Aid_Routing"
+        
+        if selected_function:
+            if feature_function_key == "9. Image-to-Calorie Estimate":
+                return selected_function(uploaded_image, prompt_text)
+            else:
+                return selected_function(prompt_text)
+        elif is_teacher_aid_proxy:
+            # --- CRITICAL FIX: Detailed Mock Responses for Teacher Aid Resources ---
+            if "Unit Overview" in prompt_text:
+                topic = prompt_text.replace("Unit Overview", "").strip() or "a new unit"
+                return f"""
+**Teacher Aid Resource: Unit Overview**
+**Request:** *{prompt_text}*
+
+---
+
+### Unit Overview: {topic.title()}
+
+**A) Unit Objectives:**
+1.  Students will be able to identify key concepts and theories related to {topic}.
+2.  Students will be able to analyze the impact of {topic} on real-world scenarios.
+3.  Students will be able to critically evaluate different perspectives on {topic}.
+
+**B) Key Topics/Subtopics:**
+* Introduction to {topic}
+* Historical Context and Development
+* Major Theories and Principles
+* Applications and Case Studies
+* Future Implications
+
+**C) Suggested Activities (3-5):**
+1.  **Debate:** Organize a classroom debate on a controversial aspect of {topic}.
+2.  **Research Project:** Assign small groups to research and present on a specific subtopic.
+3.  **Concept Mapping:** Students create visual concept maps connecting key terms.
+4.  **Guest Speaker:** Invite an expert in the field to speak to the class.
+5.  **Field Trip:** Visit a relevant museum or institution (if applicable).
+
+**D) Assessment Overview:**
+* Formative: Quizzes after each subtopic, participation in discussions.
+* Summative: A final essay (25%), a group presentation (25%), and a comprehensive test (50%).
+"""
+            elif "Lesson Plan" in prompt_text:
+                topic = prompt_text.replace("Lesson Plan", "").strip() or "a specific lesson"
+                return f"""
+**Teacher Aid Resource: Lesson Plan**
+**Request:** *{prompt_text}*
+
+---
+
+### Lesson Plan: Introduction to {topic.title()}
+
+**A) Objective:**
+* Students will be able to define {topic} and explain its basic principles.
+* Students will be able to provide at least two examples of {topic} in daily life.
+
+**B) Materials:**
+* Whiteboard or projector
+* Markers/pens
+* Handout with key terms
+* Short video clip (5 minutes) related to {topic}
+
+**C) Procedure:**
+* **Warm-up (10 min):** Ask students to brainstorm what they already know about {topic}. Write ideas on the board.
+* **Main Activity (30 min):**
+    * Teacher explains core concepts using visual aids.
+    * Show video clip and discuss.
+    * Students work in pairs to answer questions on the handout.
+* **Wrap-up (10 min):** Review answers as a class. Assign a quick write for homework: "What is one new thing you learned about {topic} today?"
+
+**D) Assessment Strategy:**
+* Informal: Observe student participation in discussions and pair work.
+* Formative: Collect and review quick writes for understanding.
+"""
+            elif "Vocabulary List" in prompt_text:
+                topic = prompt_text.replace("Vocabulary List", "").strip() or "general science"
+                return f"""
+**Teacher Aid Resource: Vocabulary List**
+**Request:** *{prompt_text}*
+
+---
+
+### Vocabulary List: {topic.title()}
+
+1.  **Term:** Photosynthesis
+    * **Concise Definition:** The process by which green plants and some other organisms use sunlight to synthesize foods from carbon dioxide and water.
+    * **Example Sentence:** During **photosynthesis**, plants absorb carbon dioxide from the atmosphere.
+2.  **Term:** Ecosystem
+    * **Concise Definition:** A biological community of interacting organisms and their physical environment.
+    * **Example Sentence:** The rainforest is a complex **ecosystem** teeming with biodiversity.
+3.  **Term:** Hypothesis
+    * **Concise Definition:** A proposed explanation made on the basis of limited evidence as a starting point for further investigation.
+    * **Example Sentence:** Her **hypothesis** was that increased sunlight would lead to faster plant growth.
+4.  **Term:** Molecule
+    * **Concise Definition:** A group of atoms bonded together, representing the smallest fundamental unit of a chemical compound that can take part in a chemical reaction.
+    * **Example Sentence:** A water **molecule** is made of two hydrogen atoms and one oxygen atom.
+5.  **Term:** Gravity
+    * **Concise Definition:** The force that attracts a body toward the center of the earth, or toward any other physical body having mass.
+    * **Example Sentence:** **Gravity** keeps our feet on the ground and planets in orbit.
+"""
+            elif "Worksheet" in prompt_text:
+                topic = prompt_text.replace("Worksheet", "").strip() or "basic math"
+                return f"""
+**Teacher Aid Resource: Worksheet**
+**Request:** *{prompt_text}*
+
+---
+
+### Worksheet: {topic.title()} Practice
+
+**Instructions:** Answer all questions to the best of your ability.
+
+1.  What is the capital city of France? (Short Answer)
+2.  Fill in the blank: The Earth orbits the ______.
+3.  Match the following:
+    a) Dog             i) Feline
+    b) Cat             ii) Canine
+4.  Solve: $5 \times 7 = $ _____.
+5.  List three primary colors.
+6.  True or False: Birds are mammals.
+7.  What is the main function of the heart?
+8.  If you have 12 apples and eat 3, how many are left?
+9.  Write a sentence using the word "magnificent."
+10. Name a famous scientist.
+
+---
+
+### Answer Key:
+1.  Paris
+2.  Sun
+3.  a) ii, b) i
+4.  35
+5.  Red, Yellow, Blue
+6.  False
+7.  To pump blood throughout the body.
+8.  9
+9.  (Accept any grammatically correct sentence using "magnificent")
+10. (Accept any famous scientist, e.g., Albert Einstein, Marie Curie)
+"""
+            elif "Quiz" in prompt_text:
+                topic = prompt_text.replace("Quiz", "").strip() or "general knowledge"
+                return f"""
+**Teacher Aid Resource: Quiz**
+**Request:** *{prompt_text}*
+
+---
+
+### Quiz: {topic.title()}
+
+**Instructions:** Choose the best answer for each question.
+
+1.  What is the largest ocean on Earth?
+    a) Atlantic Ocean
+    b) Indian Ocean
+    c) Arctic Ocean
+    d) Pacific Ocean
+2.  Who painted the Mona Lisa?
+    a) Vincent van Gogh
+    b) Pablo Picasso
+    c) Leonardo da Vinci
+    d) Claude Monet
+3.  Which planet is known as the "Red Planet"?
+    a) Venus
+    b) Mars
+    c) Jupiter
+    d) Saturn
+4.  What is the chemical symbol for water?
+    a) O2
+    b) CO2
+    c) H2O
+    d) NaCl
+5.  How many continents are there?
+    a) 5
+    b) 6
+    c) 7
+    d) 8
+
+---
+
+### Answer Key:
+1.  d) Pacific Ocean
+2.  c) Leonardo da Vinci
+3.  b) Mars
+4.  c) H2O
+5.  c) 7
+"""
+            elif "Test" in prompt_text:
+                topic = prompt_text.replace("Test", "").strip() or "comprehensive review"
+                return f"""
+**Teacher Aid Resource: Test**
+**Request:** *{prompt_text}*
+
+---
+
+### Test: {topic.title()} Comprehensive Exam
+
+**A) Multiple Choice (15 Questions):**
+*Instructions: Select the best answer for each question.*
+
+1.  Question 1 about {topic}?
+    a) Option A
+    b) Option B
+    c) Option C
+    d) Option D
+2.  Question 2 about {topic}?
+    a) Option A
+    b) Option B
+    c) Option C
+    d) Option D
+... (13 more multiple choice questions) ...
+15. Question 15 about {topic}?
+    a) Option A
+    b) Option B
+    c) Option C
+    d) Option D
+
+**B) Short/Long Answer (4 Questions):**
+*Instructions: Answer the following questions in complete sentences or paragraphs.*
+
+1.  Explain the primary causes and effects of [key event/concept in topic]. (Short Answer)
+2.  Compare and contrast two different perspectives on [another key concept in topic]. (Short Answer)
+3.  Describe in detail how [element A] influences [element B] within the context of {topic}. Provide specific examples. (Long Answer)
+4.  Propose a solution to a problem related to {topic} and justify your reasoning. (Long Answer)
+
+---
+
+### Answer Key/Rubric:
+
+**Multiple Choice Answers:**
+1.  [Correct Answer]
+2.  [Correct Answer]
+...
+15. [Correct Answer]
+
+**Short/Long Answer Rubric:**
+
+* **Question 1 (5 points):**
+    * 5 pts: Comprehensive explanation of both causes and effects with accurate details.
+    * 3 pts: Partial explanation or some inaccuracies.
+    * 1 pt: Minimal or incorrect information.
+* **Question 2 (5 points):**
+    * 5 pts: Clear comparison and contrast of two perspectives with supporting details.
+    * 3 pts: Adequate comparison but lacking depth or minor inaccuracies.
+    * 1 pt: Unclear or incorrect comparison.
+* **Question 3 (10 points):**
+    * 10 pts: Detailed description with relevant examples, demonstrating deep understanding.
+    * 6 pts: Good description, but examples may be weak or understanding is not fully demonstrated.
+    * 3 pts: Basic description with limited or no examples.
+* **Question 4 (10 points):**
+    * 10 pts: Well-reasoned solution with strong justification.
+    * 6 pts: Plausible solution with some justification, but may lack depth.
+    * 3 pts: Basic or unclear solution with weak justification.
+"""
+            else:
+                # Default generic response for Teacher Aid if no specific tag is found
+                return f"""
+**Teacher Aid Resource Generation (MOCK - Generic)**
+
+**Request:** *{prompt_text}*
+
+---
+
+### Generic Resource Output
+The system has received your request. For a more structured output, please include a specific **Resource Tag** in your prompt, such as: **Unit Overview**, **Lesson Plan**, **Vocabulary List**, **Worksheet**, **Quiz**, or **Test**.
+
+**Example:** "Create a **Lesson Plan** for teaching fractions."
+
+---
+*This is a mock response because the Gemini API is not connected or the request did not match a specific teacher resource tag.*
+"""
+            # --- END CRITICAL FIX FOR TEACHER AID MOCK RESPONSES ---
+        else:
+            return "Error: Feature not found or not yet implemented."
+
+    # 2. Real AI execution (if client is available)
+    try:
+        contents = []
+        if feature_function_key == "9. Image-to-Calorie Estimate" and uploaded_image:
+            # Convert PIL Image to BytesIO for sending to Gemini
+            img_byte_arr = BytesIO()
+            uploaded_image.save(img_byte_arr, format=uploaded_image.format or 'PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+
+            contents.append(genai.types.Blob(mime_type="image/jpeg", data=img_byte_arr))
+
+        contents.append(prompt_text)
+
+        # For GenerativeModel, system_instruction is part of generation_config
+        generation_config = genai.types.GenerationConfig(
+            system_instruction=SYSTEM_INSTRUCTION,
+        )
+
+        response = client.generate_content(
+            contents=contents,
+            generation_config=generation_config
+        )
+        return response.text
+
+    except APIError as e:
+        return f"Gemini API Error: Could not complete request. Details: {e}"
+    except Exception as e:
+        return f"An unexpected error occurred during AI generation: {e}"
+
+
+# --- INITIALIZATION BLOCK (CRITICAL FOR PERSISTENCE & ERROR FIXES) ---
+
+# Check for 'logged_in' state
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+if st.session_state.logged_in:
+    user_email = st.session_state.current_user
+
+    # --- Load Storage Tracker (Ensures Tier/User data is consistent) ---
+    storage_data = load_storage_tracker(user_email)
+
+    # Apply plan override if available
+    plan_overrides = load_plan_overrides()
+    if user_email in plan_overrides:
+        storage_data['tier'] = plan_overrides[user_email]
+
+    storage_data['user_email'] = user_email
+    st.session_state['storage'] = storage_data
+    save_storage_tracker(st.session_state.storage, user_email)
+
+
+    # --- CRITICAL FIX: Load DBs and ensure structure on every run (Persistence) ---
+
+    # 1. Utility DB
+    db_file_path_utility = get_file_path("utility_data_", user_email)
+    st.session_state['utility_db'] = load_db_file(db_file_path_utility, UTILITY_DB_INITIAL)
+
+    if 'history' not in st.session_state['utility_db'] or not isinstance(st.session_state['utility_db']['history'], list):
+         st.session_state['utility_db']['history'] = UTILITY_DB_INITIAL.get('history', [])
+
+    # 2. Teacher DB
+    db_file_path_teacher = get_file_path("teacher_data_", user_email)
+    st.session_state['teacher_db'] = load_db_file(db_file_path_teacher, TEACHER_DB_INITIAL)
+
+    if 'history' not in st.session_state['teacher_db'] or not isinstance(st.session_state['teacher_db']['history'], list):
+         st.session_state['teacher_db']['history'] = TEACHER_DB_INITIAL.get('history', [])
+
+    # --- Standard App State Initialization ---
+    if 'app_mode' not in st.session_state:
+        st.session_state['app_mode'] = "Dashboard"
+    if '28_in_1_output' not in st.session_state:
+        st.session_state['28_in_1_output'] = ""
+    if 'teacher_output' not in st.session_state:
+        st.session_state['teacher_output'] = ""
+    if 'teacher_view' not in st.session_state: # Use this for teacher sub-view
+        st.session_state['teacher_view'] = 'generation' 
+
+
+    if 'selected_28_in_1_category' not in st.session_state:
+        st.session_state['selected_28_in_1_category'] = list(UTILITY_CATEGORIES.keys())[0]
+    if 'selected_28_in_1_feature' not in st.session_state:
+        st.session_state['selected_28_in_1_feature'] = list(UTILITY_CATEGORIES[st.session_state['selected_28_in_1_category']].keys())[0]
+
+
+# --- NAVIGATION RENDERER ---
+
+def render_main_navigation_sidebar():
+    """Renders the main navigation using Streamlit's sidebar for responsiveness."""
+    with st.sidebar:
+        # Logo and Title
+        col_logo, col_title = st.columns([0.25, 0.75])
+        image_to_use = LOGO_FILENAME
+        with col_logo:
+            if os.path.exists(image_to_use):
+                st.image(image_to_use, width=30)
+            else:
+                st.markdown(f"**{ICON_SETTING}**")
+        with col_title:
+            st.markdown(f"**{WEBSITE_TITLE}**")
+
+        st.markdown("---")
+        st.markdown(f"**User:** *{st.session_state.current_user}*")
+        st.markdown(f"**Plan:** *{st.session_state.storage['tier']}*")
+        st.markdown("---")
+
+        # CRITICAL FIX: Removed 28-in-1 and Teacher Aid from sidebar.
+        menu_options = [
+            {"label": "🖥️ Dashboard", "mode": "Dashboard"},
+            {"label": "📊 Usage Dashboard", "mode": "Usage Dashboard"},
+            {"label": "💳 Plan Manager", "mode": "Plan Manager"},
+            {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"},
+            {"label": "🚪 Logout", "mode": "Logout"}
+        ]
+
+        for item in menu_options:
+            mode = item["mode"]
+            button_id = f"sidebar_nav_button_{mode.replace(' ', '_')}"
+
+            if st.button(item["label"], key=button_id, use_container_width=True):
+                if mode == "Logout":
+                    logout()
+                else:
+                    st.session_state['app_mode'] = mode
+                    st.rerun()
+
+
+# --- APPLICATION PAGE RENDERERS ---
+
+def render_main_dashboard():
+    """Renders the split-screen selection for Teacher Aid and 28/1 Utilities."""
+    st.title("🖥️ Main Dashboard")
+    st.caption("Access your two main application suites: **Teacher Aid** or **28-in-1 Stateless Utility Hub**.")
+    st.markdown("---")
+    col_teacher, col_utility = st.columns(2)
+    with col_teacher:
+        with st.container(border=True):
+            st.header("🎓 Teacher Aid")
+            st.markdown("Access curriculum planning tools, resource generation, and saved resources.")
+            if st.button("Launch Teacher Aid", key="launch_teacher_btn", use_container_width=True):
+                st.session_state['app_mode'] = "Teacher Aid"
+                st.session_state['teacher_view'] = 'generation' # Reset teacher view on launch
+                st.rerun()
+
+    with col_utility:
+        with st.container(border=True):
+            st.header("💡 28-in-1 Stateless Utility Hub")
+            st.markdown("Use **28 specialized AI tools** via single input, identified by immediate intent routing.")
+            if st.button("Launch 28-in-1 Hub", key="launch_utility_btn", use_container_width=True):
+                st.session_state['app_mode'] = "28-in-1 Utilities"
+                st.rerun()
+
+def render_utility_hub_content(can_interact, universal_error_msg):
+    """The 28-in-1 Stateless AI Utility Hub"""
+
+    st.title("💡 28-in-1 Stateless AI Utility Hub")
+    st.caption("Select a category, then choose a feature, and provide your input.")
+    st.markdown("---")
+
+    if not can_interact:
+        display_msg = universal_error_msg if universal_error_msg else "Storage limit reached or plan data loading error."
+        st.error(f"🛑 **ACCESS BLOCKED:** {display_msg}. Cannot interact with the application while over your universal limit.")
+        return
+
+    can_save_utility, utility_error_msg, utility_limit = check_storage_limit(st.session_state.storage, 'utility_save')
+
+    col_left, col_right = st.columns([1, 2])
+
+    # --- LEFT COLUMN: CATEGORY SELECTION ---
+    with col_left:
+        st.subheader("Select a Category:")
+        category_options = list(UTILITY_CATEGORIES.keys())
+
+        if st.session_state['selected_28_in_1_category'] not in category_options:
+             st.session_state['selected_28_in_1_category'] = category_options[0]
+
+        selected_category = st.radio(
+            "Category",
+            category_options,
+            key="28_in_1_category_radio",
+            index=category_options.index(st.session_state['selected_28_in_1_category']),
+            label_visibility="collapsed"
+        )
+        st.session_state['selected_28_in_1_category'] = selected_category
+
+    # --- RIGHT COLUMN: FEATURE SELECTION & INPUT ---
+    with col_right:
+        st.subheader("Select Feature & Input:")
+        features_in_category = UTILITY_CATEGORIES[selected_category]
+
+        if st.session_state['selected_28_in_1_feature'] not in features_in_category:
+            st.session_state['selected_28_in_1_feature'] = list(features_in_category.keys())[0]
+
+        selected_feature = st.selectbox(
+            "Select a Feature/Module:",
+            list(features_in_category.keys()),
+            key="28_in_1_feature_selector",
+            index=list(features_in_category.keys()).index(st.session_state['selected_28_in_1_feature'])
+        )
+        st.session_state['selected_28_in_1_feature'] = selected_feature
+
+        example_input = FEATURE_EXAMPLES.get(selected_feature, "Enter your request here...")
+        st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
+
+
+        user_input_placeholder = "Enter your request here..."
+        if selected_feature == "9. Image-to-Calorie Estimate":
+            user_input_placeholder = "Describe the food in the image and provide any specific details (e.g., '1 cup of rice with chicken')."
+
+        needs_image = selected_feature == "9. Image-to-Calorie Estimate"
+
+        uploaded_file = None
+        uploaded_image = None
+        if needs_image:
+            uploaded_file = st.file_uploader(
+                "Upload Image for Calorie Estimate (Feature 9 Only)",
+                type=["png", "jpg", "jpeg"],
+                key="28_in_1_image_uploader"
+            )
+            if uploaded_file:
+                uploaded_image = Image.open(uploaded_file)
+                st.image(uploaded_image, caption="Uploaded Image", use_column_width=False, width=150)
+
+
+        prompt_input = st.text_area(
+            "Your Request/Input:",
+            placeholder=user_input_placeholder,
+            height=150,
+            key="28_in_1_prompt_input"
+        )
+
+        if st.button("Generate Result", key="28_in_1_generate_btn", use_container_width=True):
+            if not prompt_input and not (needs_image and uploaded_image): # Ensure input or image for feature 9
+                st.warning("Please enter a request or upload an image (for Feature 9).")
+            else:
+                with st.spinner(f"Running Feature: {selected_feature}..."):
+
+                    generated_output = run_ai_generation(
+                        feature_function_key=selected_feature,
+                        prompt_text=prompt_input,
+                        uploaded_image=uploaded_image
+                    )
+
+                    st.session_state['28_in_1_output'] = generated_output
+
+                    if can_save_utility:
+                        data_to_save = {
+                            "timestamp": pd.Timestamp.now().isoformat(),
+                            "feature": selected_feature,
+                            "input": prompt_input[:100] + "..." if len(prompt_input) > 100 else prompt_input,
+                            "output_size_bytes": calculate_mock_save_size(generated_output),
+                            "output_content": generated_output
+                        }
+
+                        st.session_state.utility_db['history'].append(data_to_save)
+                        save_db_file(get_file_path("utility_data_", st.session_state.current_user), st.session_state.utility_db)
+
+                        mock_size = data_to_save["output_size_bytes"]
+                        st.session_state.storage['current_utility_storage'] += mock_size
+                        st.session_state.storage['current_universal_storage'] += mock_size
+                        save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+
+                        st.success(f"Result saved to Utility History (Mock Size: {mock_size} bytes).")
+                    else:
+                        st.error(f"⚠️ **Utility History Save Blocked:** {utility_error_msg}. Result is displayed below but not saved.")
+
+        st.markdown("---")
+        st.subheader("Output Result")
+        st.markdown(st.session_state['28_in_1_output'])
+
+
+# --- TEACHER AID RENDERERS (FIXED TO SIMPLE TABS) ---
+def render_teacher_aid_content(can_interact, universal_error_msg):
+    st.title("🎓 Teacher Aid Hub")
+    st.caption("Generate specialized educational resources. Use the highlighted **Resource Tags** in your prompt.")
+    st.markdown("---")
+
+    if not can_interact:
+        st.error(f"🛑 **ACCESS BLOCKED:** {universal_error_msg}. Cannot interact.")
+        return
+
+    # Use Streamlit Tabs for the requested layout: Generation and History
+    tab_gen, tab_history = st.tabs(
+        ["📝 Resource Generation", "📚 Saved History"]
+    )
+
+    # Pass the save check results to the generation tab
+    can_save_teacher, teacher_error_msg, teacher_limit = check_storage_limit(st.session_state.storage, 'teacher_save')
+
+    with tab_gen:
+        st.subheader("Generate Resource")
+        
+        # RESTORED Resource Tags
+        st.markdown("**Available Resource Tags:** **Unit Overview**, **Lesson Plan**, **Vocabulary List**, **Worksheet**, **Quiz**, **Test**.")
+        example_input = "Create a **Lesson Plan** for teaching the causes of World War I."
+        st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
+
+        teacher_prompt = st.text_area(
+            "Resource Request (e.g., 'Unit Overview for high school physics on momentum'):",
+            placeholder=example_input,
+            height=150,
+            key="teacher_ai_prompt"
+        )
+
+        if st.button("Generate Resource", key="teacher_generate_btn", use_container_width=True):
+            if not teacher_prompt:
+                st.warning("Please enter a request.")
+                return
+
+            feature_key_proxy = "Teacher_Aid_Routing"
+
+            with st.spinner("Generating specialized teacher resource..."):
+                generated_output = run_ai_generation(
+                    feature_function_key=feature_key_proxy,
+                    prompt_text=teacher_prompt,
+                    uploaded_image=None
+                )
+                st.session_state['teacher_output'] = generated_output
+
+                if can_save_teacher:
+                    data_to_save = {
+                        "timestamp": pd.Timestamp.now().isoformat(),
+                        "request": teacher_prompt[:100] + "..." if len(teacher_prompt) > 100 else teacher_prompt,
+                        "output_size_bytes": calculate_mock_save_size(generated_output),
+                        "output_content": generated_output
+                    }
+
+                    st.session_state.teacher_db['history'].append(data_to_save)
+                    save_db_file(get_file_path("teacher_data_", st.session_state.current_user), st.session_state.teacher_db)
+
+                    mock_size = data_to_save["output_size_bytes"]
+                    st.session_state.storage['current_teacher_storage'] += mock_size
+                    st.session_state.storage['current_universal_storage'] += mock_size
+                    save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+
+                    st.success(f"Resource saved to Teacher History (Mock Size: {mock_size} bytes).")
+                else:
+                    st.error(f"⚠️ **Teacher History Save Blocked:** {teacher_error_msg}. Result is displayed below but not saved.")
+
+        st.markdown("---")
+        st.subheader("Generated Resource Output")
+        if 'teacher_output' in st.session_state:
+            st.markdown(st.session_state['teacher_output'])
+        else:
+            st.info("Your generated resource will appear here. **Remember to use a Resource Tag (e.g., Quiz, Unit Overview) in your prompt.**")
+
+    with tab_history:
+        st.subheader("Teacher Aid Saved History")
+        teacher_df = pd.DataFrame(st.session_state.teacher_db['history'])
+        if not teacher_df.empty:
+            # Drop the 'output_content' column for the main table view to keep it clean
+            display_df = teacher_df.drop(columns=['output_content'], errors='ignore')
+            st.dataframe(display_df.sort_values(by='timestamp', ascending=False), use_container_width=True)
+            
+            # Display detailed view for selected item (optional, but good practice)
+            selected_row_index = st.selectbox("Select History Item for Full Content View:", teacher_df.index, format_func=lambda i: f"[{i+1}] {teacher_df.loc[i, 'request']}", key="teacher_history_selector")
+            
+            if selected_row_index is not None and not teacher_df.empty:
+                st.markdown("---")
+                st.subheader("Full Resource Content")
+                st.markdown(teacher_df.loc[selected_row_index, 'output_content'])
+        else:
+            st.info("No teacher resources have been saved yet.")
+
+
+# --- USAGE DASHBOARD RENDERER (GRAPHS RESTORED) ---
+def render_usage_dashboard():
+    st.title("📊 Usage Dashboard")
+    st.markdown("---")
+    st.subheader(f"Current Plan: {st.session_state.storage['tier']} ({TIER_PRICES.get(st.session_state.storage['tier'])})")
+
+    # --- RESTORED USAGE GRAPHS (Progress Bars) ---
+    st.markdown("### Storage Usage")
+
+    storage_data = st.session_state.storage
+    tier = storage_data['tier']
+
+    # 1. Universal Storage
+    current_uni = storage_data.get('current_universal_storage', 0)
+    limit_uni_raw = TIER_LIMITS.get(tier, {}).get('universal_storage_limit_bytes', 0)
+    
+    if limit_uni_raw == float('inf'):
+        uni_percent = 0.0 # Display 0% progress for unlimited, but show usage
+        uni_limit_display = "Unlimited"
+    else:
+        uni_limit_display = f"{int(limit_uni_raw):,}"
+        uni_percent = min(1.0, current_uni / limit_uni_raw) if limit_uni_raw > 0 else 0.0
+
+    st.progress(uni_percent, text=f"**Universal Storage:** {current_uni:,} / {uni_limit_display} Bytes")
+
+    # 2. Utility Storage
+    current_utility = storage_data.get('current_utility_storage', 0)
+    limit_utility_raw = TIER_LIMITS.get(tier, {}).get('utility_save_limit_bytes', 0)
+    
+    if limit_utility_raw == float('inf'):
+        utility_percent = 0.0
+        utility_limit_display = "Unlimited"
+    else:
+        utility_limit_display = f"{int(limit_utility_raw):,}"
+        utility_percent = min(1.0, current_utility / limit_utility_raw) if limit_utility_raw > 0 else 0.0
+
+    st.progress(utility_percent, text=f"**28-in-1 Utility History:** {current_utility:,} / {utility_limit_display} Bytes")
+
+    # 3. Teacher Storage
+    current_teacher = storage_data.get('current_teacher_storage', 0)
+    limit_teacher_raw = TIER_LIMITS.get(tier, {}).get('teacher_save_limit_bytes', 0)
+    
+    if limit_teacher_raw == float('inf'):
+        teacher_percent = 0.0
+        teacher_limit_display = "Unlimited"
+    else:
+        teacher_limit_display = f"{int(limit_teacher_raw):,}"
+        teacher_percent = min(1.0, current_teacher / limit_teacher_raw) if limit_teacher_raw > 0 else 0.0
+
+    st.progress(teacher_percent, text=f"**Teacher Aid History:** {current_teacher:,} / {teacher_limit_display} Bytes")
+    
+    # 4. File Storage (Placeholder/Mock - using Teacher limit for size tracking example)
+    current_file = storage_data.get('current_file_storage', 0)
+    limit_file_raw = TIER_LIMITS.get(tier, {}).get('file_upload_limit_bytes', 0)
+    
+    if limit_file_raw == float('inf'):
+        file_percent = 0.0
+        file_limit_display = "Unlimited"
+    else:
+        file_limit_display = f"{int(limit_file_raw):,}"
+        file_percent = min(1.0, current_file / limit_file_raw) if limit_file_raw > 0 else 0.0
+
+    st.progress(file_percent, text=f"**File Uploads/Images:** {current_file:,} / {file_limit_display} Bytes")
+    
+    st.markdown("---")
+    
+    # --- History Tables (The content that was NOT deleted) ---
+    st.subheader("Utility History (Last 5 Saves)")
+    utility_df = pd.DataFrame(st.session_state.utility_db['history'])
+    if not utility_df.empty:
+        st.dataframe(utility_df[['timestamp', 'feature', 'input', 'output_size_bytes']].tail(5).sort_values(by='timestamp', ascending=False), use_container_width=True)
+    else:
+        st.info("No utility history saved yet.")
+
+
+# --- PLAN MANAGER RENDERER (CONTENT RESTORED) ---
+def render_plan_manager():
+    st.title("💳 Plan Manager")
+    st.markdown("---")
+    st.subheader(f"Your Current Plan: **{st.session_state.storage['tier']}**")
+    st.markdown(f"Price: **{TIER_PRICES.get(st.session_state.storage['tier'], 'N/A')}**")
+
+    st.markdown("### Choose a New Plan")
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    plans_list = ["Free Tier", "28/1 Pro", "Teacher Pro", "Universal Pro", "Unlimited"]
+    cols = [col1, col2, col3, col4, col5]
+
+    for i, plan in enumerate(plans_list):
+        with cols[i]:
+            with st.container(border=True):
+                st.header(plan)
+                price = TIER_PRICES[plan]
+                st.markdown(f"**{price}**")
+                
+                # Dynamic feature descriptions (simplified)
+                if "Pro" in plan:
+                    st.markdown("✅ Enhanced Storage")
+                    if "28/1" in plan:
+                        st.markdown("✅ **28-in-1** Access")
+                        st.markdown("❌ Teacher Aid")
+                    elif "Teacher" in plan:
+                        st.markdown("❌ 28-in-1 Access")
+                        st.markdown("✅ **Teacher Aid**")
+                    elif "Universal" in plan:
+                        st.markdown("✅ Both Suites")
+                        st.markdown("✅ Dedicated Support")
+                elif plan == "Unlimited":
+                    st.markdown("🌟 Everything")
+                    st.markdown("🚀 Infinite Storage")
+                else:
+                    st.markdown("Basic Access")
+                    st.markdown("Limited Storage")
+
+                
+                if plan == st.session_state.storage['tier']:
+                    st.button("Current Plan", key=f"plan_current_{plan.replace(' ', '_')}", use_container_width=True, disabled=True)
+                else:
+                    # Restore the clickable interaction
+                    if st.button(f"Select {plan}", key=f"plan_select_{plan.replace(' ', '_')}", use_container_width=True):
+                        st.session_state.storage['tier'] = plan
+                        # NOTE: In a real app, this would trigger a payment gateway.
+                        st.success(f"Successfully selected the {plan}! (A full implementation would now process payment).")
+                        save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+                        st.rerun()
+
+
+# --- DATA CLEAN UP RENDERER ---
+def render_data_clean_up():
+    st.title("🧹 Data Clean Up")
+    st.markdown("---")
+    st.warning("Deleting data is permanent. Use with caution.")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Wipe Utility History", key="wipe_utility_btn", use_container_width=True):
+            st.session_state.utility_db['history'] = UTILITY_DB_INITIAL['history']
+            save_db_file(get_file_path("utility_data_", st.session_state.current_user), st.session_state.utility_db)
+
+            utility_size_cleared = st.session_state.storage.get('current_utility_storage', 0)
+            st.session_state.storage['current_utility_storage'] = 0
+            st.session_state.storage['current_universal_storage'] -= utility_size_cleared
+            # Ensure universal storage doesn't go below zero
+            if st.session_state.storage['current_universal_storage'] < 0:
+                st.session_state.storage['current_universal_storage'] = 0
+            save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+
+            st.success("Utility History has been reset and storage cleared.")
+            st.rerun() # Rerun to update dashboard immediately
+
+    with col2:
+        if st.button("Wipe Teacher History", key="wipe_teacher_btn", use_container_width=True):
+            st.session_state.teacher_db['history'] = TEACHER_DB_INITIAL['history']
+            save_db_file(get_file_path("teacher_data_", st.session_state.current_user), st.session_state.teacher_db)
+
+            teacher_size_cleared = st.session_state.storage.get('current_teacher_storage', 0)
+            st.session_state.storage['current_teacher_storage'] = 0
+            st.session_state.storage['current_universal_storage'] -= teacher_size_cleared
+            # Ensure universal storage doesn't go below zero
+            if st.session_state.storage['current_universal_storage'] < 0:
+                st.session_state.storage['current_universal_storage'] = 0
+            save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+
+            st.success("Teacher History has been reset and storage cleared.")
+            st.rerun() # Rerun to update dashboard immediately
+
+
+# --- MAIN APPLICATION LOGIC ---
+
+if not st.session_state.logged_in:
+    render_login_page()
+else:
+    # --- 1. Navigation ---
+    render_main_navigation_sidebar()
+
+    # Check universal access based on storage limits
+    can_interact, universal_error_msg, _ = check_storage_limit(st.session_state.storage, 'universal_storage')
+
+    # --- 2. Content Routing ---
+    if st.session_state.app_mode == "Dashboard":
+        render_main_dashboard()
+
+    elif st.session_state.app_mode == "28-in-1 Utilities":
+        render_utility_hub_content(can_interact, universal_error_msg)
+
+    elif st.session_state.app_mode == "Teacher Aid":
+        render_teacher_aid_content(can_interact, universal_error_msg)
+
+    elif st.session_state.app_mode == "Usage Dashboard":
+        render_usage_dashboard()
+
+    elif st.session_state.app_mode == "Plan Manager":
+        render_plan_manager()
+
+    elif st.session_state.app_mode == "Data Clean Up":
+        render_data_clean_up()
