@@ -11,7 +11,7 @@ import random
 from google import genai
 from google.genai.errors import APIError
 
-# Import custom modules (Assume these files exist and are correct)
+# Import custom modules (Assuming these files exist and are correct)
 from auth import render_login_page, logout, load_users, load_plan_overrides
 from storage_logic import (
     load_storage_tracker, save_storage_tracker, check_storage_limit,
@@ -354,6 +354,8 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
+    # If the user is logged in, but the session state was lost (e.g., in some cloud reloads), 
+    # the user will be forced to the login page, which is the secure default behavior.
 
 if st.session_state.logged_in:
     user_email = st.session_state.current_user
@@ -373,11 +375,20 @@ if st.session_state.logged_in:
         st.session_state['storage'] = storage_data
         save_storage_tracker(st.session_state.storage, user_email)
 
-    # CRITICAL: Load DBs into session state upon login/initialization
+    # CRITICAL FIX: Load DBs and ensure the 'history' key exists to prevent the crash
     if 'utility_db' not in st.session_state:
         st.session_state['utility_db'] = load_db_file(get_file_path("utility_data_", user_email), UTILITY_DB_INITIAL)
+    
+    # SAFETY CHECK: Ensure the 'history' key is a list, fixing the AttributeError
+    if 'history' not in st.session_state['utility_db'] or not isinstance(st.session_state['utility_db']['history'], list):
+         st.session_state['utility_db']['history'] = UTILITY_DB_INITIAL.get('history', [])
+         
     if 'teacher_db' not in st.session_state:
         st.session_state['teacher_db'] = load_db_file(get_file_path("teacher_data_", user_email), TEACHER_DB_INITIAL)
+
+    # SAFETY CHECK: Ensure the 'history' key is a list for the teacher DB too
+    if 'history' not in st.session_state['teacher_db'] or not isinstance(st.session_state['teacher_db']['history'], list):
+         st.session_state['teacher_db']['history'] = TEACHER_DB_INITIAL.get('history', [])
 
     if 'app_mode' not in st.session_state:
         st.session_state['app_mode'] = "Dashboard"
@@ -588,6 +599,7 @@ def render_utility_hub_content(can_interact, universal_error_msg):
                             "output_content": generated_output
                         }
                         
+                        # FIX APPLIED HERE: st.session_state.utility_db is guaranteed to have 'history' as a list now
                         st.session_state.utility_db['history'].append(data_to_save)
                         save_db_file(get_file_path("utility_data_", st.session_state.current_user), st.session_state.utility_db)
                         
