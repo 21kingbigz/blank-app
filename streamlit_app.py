@@ -66,11 +66,11 @@ ICON_SETTING = LOGO_FILENAME if os.path.exists(LOGO_FILENAME) else "💡"
 st.set_page_config(
     page_title=WEBSITE_TITLE,
     page_icon=ICON_SETTING,
-    layout="wide",
-    initial_sidebar_state="collapsed" # CRITICAL: Hide Streamlit's default sidebar
+    layout="wide", # Keep wide, Streamlit handles responsiveness for it
+    initial_sidebar_state="auto" # IMPORTANT: Let Streamlit manage sidebar state (auto for smaller screens)
 )
 
-# --- CRITICAL CSS FOR LAYOUT FIXES ---
+# --- CRITICAL CSS FOR LAYOUT FIXES (Simplified for responsiveness) ---
 st.markdown(
     f"""
     <style>
@@ -86,47 +86,41 @@ st.markdown(
         background-color: #FFFFFF;
     }}
 
-    /* === 1. NAVIGATION COLUMN FIX: Create a fixed-width left column for the main menu === */
-    .st-main-nav {{
-        width: 180px; /* Reduced width for main navigation */
+    /* --- Streamlit Sidebar (Main Navigation) Styling --- */
+    [data-testid="stSidebar"] {{
         background-color: #F0F2F6; 
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        padding: 20px 10px; /* Reduced padding */
         border-right: 1px solid #E0E0E0;
-        z-index: 100;
-    }}
-    
-    /* === 2. INTERNAL NAVIGATION COLUMN FIX: For Teacher Aid's menu === */
-    .st-internal-nav {{
-        width: 200px; 
-        background-color: #FFFFFF; /* White background to blend with main content area */
-        position: fixed;
-        top: 0;
-        left: 180px; /* Starts right after the main nav column (180px) */
-        height: 100vh;
-        padding: 20px;
-        border-right: 1px solid #E0E0E0;
-        z-index: 90;
-    }}
-    
-    /* === 3. CONTENT OFFSET ADJUSTMENT === */
-    /* Adjust Streamlit's container to honor the new left margin (Base offset) */
-    .main > div {{
-        margin-left: 180px !important; /* Base offset for main nav */
+        padding-top: 20px; /* Adjust padding */
     }}
 
-    /* Specific offset for pages with Internal Nav (Teacher Aid) */
-    .teacher-aid-content-wrapper {{
-        margin-left: 200px !important; /* Additional offset for internal nav */
-        padding: 20px 30px;
+    /* Navigation Button Styling (Main Nav in Sidebar) */
+    .st-emotion-cache-1jmve36.e1f1d6z41 {{ /* Target the specific button container in sidebar */
+        background-color: transparent;
+        border: none;
+        padding: 0;
+        margin-bottom: 5px;
+        width: 100%;
     }}
 
-    /* General content offset for pages without Internal Nav */
-    .app-main-content-container {{
-        padding: 20px 30px;
+    .nav-button {{
+        width: 100%;
+        text-align: left;
+        padding: 12px 15px; /* Adjust padding for sidebar buttons */
+        border-radius: 8px;
+        border: none;
+        background-color: transparent;
+        color: #333333;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s, color 0.2s;
+        display: block; /* Ensure it takes full width */
+    }}
+    .nav-button:hover {{
+        background-color: #E0E0E0;
+    }}
+    .nav-button.active {{
+        background-color: #2D6BBE !important;
+        color: white !important;
     }}
     
     /* Card-like containers for the Usage Dashboard and general use */
@@ -140,53 +134,6 @@ st.markdown(
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         height: 100%; 
     }}
-
-    /* Navigation Button Styling (Main Nav) */
-    .nav-button {{
-        width: 100%;
-        text-align: left;
-        padding: 12px 10px;
-        margin-bottom: 5px;
-        border-radius: 8px;
-        border: none;
-        background-color: transparent;
-        color: #333333;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background-color 0.2s, color 0.2s;
-        display: block;
-    }}
-    .nav-button:hover {{
-        background-color: #E0E0E0;
-    }}
-    .nav-button.active {{
-        background-color: #2D6BBE !important;
-        color: white !important;
-    }}
-    
-    /* Internal Nav Radio Button Styling */
-    .stRadio > label {{
-        padding: 12px 10px;
-        margin-bottom: 5px;
-        border-radius: 8px;
-        font-weight: 600;
-        display: block;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }}
-    .stRadio > label:hover {{
-        background-color: #E0E0E0;
-    }}
-    .stRadio div[role="radio"][aria-checked="true"] {{
-        background-color: #2D6BBE !important;
-        color: white !important;
-    }}
-    
-    /* Hide the default radio button circle/dot */
-    .stRadio div[role="radio"] > div:first-child {{
-        display: none;
-    }}
-
 
     /* Standard App Buttons (Primary/Darker Blue) */
     .stButton>button {{
@@ -236,8 +183,10 @@ st.markdown(
         margin-bottom: 15px;
         display: block;
     }}
-    /* Hide Streamlit footer, menu button, and default sidebar remnants */
-    #MainMenu, footer, header, [data-testid="stSidebar"] {{visibility: hidden;}}
+    
+    /* Hide Streamlit footer and default menu button (we'll keep the sidebar's expander) */
+    #MainMenu, footer, header {{visibility: hidden;}}
+
     </style>
     """,
     unsafe_allow_html=True
@@ -382,6 +331,9 @@ if 'app_mode' not in st.session_state:
 if 'utility_view' not in st.session_state:
     st.session_state['utility_view'] = 'main'
     
+if 'teacher_mode' not in st.session_state: # Initialize teacher_mode for internal navigation
+    st.session_state['teacher_mode'] = "Resource Dashboard"
+    
 # AI client setup (Assume system_instruction.txt exists or use default)
 try:
     client = genai.Client()
@@ -439,72 +391,58 @@ def calculate_mock_save_size(content: str) -> float:
     return round(size, 2)
 
 
-# --- NAVIGATION RENDERER (New Left Column Menu) ---
+# --- NAVIGATION RENDERER (Now uses st.sidebar) ---
 
-def render_main_navigation():
-    """Renders the fixed left column navigation for the main application modes."""
-    
-    # Use HTML/CSS to create the fixed-position navigation column
-    st.markdown('<div class="st-main-nav">', unsafe_allow_html=True)
-    
-    # Logo and Title
-    col_logo, col_title = st.columns([0.25, 0.75])
-    with col_logo:
-        st.image(ICON_SETTING, width=30)
-    with col_title:
-        st.markdown(f"**{WEBSITE_TITLE}**") # Use bold text instead of large heading for better fit
-    
-    st.markdown("---")
-    st.markdown(f"**Plan:** *{st.session_state.storage['tier']}*")
-    st.markdown("---")
-
-    menu_options = [
-        {"label": "📊 Usage Dashboard", "mode": "Usage Dashboard"},
-        {"label": "🖥️ Dashboard", "mode": "Dashboard"},
-        {"label": "💳 Plan Manager", "mode": "Plan Manager"},
-        {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"}
-    ]
-    
-    for item in menu_options:
-        mode = item["mode"]
-        active_class = " active" if st.session_state['app_mode'] == mode else ""
+def render_main_navigation_sidebar():
+    """Renders the main navigation using Streamlit's sidebar for responsiveness."""
+    with st.sidebar:
+        # Logo and Title
+        col_logo, col_title = st.columns([0.25, 0.75])
+        with col_logo:
+            st.image(ICON_SETTING, width=30)
+        with col_title:
+            st.markdown(f"**{WEBSITE_TITLE}**") # Use bold text instead of large heading for better fit
         
-        # Render the clickable styled button via HTML/CSS
-        st.markdown(
-            f'<button class="nav-button{active_class}" id="nav_button_{mode.replace(" ", "_")}" onclick="Streamlit.setComponentValue(\'nav_button_{mode.replace(" ", "_")}\', true);">{item["label"]}</button>',
-            unsafe_allow_html=True
-        )
+        st.markdown("---")
+        st.markdown(f"**Plan:** *{st.session_state.storage['tier']}*")
+        st.markdown("---")
 
-        # Use a hidden Streamlit element to capture the click action via JavaScript (Hack)
-        if st.session_state.get(f"nav_button_{mode.replace(' ', '_')}"):
-            st.session_state['app_mode'] = mode
-            st.session_state.pop('utility_view', None)
-            st.session_state.pop('utility_active_category', None)
-            st.rerun()
+        menu_options = [
+            {"label": "📊 Usage Dashboard", "mode": "Usage Dashboard"},
+            {"label": "🖥️ Dashboard", "mode": "Dashboard"},
+            {"label": "💳 Plan Manager", "mode": "Plan Manager"},
+            {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"}
+        ]
         
-        # Reset the session state for the button to allow future clicks
-        if f"nav_button_{mode.replace(' ', '_')}" in st.session_state:
-            del st.session_state[f"nav_button_{mode.replace(' ', '_')}"]
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-def render_internal_navigation_teacher_aid():
-    """Renders the fixed internal navigation column for Teacher Aid pages."""
-    
-    # Use HTML/CSS to create the fixed-position internal navigation column
-    st.markdown('<div class="st-internal-nav">', unsafe_allow_html=True)
-    
-    st.header("Teacher Aid Menu")
-    
-    # Radio buttons for internal navigation
-    teacher_mode = st.radio(
-        "Select View:",
-        options=["Resource Dashboard", "Saved Data", "Data Management"],
-        key="teacher_nav_radio"
-    )
-
-    st.markdown("</div>", unsafe_allow_html=True)
-    return teacher_mode
+        # Use HTML buttons for custom styling within the sidebar
+        for item in menu_options:
+            mode = item["mode"]
+            active_class = " active" if st.session_state['app_mode'] == mode else ""
+            
+            # This is a common Streamlit hack to make custom HTML buttons interact with session state.
+            # We render a hidden st.button or st.checkbox with a unique key and listen for its value.
+            # The actual visual button is rendered via markdown.
+            
+            # Create a unique key for the hidden component
+            button_key = f"sidebar_nav_button_{mode.replace(' ', '_')}"
+            
+            # Render the HTML button
+            st.markdown(
+                f'<button class="nav-button{active_class}" id="{button_key}" onclick="parent.postMessage({{streamlit: {{type: \'SET_WIDGET_VALUE\', value: true, id: \'{button_key}\'}}}}, \'*\')">{item["label"]}</button>',
+                unsafe_allow_html=True
+            )
+            
+            # Use a hidden button or checkbox to capture the click. 
+            # st.checkbox is often more robust for this hack.
+            # When the HTML button is clicked, it sends a message that sets the checkbox to True.
+            # We then check its value and reset it.
+            if st.session_state.get(button_key):
+                st.session_state['app_mode'] = mode
+                st.session_state.pop('utility_view', None)
+                st.session_state.pop('utility_active_category', None)
+                st.session_state.pop('teacher_mode', None) # Clear teacher internal nav
+                st.session_state[button_key] = False # Reset the checkbox
+                st.rerun()
 
 
 # --- APPLICATION PAGE RENDERERS ---
@@ -512,7 +450,6 @@ def render_internal_navigation_teacher_aid():
 def render_usage_dashboard():
     """Renders the main landing page structure with functional storage graphs."""
     
-    # The content will be rendered inside the 'app-main-content-container' div defined later
     st.title("📊 Usage Dashboard")
     st.caption("Monitor your storage usage and plan benefits.")
     st.markdown("---")
@@ -684,7 +621,7 @@ def render_main_dashboard():
                 st.rerun()
 
 
-def render_utility_hub_navigated(can_interact, universal_error_msg):
+def render_utility_hub_content(can_interact, universal_error_msg):
     """Renders the utility hub with back button and internal navigation."""
     
     # Check dedicated limit for utility saves
@@ -758,7 +695,7 @@ def render_utility_hub_navigated(can_interact, universal_error_msg):
             st.markdown("Each category contains specialized AI tools. Select a category to proceed to the features within it.")
             
         categories = list(CATEGORIES_FEATURES.keys())
-        # Use columns for "8 boxes" layout (dynamically adjusts for more/fewer)
+        # Use columns for "8 boxes" layout (dynamically adjusts for more/ fewer)
         num_cols = 3 
         cols = st.columns(num_cols)
         
@@ -853,8 +790,8 @@ def render_utility_hub_navigated(can_interact, universal_error_msg):
                         st.error(f"🛑 Cannot save: {block_message_for_generation_save}")
 
 
-def render_teacher_aid_content(can_interact, universal_error_msg, teacher_mode):
-    """Renders the main content of the Teacher Aid app."""
+def render_teacher_aid_content(can_interact, universal_error_msg):
+    """Renders the main content of the Teacher Aid app, now with internal tabs."""
     
     # Check dedicated limit for teacher saves
     can_save_dedicated, error_message_dedicated, _ = check_storage_limit('teacher_save')
@@ -873,14 +810,21 @@ def render_teacher_aid_content(can_interact, universal_error_msg, teacher_mode):
     is_fully_blocked_for_generation_save = not can_interact or not can_save_dedicated
     block_message_for_generation_save = universal_error_msg if not can_interact else error_message_dedicated
     
-    if is_fully_blocked_for_generation_save and teacher_mode == "Resource Dashboard":
-        st.error(f"🛑 **ACTION BLOCKED:** {block_message_for_generation_save} New generation and saving are disabled.")
-        
+    # Internal navigation using st.tabs
+    tab_titles = ["Resource Dashboard", "Saved Data", "Data Management"]
+    current_tab_index = tab_titles.index(st.session_state['teacher_mode']) if st.session_state['teacher_mode'] in tab_titles else 0
+    
+    tabs = st.tabs(tab_titles)
+
     # --- RENDER RESOURCE DASHBOARD ---
-    if teacher_mode == "Resource Dashboard":
+    with tabs[tab_titles.index("Resource Dashboard")]:
+        st.session_state['teacher_mode'] = "Resource Dashboard" # Set state when this tab is active
         st.header("Resource Generation Dashboard")
         st.info("Generate new units, lessons, quizzes, and more. All resources are saved permanently.")
         
+        if is_fully_blocked_for_generation_save:
+            st.error(f"🛑 **ACTION BLOCKED:** {block_message_for_generation_save} New generation and saving are disabled.")
+
         RESOURCE_MAP = {
             "Unit Overview": {"tag": "Unit Overview", "key": "units", "placeholder": "Generate a detailed unit plan for a 10th-grade World History class on the Renaissance."},
             "Lesson Plan": {"tag": "Lesson Plan", "key": "lessons", "placeholder": "Create a 45-minute lesson plan on Newton's First Law of Motion for 9th-grade science."},
@@ -890,10 +834,9 @@ def render_teacher_aid_content(can_interact, universal_error_msg, teacher_mode):
             "Test": {"tag": "Test", "key": "tests", "placeholder": "Design a comprehensive end-of-unit test for a high school economics class on supply and demand."}
         }
         
-        tab_titles = list(RESOURCE_MAP.keys())
-        tabs = st.tabs(tab_titles)
+        resource_tabs_inner = st.tabs(list(RESOURCE_MAP.keys()))
 
-        def generate_and_save_resource(tab_object, tab_name, ai_tag, db_key, ai_instruction_placeholder, can_save_flag, error_msg_flag, is_blocked_for_gen_save):
+        def generate_and_save_resource(tab_object, tab_name, ai_tag, db_key, ai_instruction_placeholder, can_save_flag, error_msg_flag, is_blocked_for_gen_save_inner):
             with tab_object:
                 st.subheader(f"1. Generate {tab_name}")
                 prompt = st.text_area(
@@ -901,16 +844,16 @@ def render_teacher_aid_content(can_interact, universal_error_msg, teacher_mode):
                     placeholder=ai_instruction_placeholder,
                     key=f"{db_key}_prompt",
                     height=150,
-                    disabled=is_blocked_for_gen_save 
+                    disabled=is_blocked_for_gen_save_inner 
                 )
-                if st.button(f"Generate {tab_name}", key=f"generate_{db_key}_btn", disabled=is_blocked_for_gen_save):
+                if st.button(f"Generate {tab_name}", key=f"generate_{db_key}_btn", disabled=is_blocked_for_gen_save_inner):
                     if prompt:
                         final_prompt = f"TEACHER'S AID RESOURCE TAG: {ai_tag}: {prompt}"
                         with st.spinner(f'Building {tab_name} using tag "{ai_tag}"...'):
                             result = run_ai_generation(final_prompt)
                             save_size = calculate_mock_save_size(result)
 
-                            if can_save_flag and not is_blocked_for_gen_save: # Re-check dedicated save limit right before saving
+                            if can_save_flag and not is_blocked_for_gen_save_inner: # Re-check dedicated save limit right before saving
                                 st.session_state['teacher_db'][db_key].append({
                                     "name": f"{tab_name} from '{prompt[:20]}...' - {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}",
                                     "content": result,
@@ -922,19 +865,19 @@ def render_teacher_aid_content(can_interact, universal_error_msg, teacher_mode):
                                 save_storage_tracker(st.session_state.storage)
                                 st.success(f"{tab_name} Generated and Saved Permanently! ({save_size:.1f}MB)!")
                                 st.rerun()
-                            elif is_blocked_for_gen_save:
+                            elif is_blocked_for_gen_save_inner:
                                 st.error(f"🛑 Generation Blocked: {block_message_for_generation_save}")
                             else:
                                 st.error(f"🛑 Cannot save {tab_name}: {error_msg_flag}")
                     else:
                         st.warning("Please provide a prompt to generate.")
 
-
         for i, (name, data) in enumerate(RESOURCE_MAP.items()):
-            generate_and_save_resource(tabs[i], name, data["tag"], data["key"], data["placeholder"], can_save_dedicated, error_message_dedicated, is_fully_blocked_for_generation_save)
+            generate_and_save_resource(resource_tabs_inner[i], name, data["tag"], data["key"], data["placeholder"], can_save_dedicated, error_message_dedicated, is_fully_blocked_for_generation_save)
 
     # --- RENDER SAVED DATA VIEW ---
-    elif teacher_mode == "Saved Data":
+    with tabs[tab_titles.index("Saved Data")]:
+        st.session_state['teacher_mode'] = "Saved Data" # Set state when this tab is active
         st.header("Saved Resources Manager")
         st.info("View, edit, or delete all your generated Teacher Aid resources.")
         
@@ -943,12 +886,15 @@ def render_teacher_aid_content(can_interact, universal_error_msg, teacher_mode):
         else:
             # Dropdown menu to select category (as requested)
             category_options = list(st.session_state['teacher_db'].keys())
-            selected_category = st.selectbox("Choose a resource category:", category_options)
+            selected_category = st.selectbox("Choose a resource category:", category_options, key="teacher_saved_data_category")
             
             resources = st.session_state['teacher_db'].get(selected_category, [])
 
             if not resources:
                 st.info(f"No saved {selected_category.title()} data found.")
+                # If the current category is empty, default to "Resource Dashboard" on next rerun.
+                if st.session_state['teacher_mode'] == "Saved Data":
+                    st.session_state['teacher_mode'] = "Resource Dashboard"
                 return
 
             # Display saved items
@@ -983,7 +929,8 @@ def render_teacher_aid_content(can_interact, universal_error_msg, teacher_mode):
                             st.rerun()
 
     # --- RENDER DATA MANAGEMENT VIEW ---
-    elif teacher_mode == "Data Management":
+    with tabs[tab_titles.index("Data Management")]:
+        st.session_state['teacher_mode'] = "Data Management" # Set state when this tab is active
         st.header("Data Management & Cleanup")
         st.info("Manage what's taking up the most space in your Teacher Aid section.")
         
@@ -1139,23 +1086,12 @@ def render_data_cleanup():
 
 # --- MAIN APP LOGIC AND NAVIGATION CONTROL ---
 
-# 1. RENDER MAIN FIXED NAVIGATION (180px wide)
-render_main_navigation()
+# 1. RENDER MAIN NAVIGATION IN STREAMLIT'S SIDEBAR
+render_main_navigation_sidebar()
 
 # --- GLOBAL TIER RESTRICTION CHECK (Runs on every page load) ---
 universal_limit_reached, universal_error_msg, _ = check_storage_limit('universal')
 can_interact_universally = not universal_limit_reached
-
-# --- RENDER INTERNAL FIXED NAVIGATION (Teacher Aid Only - 200px wide) ---
-# If the app is in Teacher Aid mode, render the internal navigation column.
-teacher_mode = None
-if st.session_state['app_mode'] == "Teacher Aid" and can_interact_universally:
-    teacher_mode = render_internal_navigation_teacher_aid()
-    # If in Teacher Aid mode, the content needs a larger offset (180px main + 200px internal = 380px)
-    st.markdown('<div class="app-main-content-container teacher-aid-content-wrapper">', unsafe_allow_html=True)
-else:
-    # If in any other mode, the content only needs the 180px main offset
-    st.markdown('<div class="app-main-content-container">', unsafe_allow_html=True) 
 
 # Render the tier label at the top of the main content area
 st.markdown(f'<p class="tier-label">Current Plan: {st.session_state.storage["tier"]}</p>', unsafe_allow_html=True)
@@ -1182,7 +1118,7 @@ elif st.session_state['app_mode'] == "28/1 Utilities":
             st.session_state['app_mode'] = "Dashboard"
             st.rerun()
     else:
-        render_utility_hub_navigated(can_interact_universally, universal_error_msg)
+        render_utility_hub_content(can_interact_universally, universal_error_msg)
     
 elif st.session_state['app_mode'] == "Teacher Aid":
     if not can_interact_universally:
@@ -1192,8 +1128,4 @@ elif st.session_state['app_mode'] == "Teacher Aid":
             st.session_state['app_mode'] = "Dashboard"
             st.rerun()
     else:
-        # Note: teacher_mode is set by render_internal_navigation_teacher_aid() above
-        render_teacher_aid_content(can_interact_universally, universal_error_msg, teacher_mode)
-
-# 3. CLOSE MAIN CONTENT WRAPPER
-st.markdown('</div>', unsafe_allow_html=True)
+        render_teacher_aid_content(can_interact_universally, universal_error_msg)
