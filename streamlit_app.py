@@ -8,22 +8,12 @@ import re
 import random
 import traceback # Import traceback for detailed error logging
 
-# --- Ensure you have google-genai installed and configured ---
-import google.genai as genai # Revert to google.genai
-# Attempt to import APIError from a common location, or define a mock one if it fails
-try:
-    from google.genai.errors import APIError
-except ImportError:
-    # If APIError is not found, define a placeholder to avoid breaking the code
-    class APIError(Exception):
-        pass
-    st.sidebar.warning("⚠️ Could not import 'APIError' from google.genai. If you encounter API errors, details might be limited.")
+# --- CRITICAL FIX: Ensure you have google-generativeai installed ---
+import google.generativeai as genai
+from google.generativeai import APIError # Corrected safe import for APIError
+# Import necessary types for function arguments (like GenerationConfig)
+from google.generativeai.types import GenerationConfig 
 
-import traceback # Import traceback for detailed error logging
-
-# We'll use the 'types' or 'generative_models' directly if 'configure' is not present.
-# For now, let's keep it minimal.
-# from google.generativeai.types import GenerationConfig # Will likely not work with google.genai
 # Import custom modules (Assuming these files exist and are correct)
 # NOTE: These files (auth, storage_logic) MUST be present for the app to run.
 from auth import render_login_page, logout, load_users, load_plan_overrides
@@ -46,8 +36,7 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# --- INITIALIZE GEMINI CLIENT (FINAL, MOST ROBUST FIX) ---
-# --- INITIALIZE GEMINI CLIENT ---
+# --- INITIALIZE GEMINI CLIENT (FINAL, CORRECT FIX) ---
 client = None # Default to None
 api_key_source = "None"
 
@@ -58,15 +47,17 @@ try:
     if "GEMINI_API_KEY" in st.secrets:
         api_key = st.secrets["GEMINI_API_KEY"]
         api_key_source = "Streamlit Secrets"
-    # 2. Fallback to os.getenv (for local env or other setups)
+    # 2. Fallback to os.getenv 
     elif os.getenv("GEMINI_API_KEY"):
         api_key = os.getenv("GEMINI_API_KEY")
         api_key_source = "Environment Variable"
 
     if api_key and api_key.strip():
-        # Directly initialize the client with the API key 
-        # (Needed because 'configure' is causing errors with your installed 'google-genai' version)
-        client = genai.GenerativeModel(MODEL, api_key=api_key) 
+        # Use the standard, modern configuration method
+        genai.configure(api_key=api_key) 
+        
+        # Instantiate GenerativeModel (This is the class that was missing before)
+        client = genai.GenerativeModel(MODEL) 
         st.sidebar.success(f"✅ Gemini Client Initialized (Key from {api_key_source}).")
     else:
         st.sidebar.warning("⚠️ Gemini API Key not found or is empty. Running in MOCK MODE.")
@@ -81,7 +72,6 @@ except Exception as e:
     st.sidebar.error(f"❌ Unexpected Setup Error during Gemini client initialization. See Streamlit logs for details.")
     st.exception(e)
     
-# --- END INITIALIZE GEMINI CLIENT ---
 # --- END INITIALIZE GEMINI CLIENT ---
 
 
@@ -630,7 +620,7 @@ The system has received your request. For a more structured output, please inclu
         contents.append(prompt_text)
 
         # For GenerativeModel, system_instruction is part of generation_config
-        generation_config = genai.types.GenerationConfig(
+        generation_config = GenerationConfig(
             system_instruction=SYSTEM_INSTRUCTION,
         )
 
