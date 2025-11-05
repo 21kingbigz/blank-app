@@ -32,24 +32,34 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# --- INITIALIZE GEMINI CLIENT ---
+# --- INITIALIZE GEMINI CLIENT (FIXED) ---
 client = None # Default to None
 
 try:
     # 1. Safely retrieve the API key first
     api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
 
+    # FIX: Check for a common nested structure in st.secrets, just in case
+    if not api_key and "api_keys" in st.secrets and "GEMINI_API_KEY" in st.secrets["api_keys"]:
+         api_key = st.secrets["api_keys"]["GEMINI_API_KEY"]
+    
+    # Check for another common Streamlit secret name for Google
+    if not api_key and "google_api_key" in st.secrets:
+         api_key = st.secrets["google_api_key"]
+
+
     if api_key:
         # 2. Only proceed to configure and initialize if the key is found
         genai.configure(api_key=api_key)
         client = genai.GenerativeModel(MODEL)
-        # st.success("Gemini Client successfully initialized!") # Optional feedback for debugging
+        # The client is initialized, so we don't need to show the mock warning.
     else:
         # Key not found, client remains None. The warning will be shown in run_ai_generation.
         pass
 
 except Exception as e:
     client = None
+    # If the app fails here, it's often due to a structural issue with the key
     # st.error(f"Gemini API Setup Error: {e}") # Optional detailed error for debugging
 
 # --- END INITIALIZE GEMINI CLIENT ---
@@ -293,7 +303,7 @@ FEATURE_EXAMPLES = {
     "28. Grade Calculator": "Quiz 80 (20%), Midterm 75 (30%), Final 90 (50%)",
 }
 
-# --- AI GENERATION FUNCTION ---
+# --- AI GENERATION FUNCTION (MODIFIED WARNING) ---
 def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_image: Image.Image = None) -> str:
     """
     Executes the selected feature function. Uses the real Gemini API if available,
@@ -302,7 +312,8 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 
     # 1. Fallback/Mock execution
     if client is None:
-        st.warning("Gemini Client is NOT initialized. Using Mock Response.")
+        # MODIFIED: Give specific instructions on how to fix the API key issue
+        st.warning("⚠️ **MOCK MODE:** Gemini Client is NOT initialized. Using Mock Response. To enable the real AI, please ensure your `GEMINI_API_KEY` is correctly set in your Streamlit app's secrets.")
         selected_function = None
         
         # Check Utility Mappings
@@ -323,7 +334,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
             if "Unit Overview" in prompt_text:
                 topic = prompt_text.replace("Unit Overview", "").strip() or "a new unit"
                 return f"""
-**Teacher Aid Resource: Unit Overview**
+**Teacher Aid Resource: Unit Overview (MOCK)**
 **Request:** *{prompt_text}*
 
 ---
@@ -356,7 +367,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
             elif "Lesson Plan" in prompt_text:
                 topic = prompt_text.replace("Lesson Plan", "").strip() or "a specific lesson"
                 return f"""
-**Teacher Aid Resource: Lesson Plan**
+**Teacher Aid Resource: Lesson Plan (MOCK)**
 **Request:** *{prompt_text}*
 
 ---
@@ -388,7 +399,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
             elif "Vocabulary List" in prompt_text:
                 topic = prompt_text.replace("Vocabulary List", "").strip() or "general science"
                 return f"""
-**Teacher Aid Resource: Vocabulary List**
+**Teacher Aid Resource: Vocabulary List (MOCK)**
 **Request:** *{prompt_text}*
 
 ---
@@ -414,7 +425,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
             elif "Worksheet" in prompt_text:
                 topic = prompt_text.replace("Worksheet", "").strip() or "basic math"
                 return f"""
-**Teacher Aid Resource: Worksheet**
+**Teacher Aid Resource: Worksheet (MOCK)**
 **Request:** *{prompt_text}*
 
 ---
@@ -453,7 +464,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
             elif "Quiz" in prompt_text:
                 topic = prompt_text.replace("Quiz", "").strip() or "general knowledge"
                 return f"""
-**Teacher Aid Resource: Quiz**
+**Teacher Aid Resource: Quiz (MOCK)**
 **Request:** *{prompt_text}*
 
 ---
@@ -500,7 +511,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
             elif "Test" in prompt_text:
                 topic = prompt_text.replace("Test", "").strip() or "comprehensive review"
                 return f"""
-**Teacher Aid Resource: Test**
+**Teacher Aid Resource: Test (MOCK)**
 **Request:** *{prompt_text}*
 
 ---
