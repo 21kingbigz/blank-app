@@ -928,7 +928,7 @@ def render_teacher_aid_navigated(can_interact):
                     if col_delete.button("Delete", key=f"clean_teacher_{item['category']}_{item['index']}_{i}"):
                         
                         # Find the true index in the original DB list before deletion
-                        true_index = next((idx for idx, res in enumerate(st.session_state['teacher_db'][item['category']]) if res['name'] == item['name'] && res['size_mb'] == item['size_mb']), -1)
+                        true_index = next((idx for idx, res in enumerate(st.session_state['teacher_db'][item['category']]) if res['name'] == item['name'] and res['size_mb'] == item['size_mb']), -1)
                         
                         if true_index != -1:
                             deleted_size = item['size_mb']
@@ -1004,4 +1004,107 @@ def render_data_cleanup():
     
     st.subheader("Storage Utilization")
     total_used = st.session_state.storage['total_used_mb']
-    limit = TIER_LIMITS[st.session
+    limit = TIER_LIMITS[st.session_state.storage['tier']]
+    used_percent = min(100, (total_used / limit) * 100) if limit != float('inf') and limit > 0 else 0
+    st.metric(label="Total Storage Used", value=f"{total_used:.2f} MB", delta=f"{limit if limit != float('inf') else '∞'} MB Total")
+    if limit != float('inf'):
+        st.progress(used_percent / 100)
+    
+    st.markdown("---")
+    
+    if not can_proceed:
+        st.error(f"🛑 {error_msg} Cannot perform cleanup. Please consider upgrading.")
+        return
+
+    st.subheader("Automated Suggestions (Simulated)")
+    
+    # Simple calculation for total saved items
+    total_items = len(st.session_state.utility_db['saved_items']) + sum(len(v) for v in st.session_state.teacher_db.values())
+    total_mb = st.session_state.storage['utility_used_mb'] + st.session_state.storage['teacher_used_mb']
+    
+    st.write(f"1. **Items to Review:** Found **{total_items}** total items saved (**{total_mb:.2f} MB**).")
+    st.write("2. **Oldest Saves:** Items saved over 6 months ago (Simulated 35.2 MB).")
+    st.write("3. **Largest Saves:** Largest items (Simulated 182.1 MB).")
+    
+    if st.button("Simulate Bulk Delete of Suggested Items", key="review_cleanup_btn", use_container_width=True):
+        if total_mb > NEW_SAVE_COST_BASE_MB:
+            mock_deleted_size = total_mb * 0.25 # Delete 25% of current data
+            
+            # Simple simulation: reduce totals, don't worry about individual items
+            st.session_state.storage['total_used_mb'] = max(0, st.session_state.storage['total_used_mb'] - mock_deleted_size)
+            st.session_state.storage['utility_used_mb'] = max(0, st.session_state.storage['utility_used_mb'] - mock_deleted_size * 0.5)
+            st.session_state.storage['teacher_used_mb'] = max(0, st.session_state.storage['teacher_used_mb'] - mock_deleted_size * 0.5)
+            
+            save_storage_tracker(st.session_state.storage)
+            st.toast(f"🧹 Successfully cleaned up {mock_deleted_size:.1f}MB of data (Simulated)!")
+            st.rerun()
+        else:
+            st.info("Not enough data saved to perform a significant cleanup.")
+
+
+# --- MAIN APP LOGIC AND NAVIGATION CONTROL ---
+
+# --- SIDEBAR NAVIGATION (Main Menu) ---
+with st.sidebar:
+    col_logo, col_title = st.columns([0.25, 0.75])
+    with col_logo:
+        st.image(ICON_SETTING, width=40)
+    with col_title:
+        st.markdown(f"## {WEBSITE_TITLE}")
+    
+    st.markdown("---")
+    st.markdown(f"Current Plan: **{st.session_state.storage['tier']}**")
+    st.markdown("---")
+
+    menu_options = ["Usage Dashboard", "Dashboard", "Plan Manager", "Data Clean Up"]
+    
+    try:
+        current_index = menu_options.index(st.session_state.get('app_mode', 'Usage Dashboard'))
+    except ValueError:
+        current_index = 0
+
+    mode_selection = st.radio(
+        "Application Menu:",
+        options=menu_options,
+        index=current_index,
+        key="main_mode_select"
+    )
+    
+    if mode_selection != st.session_state.get('app_mode', 'Usage Dashboard'):
+        st.session_state['app_mode'] = mode_selection
+        st.session_state.pop('utility_view', None)
+        st.session_state.pop('utility_active_category', None)
+        st.rerun()
+
+
+# --- GLOBAL TIER RESTRICTION CHECK (Runs on every page load) ---
+universal_limit_reached, universal_error_msg, _ = check_storage_limit('universal')
+can_interact = not universal_limit_reached
+
+# Render the tier label at the top of the main content area
+st.markdown(f'<p class="tier-label">{st.session_state.storage["tier"]}</p>', unsafe_allow_html=True)
+
+if not can_interact and st.session_state['app_mode'] not in ["Usage Dashboard", "Plan Manager", "Data Clean Up"]:
+    st.error(f"🛑 **STORAGE LIMIT REACHED:** {universal_error_msg}. You cannot generate new data or save until you upgrade or clean up storage.")
+    st.session_state['app_mode'] = "Usage Dashboard"
+    st.rerun()
+
+
+# --- RENDERER DISPATCHER ---
+if st.session_state['app_mode'] == "Usage Dashboard":
+    render_usage_dashboard()
+    
+elif st.session_state['app_mode'] == "Dashboard":
+    render_main_dashboard()
+
+elif st.session_state['app_mode'] == "Plan Manager":
+    render_plan_manager()
+    
+elif st.session_state['app_mode'] == "Data Clean Up":
+    render_data_cleanup()
+    
+elif st.session_state['app_mode'] == "28/1 Utilities":
+    render_utility_hub_navigated(can_interact)
+    
+elif st.session_state['app_mode'] == "Teacher Aid":
+    render_teacher_aid_navigated(can_interact)
