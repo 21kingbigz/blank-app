@@ -222,7 +222,7 @@ UTILITY_CATEGORIES = {
     "Cognitive & Productivity": {
         "1. Daily Schedule Optimizer": daily_schedule_optimizer,
         "2. Task Deconstruction Expert": task_deconstruction_expert,
-        "3. 'Get Unstuck" Prompter': get_unstuck_prompter,
+        "3. 'Get Unstuck' Prompter": get_unstuck_prompter,        
         "4. Habit Breaker": habit_breaker,
         "5. One-Sentence Summarizer": one_sentence_summarizer,
     },
