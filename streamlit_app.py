@@ -9,8 +9,10 @@ import random
 import traceback # Import traceback for detailed error logging
 
 # --- Ensure you have google-genai installed and configured if you want real AI calls ---
-from google import genai
-from google.genai.errors import APIError
+import google.generativeai as genai
+from google.generativeai.types import GenerationConfig # Correct import for GenerationConfig
+from google.generativeai.client import get_default_retriever, get_default_tuned_model # Added for robustness
+from google.generativeai.errors import APIError
 
 # Import custom modules (Assuming these files exist and are correct)
 # NOTE: These files (auth, storage_logic) MUST be present for the app to run.
