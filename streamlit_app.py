@@ -2,12 +2,13 @@ import streamlit as st
 import os
 import json
 import math
-import pandas as pd # Added for simple data tables/charts
-import numpy as np # Added for mock data generation
-from google import genai
+import pandas as pd
+import numpy as np
+from google import genai # This is the client import
 from PIL import Image
 from io import BytesIO
-from google.generativeai.errors import APIError
+# --- CORRECTED LINE BELOW ---
+from google.genai.errors import APIError # Correct import path for APIError
 
 # --- 0. CONFIGURATION AND PERSISTENCE FILE PATHS ---
 WEBSITE_TITLE = "Artorius"
