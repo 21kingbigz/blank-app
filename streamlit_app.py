@@ -302,7 +302,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 
     # 1. Fallback/Mock execution
     if client is None:
-        # FIX: Removed the warning about initialization to address user feedback.
+        st.warning("Gemini Client is NOT initialized. Using Mock Response.")
         selected_function = None
         
         # Check Utility Mappings
@@ -320,8 +320,8 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
                 return selected_function(prompt_text)
         elif is_teacher_aid_proxy:
             # --- CRITICAL FIX: Detailed Mock Responses for Teacher Aid Resources ---
-            if "Unit Overview" in prompt_text:
-                topic = prompt_text.replace("Unit Overview", "").strip() or "a new unit"
+            if "Unit Overview:" in prompt_text:
+                topic = prompt_text.replace("Unit Overview:", "").strip() or "a new unit"
                 return f"""
 **Teacher Aid Resource: Unit Overview**
 **Request:** *{prompt_text}*
@@ -353,8 +353,8 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 * Formative: Quizzes after each subtopic, participation in discussions.
 * Summative: A final essay (25%), a group presentation (25%), and a comprehensive test (50%).
 """
-            elif "Lesson Plan" in prompt_text:
-                topic = prompt_text.replace("Lesson Plan", "").strip() or "a specific lesson"
+            elif "Lesson Plan:" in prompt_text:
+                topic = prompt_text.replace("Lesson Plan:", "").strip() or "a specific lesson"
                 return f"""
 **Teacher Aid Resource: Lesson Plan**
 **Request:** *{prompt_text}*
@@ -385,8 +385,8 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 * Informal: Observe student participation in discussions and pair work.
 * Formative: Collect and review quick writes for understanding.
 """
-            elif "Vocabulary List" in prompt_text:
-                topic = prompt_text.replace("Vocabulary List", "").strip() or "general science"
+            elif "Vocabulary List:" in prompt_text:
+                topic = prompt_text.replace("Vocabulary List:", "").strip() or "general science"
                 return f"""
 **Teacher Aid Resource: Vocabulary List**
 **Request:** *{prompt_text}*
@@ -411,8 +411,8 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
     * **Concise Definition:** The force that attracts a body toward the center of the earth, or toward any other physical body having mass.
     * **Example Sentence:** **Gravity** keeps our feet on the ground and planets in orbit.
 """
-            elif "Worksheet" in prompt_text:
-                topic = prompt_text.replace("Worksheet", "").strip() or "basic math"
+            elif "Worksheet:" in prompt_text:
+                topic = prompt_text.replace("Worksheet:", "").strip() or "basic math"
                 return f"""
 **Teacher Aid Resource: Worksheet**
 **Request:** *{prompt_text}*
@@ -450,8 +450,8 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 9.  (Accept any grammatically correct sentence using "magnificent")
 10. (Accept any famous scientist, e.g., Albert Einstein, Marie Curie)
 """
-            elif "Quiz" in prompt_text:
-                topic = prompt_text.replace("Quiz", "").strip() or "general knowledge"
+            elif "Quiz:" in prompt_text:
+                topic = prompt_text.replace("Quiz:", "").strip() or "general knowledge"
                 return f"""
 **Teacher Aid Resource: Quiz**
 **Request:** *{prompt_text}*
@@ -497,8 +497,8 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 4.  c) H2O
 5.  c) 7
 """
-            elif "Test" in prompt_text:
-                topic = prompt_text.replace("Test", "").strip() or "comprehensive review"
+            elif "Test:" in prompt_text:
+                topic = prompt_text.replace("Test:", "").strip() or "comprehensive review"
                 return f"""
 **Teacher Aid Resource: Test**
 **Request:** *{prompt_text}*
@@ -532,7 +532,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 
 1.  Explain the primary causes and effects of [key event/concept in topic]. (Short Answer)
 2.  Compare and contrast two different perspectives on [another key concept in topic]. (Short Answer)
-3.  Describe in detail how [element A] influences [element B] within the context of {topic}. Provide specific examples. (Long Answer)
+3.  Describe in detail how [element A] influences [element B] within the context of {topic}. (Long Answer)
 4.  Propose a solution to a problem related to {topic} and justify your reasoning. (Long Answer)
 
 ---
@@ -574,9 +574,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 ---
 
 ### Generic Resource Output
-The system has received your request. For a more structured output, please include a specific **Resource Tag** in your prompt, such as: **Unit Overview**, **Lesson Plan**, **Vocabulary List**, **Worksheet**, **Quiz**, or **Test**.
-
-**Example:** "Create a **Lesson Plan** for teaching fractions."
+The system has received your request. For a more structured output, please use one of the six dedicated resource tabs. Your prompt did not contain a specific Resource Tag.
 
 ---
 *This is a mock response because the Gemini API is not connected or the request did not match a specific teacher resource tag.*
@@ -631,11 +629,6 @@ if st.session_state.logged_in:
     plan_overrides = load_plan_overrides()
     if user_email in plan_overrides:
         storage_data['tier'] = plan_overrides[user_email]
-    # FIX: Ensure non-whitelisted users do not get the 'Unlimited' tier.
-    elif storage_data['tier'] == 'Unlimited':
-        # If the user's current tier is 'Unlimited' but they are not in the
-        # whitelisted list, revert them to the default starting tier ('Free Tier').
-        storage_data['tier'] = 'Free Tier'
 
     storage_data['user_email'] = user_email
     st.session_state['storage'] = storage_data
@@ -663,8 +656,7 @@ if st.session_state.logged_in:
         st.session_state['app_mode'] = "Dashboard"
     if '28_in_1_output' not in st.session_state:
         st.session_state['28_in_1_output'] = ""
-    if 'teacher_output' not in st.session_state:
-        st.session_state['teacher_output'] = ""
+    # Removed generic 'teacher_output' since outputs are now per tab
     if 'teacher_view' not in st.session_state: # Use this for teacher sub-view
         st.session_state['teacher_view'] = 'generation' 
 
@@ -861,85 +853,106 @@ def render_utility_hub_content(can_interact, universal_error_msg):
         st.markdown(st.session_state['28_in_1_output'])
 
 
-# --- TEACHER AID RENDERERS (FIXED TO SIMPLE TABS) ---
+# --- TEACHER AID RENDERERS (MODIFIED TO 6 TABS + HISTORY) ---
 def render_teacher_aid_content(can_interact, universal_error_msg):
     st.title("🎓 Teacher Aid Hub")
-    st.caption("Generate specialized educational resources. Use the highlighted **Resource Tags** in your prompt.")
+    st.caption("Generate specialized educational resources using the six dedicated tabs below.")
     st.markdown("---")
 
     if not can_interact:
         st.error(f"🛑 **ACCESS BLOCKED:** {universal_error_msg}. Cannot interact.")
         return
 
-    # Use Streamlit Tabs for the requested layout: Generation and History
-    tab_gen, tab_history = st.tabs(
-        ["📝 Resource Generation", "📚 Saved History"]
-    )
-
     # Pass the save check results to the generation tab
     can_save_teacher, teacher_error_msg, teacher_limit = check_storage_limit(st.session_state.storage, 'teacher_save')
 
-    with tab_gen:
-        st.subheader("Generate Resource")
-        
-        # RESTORED Resource Tags
-        st.markdown("**Available Resource Tags:** **Unit Overview**, **Lesson Plan**, **Vocabulary List**, **Worksheet**, **Quiz**, **Test**.")
-        example_input = "Create a **Lesson Plan** for teaching the causes of World War I."
-        st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
+    # Use Streamlit Tabs for the requested layout (6 resource tabs + History)
+    tab_unit, tab_lesson, tab_vocab, tab_worksheet, tab_quiz, tab_test, tab_history = st.tabs(
+        ["Unit Overview", "Lesson Plan", "Vocabulary List", "Worksheet", "Quiz", "Test", "📚 Saved History"]
+    )
 
-        teacher_prompt = st.text_area(
-            "Resource Request (e.g., 'Unit Overview for high school physics on momentum'):",
-            placeholder=example_input,
-            height=150,
-            key="teacher_ai_prompt"
-        )
+    # Define a helper function to render each resource tab
+    def render_resource_tab(tab_container, resource_type, example_prompt):
+        with tab_container:
+            st.subheader(f"Generate {resource_type}")
+            st.markdown(f'<p class="example-text">Example: <code>{example_prompt}</code></p>', unsafe_allow_html=True)
+            
+            prompt_key = f"teacher_prompt_{resource_type.lower().replace(' ', '_')}"
+            button_key = f"teacher_generate_btn_{resource_type.lower().replace(' ', '_')}"
+            output_key = f"teacher_output_{resource_type.lower().replace(' ', '_')}"
 
-        if st.button("Generate Resource", key="teacher_generate_btn", use_container_width=True):
-            if not teacher_prompt:
-                st.warning("Please enter a request.")
-                return
+            # Initialize output for persistence
+            if output_key not in st.session_state:
+                st.session_state[output_key] = f"Your generated {resource_type} will appear here."
 
-            feature_key_proxy = "Teacher_Aid_Routing"
+            teacher_prompt = st.text_area(
+                "Topic/Details:",
+                placeholder=example_prompt,
+                height=150,
+                key=prompt_key
+            )
 
-            with st.spinner("Generating specialized teacher resource..."):
-                generated_output = run_ai_generation(
-                    feature_function_key=feature_key_proxy,
-                    prompt_text=teacher_prompt,
-                    uploaded_image=None
-                )
-                st.session_state['teacher_output'] = generated_output
+            if st.button(f"Generate {resource_type}", key=button_key, use_container_width=True):
+                if not teacher_prompt:
+                    st.warning("Please enter a topic or details for the resource.")
+                    return
 
-                if can_save_teacher:
-                    data_to_save = {
-                        "timestamp": pd.Timestamp.now().isoformat(),
-                        "request": teacher_prompt[:100] + "..." if len(teacher_prompt) > 100 else teacher_prompt,
-                        "output_size_bytes": calculate_mock_save_size(generated_output),
-                        "output_content": generated_output
-                    }
+                # CRITICAL: Prepend the Resource Tag to the prompt for AI routing
+                full_ai_prompt = f"{resource_type}: {teacher_prompt}"
+                feature_key_proxy = "Teacher_Aid_Routing"
 
-                    st.session_state.teacher_db['history'].append(data_to_save)
-                    save_db_file(get_file_path("teacher_data_", st.session_state.current_user), st.session_state.teacher_db)
+                with st.spinner(f"Generating specialized {resource_type}..."):
+                    generated_output = run_ai_generation(
+                        feature_function_key=feature_key_proxy,
+                        prompt_text=full_ai_prompt,
+                        uploaded_image=None
+                    )
+                    st.session_state[output_key] = generated_output
+                    
+                    if can_save_teacher:
+                        data_to_save = {
+                            "timestamp": pd.Timestamp.now().isoformat(),
+                            "resource_type": resource_type,
+                            "request": teacher_prompt[:100] + "..." if len(teacher_prompt) > 100 else teacher_prompt,
+                            "output_size_bytes": calculate_mock_save_size(generated_output),
+                            "output_content": generated_output
+                        }
 
-                    mock_size = data_to_save["output_size_bytes"]
-                    st.session_state.storage['current_teacher_storage'] += mock_size
-                    st.session_state.storage['current_universal_storage'] += mock_size
-                    save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+                        st.session_state.teacher_db['history'].append(data_to_save)
+                        save_db_file(get_file_path("teacher_data_", st.session_state.current_user), st.session_state.teacher_db)
 
-                    st.success(f"Resource saved to Teacher History (Mock Size: {mock_size} bytes).")
-                else:
-                    st.error(f"⚠️ **Teacher History Save Blocked:** {teacher_error_msg}. Result is displayed below but not saved.")
+                        mock_size = data_to_save["output_size_bytes"]
+                        st.session_state.storage['current_teacher_storage'] += mock_size
+                        st.session_state.storage['current_universal_storage'] += mock_size
+                        save_storage_tracker(st.session_state.storage, st.session_state.current_user)
 
-        st.markdown("---")
-        st.subheader("Generated Resource Output")
-        if 'teacher_output' in st.session_state:
-            st.markdown(st.session_state['teacher_output'])
-        else:
-            st.info("Your generated resource will appear here. **Remember to use a Resource Tag (e.g., Quiz, Unit Overview) in your prompt.**")
+                        st.success(f"Resource saved to History (Mock Size: {mock_size} bytes).")
+                    else:
+                        st.error(f"⚠️ **History Save Blocked:** {teacher_error_msg}. Result is displayed below but not saved.")
 
+            st.markdown("---")
+            st.subheader(f"Generated {resource_type} Output")
+            st.markdown(st.session_state[output_key])
+
+
+    # Render all 6 resource tabs
+    render_resource_tab(tab_unit, "Unit Overview", "High school physics unit on Newton's Laws of Motion.")
+    render_resource_tab(tab_lesson, "Lesson Plan", "A 50-minute lesson plan for middle school students learning about the water cycle.")
+    render_resource_tab(tab_vocab, "Vocabulary List", "Generate 10 key terms for a 10th-grade class studying the novel '1984'.")
+    render_resource_tab(tab_worksheet, "Worksheet", "A 10-question mixed-format worksheet on basic algebra: solving for x, and simple inequalities.")
+    render_resource_tab(tab_quiz, "Quiz", "A 5-question multiple choice quiz for 5th graders on world geography, capitals and continents.")
+    render_resource_tab(tab_test, "Test", "A comprehensive test for a college-level introduction to macroeconomics (supply/demand, GDP, inflation).")
+
+
+    # Render the History Tab (identical to uploaded file's logic)
     with tab_history:
         st.subheader("Teacher Aid Saved History")
         teacher_df = pd.DataFrame(st.session_state.teacher_db['history'])
         if not teacher_df.empty:
+            # Add 'resource_type' column if not present (only for old mock data compatibility)
+            if 'resource_type' not in teacher_df.columns:
+                teacher_df['resource_type'] = teacher_df['request'].apply(lambda x: x.split(':')[0].strip() if ':' in x else 'Generic')
+            
             # Drop the 'output_content' column for the main table view to keep it clean
             display_df = teacher_df.drop(columns=['output_content'], errors='ignore')
             st.dataframe(display_df.sort_values(by='timestamp', ascending=False), use_container_width=True)
