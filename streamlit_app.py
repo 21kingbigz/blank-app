@@ -18,7 +18,7 @@ from storage_logic import (
 WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash'
 LOGO_FILENAME = "image_fd0b7e.png" 
-ICON_SETTING = "💡" # Fallback icon if logo fails
+ICON_SETTING = "💡" 
 
 # Set browser tab title, favicon, and layout.
 st.set_page_config(
@@ -484,18 +484,19 @@ def render_usage_dashboard():
     
     storage = st.session_state.storage
     
-    can_proceed, _, universal_limit_for_calc = check_storage_limit(storage, 'universal')
-    
+    # Check the universal limit for the current tier
+    # No need to use the check_storage_limit function here, we calculate limits for display
+    current_tier = storage['tier']
+
     # --- Prepare Data for Charts ---
     total_used = storage['total_used_mb']
     
-    if storage['tier'] == 'Unlimited':
+    if current_tier == 'Unlimited':
         used_percent = 0 
         remaining_mb_display = "Unlimited"
         total_limit_display = "Unlimited"
-        universal_limit_for_calc = 10000.0 
+        universal_limit_for_calc = 10000.0 # Just a large number for calculation purposes
     else:
-        current_tier = storage['tier']
         if current_tier == 'Universal Pro':
              limit = TIER_LIMITS['Universal Pro']
         elif current_tier in ['28/1 Pro', 'Teacher Pro', 'Free Tier']:
@@ -679,14 +680,26 @@ def render_data_cleanup():
 if not st.session_state.logged_in:
     render_login_page()
 else:
+    # 1. RENDER MAIN NAVIGATION
     render_main_navigation_sidebar()
 
-    universal_limit_reached, universal_error_msg, _ = check_storage_limit(st.session_state.storage, 'universal')
-    can_interact_universally = not universal_limit_reached
+    # --- GLOBAL TIER RESTRICTION CHECK (FIXED LOGIC) ---
+    # We check the tier first. If Unlimited, access is always granted.
+    current_tier = st.session_state.storage.get('tier', 'Free Tier')
+    universal_error_msg = None
+    
+    if current_tier == "Unlimited":
+        can_interact_universally = True
+    else:
+        # If not Unlimited, proceed with the storage check
+        universal_limit_reached, universal_error_msg, _ = check_storage_limit(st.session_state.storage, 'universal')
+        can_interact_universally = not universal_limit_reached
 
-    st.markdown(f'<p class="tier-label">Current Plan: {st.session_state.storage["tier"]}</p>', unsafe_allow_html=True)
+    # Render the tier label at the top of the main content area
+    st.markdown(f'<p class="tier-label">Current Plan: {current_tier}</p>', unsafe_allow_html=True)
 
 
+    # --- RENDERER DISPATCHER ---
     if st.session_state['app_mode'] == "Usage Dashboard":
         render_usage_dashboard()
         
@@ -694,9 +707,11 @@ else:
         render_main_dashboard()
         
     elif st.session_state['app_mode'] == "Teacher Aid":
+        # Pass the result of the new, corrected check
         render_teacher_aid_content(can_interact_universally, universal_error_msg)
     
     elif st.session_state['app_mode'] == "28/1 Utilities":
+        # Pass the result of the new, corrected check
         render_utility_hub_content(can_interact_universally, universal_error_msg)
 
     elif st.session_state['app_mode'] == "Plan Manager":
