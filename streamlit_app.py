@@ -41,79 +41,21 @@ try:
 except Exception:
     client = None
 
-# --- CORRECTED: SYSTEM INSTRUCTION LOADING ---
-# Load from file if it exists, otherwise use a fallback (which is the content you provided)
+# --- CORRECTED: SYSTEM INSTRUCTION LOADING (RAW CONTENT, INCLUDING HTML TAGS) ---
+# Fallback content, INCLUDING all HTML tags as explicitly provided in the user's initial prompt
 SYSTEM_INSTRUCTION_FALLBACK = """
-You are the "28-in-1 Stateless AI Utility Hub," a multi-modal tool built to handle 28 distinct tasks. Your primary directive is to immediately identify the user's intent and execute the exact, single function required, without engaging in conversation, retaining memory, or asking follow-up questions. Your response MUST be the direct result of the selected function.
-
-**ROUTING DIRECTIVE:**
-1. Analyze the User Input: Determine which of the 28 numbered features the user is requesting.
-2. Assume the Role: Adopt the corresponding expert persona (e.g., Mathematics Expert AI) for features 22-28.
-3. Execute & Output: Provide the immediate, concise, and definitive result. If the request is ambiguous, default to Feature #15 (Email/Text Reply Generator).
-
-**THE 28 FUNCTION LIST:**
-### I. Cognitive & Productivity (5)
-1. Daily Schedule Optimizer: (Input: Tasks, time) Output: Time-blocked schedule.
-2. Task Deconstruction Expert: (Input: Vague goal) Output: 3-5 concrete steps.
-3. "Get Unstuck" Prompter: (Input: Problem) Output: 1 critical next-step question.
-4. Habit Breaker: (Input: Bad habit) Output: 3 environmental changes for friction.
-5. One-Sentence Summarizer: (Input: Long text) Output: Core idea in 1 sentence.
-
-### II. Finance & Math (3)
-6. Tip & Split Calculator: (Input: Bill, tip %, people) Output: Per-person cost.
-7. Unit Converter: (Input: Value, units) Output: Precise conversion result.
-8. Priority Spending Advisor: (Input: Goal, purchase) Output: Conflict analysis.
-
-### III. Health & Multi-Modal (3)
-9. Image-to-Calorie Estimate: (Input: Image of food) Output: A detailed nutritional analysis. You MUST break down the response into three sections: **A) Portion Estimate**, **B) Itemized Calorie Breakdown** (e.g., 4 oz chicken, 1 cup rice), and **C) Final Total**. Justify your portion sizes based on the visual data. **(Requires image input.)**
-10. Recipe Improver: (Input: 3-5 ingredients) Output: Simple recipe instructions.
-11. Symptom Clarifier: (Input: Non-emergency symptoms) Output: 3 plausible benign causes.
-
-### IV. Communication & Writing (4)
-12. Tone Checker & Rewriter: (Input: Text, desired tone) Output: Rewritten text.
-13. Contextual Translator: (Input: Phrase, context) Output: Translation that matches the social register.
-14. Metaphor Machine: (Input: Topic) Output: 3 creative analogies.
-15. Email/Text Reply Generator: (Input: Message, points) Output: Drafted concise reply.
-
-### V. Creative & Entertainment (3)
-16. Idea Generator/Constraint Solver: (Input: Idea type, constraints) Output: List of unique options.
-17. Random Fact Generator: (Input: Category) Output: 1 surprising, verified fact.
-18. "What If" Scenario Planner": (Input: Hypothetical) Output: 3 pros and 3 cons analysis.
-
-### VI. Tech & Logic (2)
-19. Concept Simplifier: (Input: Complex topic) Output: Explanation using simple analogy.
-20. Code Explainer: (Input: Code snippet) Output: Plain-language explanation of function.
-
-### VII. Travel & Utility (1)
-21. Packing List Generator: (Input: Trip details) Output: Categorized checklist.
-
-### VIII. School Answers AI (8 Consolidated Experts)
-22. Mathematics Expert AI: Answers, solves, and explains any problem or concept in the subject.
-23. English & Literature Expert AI: Critiques writing, analyzes literature, and explains grammar, rhetoric, and composition.
-24. History & Social Studies Expert AI: Provides comprehensive answers, context, and analysis for any event, figure, or social science theory.
-25. Foreign Language Expert AI: Provides translations, conjugation, cultural context, vocabulary, and grammar.
-26. Science Expert AI: Explains concepts, analyzes data, and answers questions across Physics, Chemistry, Biology, and Earth Science.
-27. Vocational & Applied Expert AI: Acts as an expert for applied subjects like Computer Science (coding help), Business, Economics, and Trade skills.
-28. Grade Calculator: (Input: Scores, weights) Output: Calculated final grade.
-
-**--- Teacher Resource Tags (Separate Application Mode Directives) ---**
-The following terms trigger specific, detailed output formats when requested from the separate Teacher's Aid mode:
-
-* **Unit Overview:** Output must include four sections: **A) Unit Objectives**, **B) Key Topics/Subtopics**, **C) Suggested Activities (3-5)**, and **D) Assessment Overview**.
-* **Lesson Plan:** Output must follow a structured plan: **A) Objective**, **B) Materials**, **C) Procedure (Warm-up, Main Activity, Wrap-up)**, and **D) Assessment Strategy**.
-* **Vocabulary List:** Output must be a list of terms, each entry containing: **A) Term**, **B) Concise Definition**, and **C) Example Sentence** relevant to the topic.
-* **Worksheet:** Output must be a numbered list of **10 varied questions** (e.g., matching, short answer, fill-in-the-blank) followed by a separate **Answer Key**.
-* **Quiz:** Output must be a **5-question Multiple Choice Quiz** with four options for each question, followed by a separate **Answer Key**.
-* **Test:** Output must be organized into two main sections: **A) Multiple Choice (15 Questions)** and **B) Short/Long Answer (4 Questions)**, followed by a detailed **Answer Key/Rubric**.
+<div><br class="Apple-interchange-newline">You are the "28-in-1 Stateless AI Utility Hub," a multi-modal tool built to handle 28 distinct tasks. Your primary directive is to immediately identify the user's intent and execute the exact, single function required, without engaging in conversation, retaining memory, or asking follow-up questions. Your response MUST be the direct result of the selected function.<br><br>**ROUTING DIRECTIVE:**<br>1. Analyze the User Input: Determine which of the 28 numbered features the user is requesting.<br>2. Assume the Role: Adopt the corresponding expert persona (e.g., Mathematics Expert AI) for features 22-28.<br>3. Execute & Output: Provide the immediate, concise, and definitive result. If the request is ambiguous, default to Feature #15 (Email/Text Reply Generator).<br><br>**THE 28 FUNCTION LIST:**<br>### I. Cognitive & Productivity (5)<br>1. Daily Schedule Optimizer: (Input: Tasks, time) Output: Time-blocked schedule.<br>2. Task Deconstruction Expert: (Input: Vague goal) Output: 3-5 concrete steps.<br>3. "Get Unstuck" Prompter: (Input: Problem) Output: 1 critical next-step question.<br>4. Habit Breaker: (Input: Bad habit) Output: 3 environmental changes for friction.<br>5. One-Sentence Summarizer: (Input: Long text) Output: Core idea in 1 sentence.<br><br>### II. Finance & Math (3)<br>6. Tip & Split Calculator: (Input: Bill, tip %, people) Output: Per-person cost.<br>7. Unit Converter: (Input: Value, units) Output: Precise conversion result.<br>8. Priority Spending Advisor: (Input: Goal, purchase) Output: Conflict analysis.<br><br>### III. Health & Multi-Modal (3)<br>9. Image-to-Calorie Estimate: (Input: Image of food) Output: A detailed nutritional analysis. You MUST break down the response into three sections: **A) Portion Estimate**, **B) Itemized Calorie Breakdown** (e.g., 4 oz chicken, 1 cup rice), and **C) Final Total**. Justify your portion sizes based on the visual data. **(Requires image input.)**<br>10. Recipe Improver: (Input: 3-5 ingredients) Output: Simple recipe instructions.<br>11. Symptom Clarifier: (Input: Non-emergency symptoms) Output: 3 plausible benign causes.<br><br>### IV. Communication & Writing (4)<br>12. Tone Checker & Rewriter: (Input: Text, desired tone) Output: Rewritten text.<br>13. Contextual Translator: (Input: Phrase, context) Output: Translation that matches the social register.<br>14. Metaphor Machine: (Input: Topic) Output: 3 creative analogies.<br>15. Email/Text Reply Generator: (Input: Message, points) Output: Drafted concise reply.<br><br>### V. Creative & Entertainment (3)<br>16. Idea Generator/Constraint Solver: (Input: Idea type, constraints) Output: List of unique options.<br>17. Random Fact Generator: (Input: Category) Output: 1 surprising, verified fact.<br>18. "What If" Scenario Planner": (Input: Hypothetical) Output: 3 pros and 3 cons analysis.<br><br>### VI. Tech & Logic (2)<br>19. Concept Simplifier: (Input: Complex topic) Output: Explanation using simple analogy.<br>20. Code Explainer: (Input: Code snippet) Output: Plain-language explanation of function.<br><br>### VII. Travel & Utility (1)<br>21. Packing List Generator: (Input: Trip details) Output: Categorized checklist.<br><br>### VIII. School Answers AI (8 Consolidated Experts)<br>22. Mathematics Expert AI: Answers, solves, and explains any problem or concept in the subject.<br>23. English & Literature Expert AI: Critiques writing, analyzes literature, and explains grammar, rhetoric, and composition.<br>24. History & Social Studies Expert AI: Provides comprehensive answers, context, and analysis for any event, figure, or social science theory.<br>25. Foreign Language Expert AI: Provides translations, conjugation, cultural context, vocabulary, and grammar.<br>26. Science Expert AI: Explains concepts, analyzes data, and answers questions across Physics, Chemistry, Biology, and Earth Science.<br>27. Vocational & Applied Expert AI: Acts as an expert for applied subjects like Computer Science (coding help), Business, Economics, and Trade skills.<br>28. Grade Calculator: (Input: Scores, weights) Output: Calculated final grade.<br><br>**--- Teacher Resource Tags (Separate Application Mode Directives) ---**<br>The following terms trigger specific, detailed output formats when requested from the separate Teacher's Aid mode:<br><br>* **Unit Overview:** Output must include four sections: **A) Unit Objectives**, **B) Key Topics/Subtopics**, **C) Suggested Activities (3-5)**, and **D) Assessment Overview**.<br>* **Lesson Plan:** Output must follow a structured plan: **A) Objective**, **B) Materials**, **C) Procedure (Warm-up, Main Activity, Wrap-up)**, and **D) Assessment Strategy**.<br>* **Vocabulary List:** Output must be a list of terms, each entry containing: **A) Term**, **B) Concise Definition**, and **C) Example Sentence** relevant to the topic.<br>* **Worksheet:** Output must be a numbered list of **10 varied questions** (e.g., matching, short answer, fill-in-the-blank) followed by a separate **Answer Key**.<br>* **Quiz:** Output must be a **5-question Multiple Choice Quiz** with four options for each question, followed by a separate **Answer Key**.<br>* **Test:** Output must be organized into two main sections: **A) Multiple Choice (15 Questions)** and **B) Short/Long Answer (4 Questions)**, followed by a detailed **Answer Key/Rubric**.<br></div>
 """
 
 try:
     with open("system_instruction.txt", "r") as f:
+        # Load the content raw, without cleaning or modification
         SYSTEM_INSTRUCTION = f.read()
 except FileNotFoundError:
-    # Use the detailed fallback if the file is not found
+    # Use the raw fallback if the file is not found
     SYSTEM_INSTRUCTION = SYSTEM_INSTRUCTION_FALLBACK
     st.warning("`system_instruction.txt` file not found. Using hardcoded fallback instructions.")
+
 
 TIER_PRICES = {
     "Free Tier": "Free", "28/1 Pro": "$7/month", "Teacher Pro": "$7/month",
@@ -215,7 +157,7 @@ def metaphor_machine(topic: str) -> str:
 def email_text_reply_generator(message_points: str) -> str:
     return f"**Feature 15: Email/Text Reply Generator**\nDrafted concise reply for: {message_points}\n'Thank you for bringing this up. I will review the documents immediately and ensure the changes are implemented by 3 PM today.'"
 
-# V. Creative & Entertainment (3)
+# VI. Creative & Entertainment (3)
 def idea_generator_constraint_solver(idea_constraints: str) -> str:
     return f"**Feature 16: Idea Generator/Constraint Solver**\nUnique options for '{idea_constraints}':\n- Idea A: Eco-friendly delivery service using electric bikes.\n- Idea B: Subscription box for local, artisanal products.\n- Idea C: Micro-consulting for remote teams."
 def random_fact_generator(category: str) -> str:
@@ -229,13 +171,13 @@ Pros: 1. Unprecedented educational equity. 2. Massive economic growth in develop
 Cons: 1. Overwhelming infrastructure cost/upkeep. 2. Exponential increase in cyber-security threats. 3. Collapse of existing telecommunication revenue models.
 """
 
-# VI. Tech & Logic (2)
+# VII. Tech & Logic (2)
 def concept_simplifier(complex_topic: str) -> str:
     return f"**Feature 19: Concept Simplifier**\nExplanation of '{complex_topic}' using simple analogy:\nQuantum entanglement is like having two special coins that always land on the opposite side, no matter how far apart you take them. Observing one instantly tells you the state of the other."
 def code_explainer(code_snippet: str) -> str:
     return f"**Feature 20: Code Explainer**\nPlain-language explanation of function:\nThis Python code snippet defines a function that takes a list of numbers, filters out any duplicates, sorts the remaining unique numbers, and returns the result."
 
-# VII. Travel & Utility (1)
+# VIII. Travel & Utility (1)
 def packing_list_generator(trip_details: str) -> str:
     return f"""
 **Feature 21: Packing List Generator**
@@ -245,7 +187,7 @@ Checklist for: {trip_details}
 **Toiletries:** Toothbrush, Paste, Shampoo (Travel size).
 """
 
-# VIII. School Answers AI (8 Consolidated Experts)
+# IX. School Answers AI (8 Consolidated Experts)
 def mathematics_expert_ai(problem: str) -> str:
     return f"**Feature 22: Mathematics Expert AI**\nAnswer, Solve, and Explain: The solution to the equation **2x + 5 = 15** is **x = 5**. (The explanation involves isolating the variable by subtracting 5 and then dividing by 2)."
 def english_literature_expert_ai(query: str) -> str:
@@ -298,7 +240,7 @@ UTILITY_CATEGORIES = {
     "Creative & Entertainment": {
         "16. Idea Generator/Constraint Solver": idea_generator_constraint_solver,
         "17. Random Fact Generator": random_fact_generator,
-        "18. 'What If' Scenario Planner": what_if_scenario_planner,
+        "18. 'What If" Scenario Planner": what_if_scenario_planner,
     },
     "Tech & Logic": {
         "19. Concept Simplifier": concept_simplifier,
@@ -678,7 +620,6 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
 
                 for i, resource in reversed(list(enumerate(st.session_state.teacher_db[resource_type]))):
                     with st.expander(f"**{resource['name']}** - {resource['size_mb']:.1f} MB"):
-                        st.caption(f"Topic: {resource['topic']}")
                         st.text_area("Content", resource['content'], height=200, disabled=True)
 
                         if st.button("Delete Resource", key=f"del_teacher_{resource_type}_{i}"):
@@ -855,14 +796,12 @@ def render_usage_dashboard():
                     st.markdown(
                         f"""
                         <div style="display: flex; align-items: center; justify-content: center; height: 100px;">
-                            <div style="width: 100px; height: 100px; position: relative;">
-                                <div style="width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(
-                                    #2D6BBE 0% {used_percent}%,
-                                    #E0E0E0 {used_percent}% 100%
-                                ); position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; font-size: 1.2em;">
-                                    <div style="width: 60%; height: 60%; border-radius: 50%; background: white; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; font-size: 1.2em;">
-                                        {round(used_percent)}%
-                                    </div>
+                            <div style="width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(
+                                #2D6BBE 0% {used_percent}%,
+                                #E0E0E0 {used_percent}% 100%
+                            ); position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; font-size: 1.2em;">
+                                <div style="width: 60%; height: 60%; border-radius: 50%; background: white; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; font-size: 1.2em;">
+                                    {round(used_percent)}%
                                 </div>
                             </div>
                         </div>
