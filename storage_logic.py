@@ -108,7 +108,7 @@ def save_storage_tracker(tracker_data: dict, user_email: str):
     except IOError as e:
         st.error(f"Error saving storage tracker for {user_email}: {e}")
 
-# --- Storage Limit Checks (FIXED) ---
+# --- Storage Limit Checks (CRITICAL FIX APPLIED) ---
 def calculate_mock_save_size(content: str) -> int:
     """Calculates a mock size for saved content based on string length."""
     return len(content.encode('utf-8')) + 100 # Add a small overhead
@@ -125,7 +125,7 @@ def check_storage_limit(storage_data: dict, check_type: str) -> tuple[bool, str,
 
     can_save = True
     error_msg = ""
-    # FIX: Initialize limit_value to 0 (a number)
+    # Initialize limit_value to 0 (a number)
     limit_value = 0 
 
     if check_type == 'utility_save':
@@ -183,6 +183,13 @@ def check_storage_limit(storage_data: dict, check_type: str) -> tuple[bool, str,
             can_save = False
             error_msg = f"Your '{user_tier}' plan does not include access to Teacher Aid."
 
+    # CRITICAL FINAL FIX: Handle float('inf') before casting to int().
+    # If the limit is infinite (e.g., Unlimited Tier), return a very large but finite integer.
+    if limit_value == float('inf'):
+        # Use a large, safe integer value for the return type annotation of 'int'.
+        # This number should be sufficiently large to indicate "effectively unlimited"
+        # without causing an overflow or type error.
+        return can_save, error_msg, 2**63 - 1 # Max value for a 64-bit signed integer
 
-    # FINAL CAST: limit_value is now guaranteed to be a number (float or int), making this safe.
+    # FINAL CAST: limit_value is now guaranteed to be a finite number.
     return can_save, error_msg, int(limit_value)
