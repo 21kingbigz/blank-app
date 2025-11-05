@@ -12,6 +12,7 @@ from google import genai
 from google.genai.errors import APIError
 
 # Import custom modules (Assuming these files exist and are correct)
+# NOTE: These files (auth, storage_logic) MUST be present for the app to run.
 from auth import render_login_page, logout, load_users, load_plan_overrides
 from storage_logic import (
     load_storage_tracker, save_storage_tracker, check_storage_limit,
@@ -32,48 +33,39 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# --- INITIALIZE GEMINI CLIENT (REVISED FOR MAX ROBUSTNESS) ---
+# --- INITIALIZE GEMINI CLIENT (FINAL ROBUST FIX) ---
 client = None # Default to None
-api_key_found = False
 
 try:
-    # Prioritize Streamlit secrets as the primary source
+    api_key = None
+    
+    # 1. Prioritize Streamlit secrets, checking for key existence first
     if "GEMINI_API_KEY" in st.secrets:
         api_key = st.secrets["GEMINI_API_KEY"]
-        api_key_source = "Streamlit Secrets"
-        if api_key and api_key.strip(): # Check if it's not empty or just whitespace
-            os.environ["GEMINI_API_KEY"] = api_key # Force set environment variable for genai
-            genai.configure(api_key=api_key)
-            client = genai.GenerativeModel(MODEL)
-            api_key_found = True
-            st.success(f"Gemini Client successfully initialized from {api_key_source}!") # Temporary success message
-        else:
-            st.warning("⚠️ Streamlit Secret 'GEMINI_API_KEY' found, but its value is empty.")
     else:
-        # Fallback to os.getenv if not in st.secrets (less secure for prod, but for robustness)
+        # 2. Fallback to os.getenv (for local env or other setups)
         api_key = os.getenv("GEMINI_API_KEY")
-        api_key_source = "Environment Variable"
-        if api_key and api_key.strip():
-            genai.configure(api_key=api_key)
-            client = genai.GenerativeModel(MODEL)
-            api_key_found = True
-            st.success(f"Gemini Client successfully initialized from {api_key_source}!") # Temporary success message
-        else:
-            st.warning("⚠️ GEMINI_API_KEY not found in Streamlit Secrets or Environment Variables.")
+
+    if api_key and api_key.strip():
+        # Force set environment variable and initialize
+        os.environ["GEMINI_API_KEY"] = api_key 
+        genai.configure(api_key=api_key)
+        client = genai.GenerativeModel(MODEL)
+        # Success message in the sidebar for visible confirmation
+        st.sidebar.success("✅ Gemini Client Initialized.")
+    else:
+        # Key not found or empty
+        # A warning will be displayed if the client is still None later in run_ai_generation
+        pass
 
 except APIError as e:
     client = None
-    st.error(f"Gemini API Setup Error during configuration: {e}")
-    st.warning("⚠️ MOCK MODE: Gemini Client initialization failed due to API error. Using Mock Response.")
+    st.sidebar.error("❌ Gemini API Setup Error.")
 except Exception as e:
     client = None
-    st.error(f"An unexpected error occurred during Gemini API setup: {e}")
-    st.warning("⚠️ MOCK MODE: Gemini Client initialization failed. Using Mock Response.")
-
-if not api_key_found:
-    st.warning("⚠️ MOCK MODE: Gemini Client is NOT initialized. Using Mock Response. To enable the real AI, please ensure your `GEMINI_API_KEY` is correctly set in your Streamlit app's secrets.")
-
-# --- END INITIALIZE GEMINI CLIENT ---
+    st.sidebar.error("❌ Unexpected Setup Error.")
+    
+# --- END INITIALIZE GEMINI CLIENT (FINAL ROBUST FIX) ---
 
 
 # --- SYSTEM INSTRUCTION LOADING (RAW CONTENT) ---
@@ -169,7 +161,7 @@ def image_to_calorie_estimate(image: Image.Image, user_input: str) -> str:
 **C) Final Total:** **~410 calories**
 """
 def recipe_improver(ingredients: str) -> str:
-    return f"**Feature 10: Recipe Improver**\nSimple recipe instructions for: {ingredients}\n1. Sauté the chicken and onions until browned. 2. Add vegetables and stock. 3. Simmer for 20 minutes and serve with rice."
+    return f"**Feature 10: Recipe Improver**\nSimple recipe instructions for: {ingredients}\n1. Sauté the chicken and onions until browned. 3. Add vegetables and stock. 4. Simmer for 20 minutes and serve with rice."
 def symptom_clarifier(symptoms: str) -> str:
     return f"**Feature 11: Symptom Clarifier**\n3 plausible benign causes for '{symptoms}':\n1. Common seasonal allergies (pollen/dust).\n2. Mild fatigue due to poor sleep.\n3. Dehydration or temporary low blood sugar."
 
