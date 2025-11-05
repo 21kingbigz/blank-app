@@ -73,9 +73,15 @@ st.markdown(
         margin-top: -15px;
         margin-bottom: 20px;
     }
-    /* Custom styling for horizontal radio buttons */
+    /* Ensure vertical radio buttons are not forced horizontal by previous CSS */
+    .stRadio {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
     .stRadio > label {
-        padding-right: 15px; /* Adjust spacing between radio buttons */
+        padding-right: 0; /* Remove horizontal padding if applied by generic rules */
+        margin-bottom: 5px; /* Spacing between vertical radio buttons */
     }
     </style>
     """,
@@ -183,7 +189,7 @@ def history_social_studies_expert_ai(query: str) -> str:
 def foreign_language_expert_ai(query: str) -> str:
     return f"**Feature 25: Foreign Language Expert AI**\nTranslation/Context for '{query}':\n*German:* **Guten Tag! Wie geht es Ihnen?** (Formal: Hello! How are you?). *Context:* Use 'Ihnen' when speaking to strangers or elders."
 def science_expert_ai(query: str) -> str:
-    return f"**Feature 26: Science Expert AI**\nExplanation/Analysis for '{query}':\nPhotosynthesis is the process by which plants convert light energy, carbon dioxide, and water into glucose (food) and oxygen. Its chemical formula is **6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₆**." # Corrected CO6 to C6H12O6 + 6O2
+    return f"**Feature 26: Science Expert AI**\nExplanation/Analysis for '{query}':\nPhotosynthesis is the process by which plants convert light energy, carbon dioxide, and water into glucose (food) and oxygen. Its chemical formula is **6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂**."
 def vocational_applied_expert_ai(query: str) -> str:
     return f"**Feature 27: Vocational & Applied Expert AI**\nExpert Answer for '{query}':\nPolymorphism in Python allows objects of different classes to be treated as objects of a common interface (the same function name can be used on different types of objects)."
 def grade_calculator(scores_weights: str) -> str:
@@ -385,9 +391,9 @@ def render_main_dashboard():
                 st.session_state['app_mode'] = "28-in-1 Utilities"
                 st.rerun()
 
-# --- MODIFIED: 28-in-1 Utility Hub Content with Category Radio Buttons ---
+# --- MODIFIED: 28-in-1 Utility Hub Content with Category Radio Buttons on Left, Features/Input on Right ---
 def render_utility_hub_content(can_interact, universal_error_msg):
-    """The 28-in-1 Stateless AI Utility Hub (with category radio buttons and feature select box)"""
+    """The 28-in-1 Stateless AI Utility Hub (with category radio buttons on left, features/input on right)"""
 
     st.title("💡 28-in-1 Stateless AI Utility Hub")
     st.caption("Select a category, then choose a feature, and provide your input.")
@@ -404,29 +410,27 @@ def render_utility_hub_content(can_interact, universal_error_msg):
     # Check if interaction is possible specifically for utility data saves
     can_save_utility, utility_error_msg, utility_limit = check_storage_limit(st.session_state.storage, 'utility_save')
 
-    # --- CATEGORY SELECTION: Now uses st.radio ---
-    category_options = list(UTILITY_CATEGORIES.keys())
+    col_left, col_right = st.columns([1, 2]) # Adjust column ratios as needed
 
-    # Ensure the session state value is valid, default to the first if not
-    if st.session_state['selected_28_in_1_category'] not in category_options:
-         st.session_state['selected_28_in_1_category'] = category_options[0]
+    with col_left:
+        st.subheader("Select a Category:")
+        category_options = list(UTILITY_CATEGORIES.keys())
 
-    st.subheader("Select a Category:")
-    selected_category = st.radio(
-        "Category", # Label is hidden as we use st.subheader above
-        category_options,
-        key="28_in_1_category_radio",
-        index=category_options.index(st.session_state['selected_28_in_1_category']),
-        horizontal=True, # Display options horizontally for a clean look
-        label_visibility="collapsed" # Hide the default label to use the subheader
-    )
-    st.session_state['selected_28_in_1_category'] = selected_category
+        # Ensure the session state value is valid, default to the first if not
+        if st.session_state['selected_28_in_1_category'] not in category_options:
+             st.session_state['selected_28_in_1_category'] = category_options[0]
 
-    st.markdown("---")
+        selected_category = st.radio(
+            "Category", # Label is hidden, using the subheader above
+            category_options,
+            key="28_in_1_category_radio",
+            index=category_options.index(st.session_state['selected_28_in_1_category']),
+            label_visibility="collapsed" # Hide the default label to use the subheader
+        )
+        st.session_state['selected_28_in_1_category'] = selected_category
 
-    # --- FEATURE SELECTION: Stays as st.selectbox, dependent on Category ---
-    col_feature, _ = st.columns([1, 2])
-    with col_feature:
+    with col_right:
+        st.subheader("Select Feature & Input:")
         # Get features for the selected category
         features_in_category = UTILITY_CATEGORIES[selected_category]
 
@@ -440,76 +444,75 @@ def render_utility_hub_content(can_interact, universal_error_msg):
             key="28_in_1_feature_selector",
             index=list(features_in_category.keys()).index(st.session_state['selected_28_in_1_feature'])
         )
-    st.session_state['selected_28_in_1_feature'] = selected_feature
+        st.session_state['selected_28_in_1_feature'] = selected_feature
 
-    st.markdown("---")
+        user_input_placeholder = "Enter your request here..."
+        if selected_feature == "9. Image-to-Calorie Estimate":
+            user_input_placeholder = "Describe the food in the image (optional)."
+        elif selected_feature == "6. Tip & Split Calculator":
+            user_input_placeholder = "e.g., Bill: $50, Tip: 18%, People: 3"
+        elif selected_feature == "28. Grade Calculator":
+            user_input_placeholder = "e.g., Quiz 80 (20%), Midterm 75 (30%), Final 90 (50%)"
 
-    # The rest of the function remains the same (Input/Image/Generate button/Output display)
-    user_input_placeholder = "Enter your request here..."
-    if selected_feature == "9. Image-to-Calorie Estimate":
-        user_input_placeholder = "Describe the food in the image (optional)."
-    elif selected_feature == "6. Tip & Split Calculator":
-        user_input_placeholder = "e.g., Bill: $50, Tip: 18%, People: 3"
-    elif selected_feature == "28. Grade Calculator":
-        user_input_placeholder = "e.g., Quiz 80 (20%), Midterm 75 (30%), Final 90 (50%)"
+        user_input = st.text_area(
+            "Your Input:",
+            height=100,
+            key="utility_text_input",
+            placeholder=user_input_placeholder
+        )
 
-    user_input = st.text_area(
-        "Your Input:",
-        height=100,
-        key="utility_text_input",
-        placeholder=user_input_placeholder
-    )
-
-    uploaded_image = None
-    if selected_feature == "9. Image-to-Calorie Estimate":
-        uploaded_file = st.file_uploader("Upload Image (required for this feature)", type=['jpg', 'jpeg', 'png'], key="28_in_1_uploader")
-        if uploaded_file:
-            try:
-                uploaded_image = Image.open(uploaded_file)
-                st.image(uploaded_image, caption=uploaded_file.name, width=150)
-            except Exception as e:
-                st.error(f"Error loading image: {e}")
-    else:
-        st.info("Image upload is only active for '9. Image-to-Calorie Estimate'.")
-
-    # Disable generate button if save is not possible or input is missing
-    generate_disabled = not can_save_utility or (not user_input and selected_feature != "9. Image-to-Calorie Estimate") or (selected_feature == "9. Image-to-Calorie Estimate" and not uploaded_image)
-
-    if st.button("🚀 Generate Response", use_container_width=True, disabled=generate_disabled):
-        if not can_save_utility:
-            st.error(f"🛑 Generation Blocked: {utility_error_msg}")
-        else:
-            with st.spinner(f"Generating response for '{selected_feature}'..."):
+        uploaded_image = None
+        if selected_feature == "9. Image-to-Calorie Estimate":
+            uploaded_file = st.file_uploader("Upload Image (required for this feature)", type=['jpg', 'jpeg', 'png'], key="28_in_1_uploader")
+            if uploaded_file:
                 try:
-                    # Execute the selected function using run_ai_generation
-                    ai_output = run_ai_generation(selected_feature, user_input, uploaded_image)
-
-                    st.session_state['28_in_1_output'] = ai_output
-
-                    # Save the interaction as a 'utility_db' item (Mock save logic)
-                    save_size = calculate_mock_save_size(ai_output + user_input)
-                    new_item = {
-                        "name": f"{selected_feature} ({user_input[:50]}...)" if len(user_input) > 50 else f"{selected_feature} ({user_input})",
-                        "category": selected_category,
-                        "feature": selected_feature,
-                        "input": user_input,
-                        "output": ai_output,
-                        "timestamp": pd.Timestamp.now().isoformat(),
-                        "size_mb": save_size
-                    }
-                    if 'saved_items' not in st.session_state.utility_db:
-                        st.session_state.utility_db['saved_items'] = []
-                    st.session_state.utility_db['saved_items'].append(new_item)
-                    save_db_file(st.session_state.utility_db, get_file_path("utility_data_", st.session_state.current_user))
-
-                    st.session_state.storage['utility_used_mb'] += save_size
-                    st.session_state.storage['total_used_mb'] += save_size
-                    save_storage_tracker(st.session_state.storage, st.session_state.current_user)
-
-                    st.rerun() # Rerun to update storage stats and display output
+                    uploaded_image = Image.open(uploaded_file)
+                    st.image(uploaded_image, caption=uploaded_file.name, width=150)
                 except Exception as e:
-                    st.error(f"An error occurred during generation: {e}")
+                    st.error(f"Error loading image: {e}")
+        else:
+            st.info("Image upload is only active for '9. Image-to-Calorie Estimate'.")
 
+        # Disable generate button if save is not possible or input is missing
+        generate_disabled = not can_save_utility or (not user_input and selected_feature != "9. Image-to-Calorie Estimate") or (selected_feature == "9. Image-to-Calorie Estimate" and not uploaded_image)
+
+        if st.button("🚀 Generate Response", use_container_width=True, disabled=generate_disabled):
+            if not can_save_utility:
+                st.error(f"🛑 Generation Blocked: {utility_error_msg}")
+            else:
+                with st.spinner(f"Generating response for '{selected_feature}'..."):
+                    try:
+                        # Execute the selected function using run_ai_generation
+                        ai_output = run_ai_generation(selected_feature, user_input, uploaded_image)
+
+                        st.session_state['28_in_1_output'] = ai_output
+
+                        # Save the interaction as a 'utility_db' item (Mock save logic)
+                        save_size = calculate_mock_save_size(ai_output + user_input)
+                        new_item = {
+                            "name": f"{selected_feature} ({user_input[:50]}...)" if len(user_input) > 50 else f"{selected_feature} ({user_input})",
+                            "category": selected_category,
+                            "feature": selected_feature,
+                            "input": user_input,
+                            "output": ai_output,
+                            "timestamp": pd.Timestamp.now().isoformat(),
+                            "size_mb": save_size
+                        }
+                        if 'saved_items' not in st.session_state.utility_db:
+                            st.session_state.utility_db['saved_items'] = []
+                        st.session_state.utility_db['saved_items'].append(new_item)
+                        save_db_file(st.session_state.utility_db, get_file_path("utility_data_", st.session_state.current_user))
+
+                        st.session_state.storage['utility_used_mb'] += save_size
+                        st.session_state.storage['total_used_mb'] += save_size
+                        save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+
+                        st.rerun() # Rerun to update storage stats and display output
+                    except Exception as e:
+                        st.error(f"An error occurred during generation: {e}")
+
+    # Output display below the two columns
+    st.markdown("---")
     if st.session_state['28_in_1_output']:
         st.subheader("🤖 Generated Output")
         st.markdown(st.session_state['28_in_1_output'])
