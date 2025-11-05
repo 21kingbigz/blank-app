@@ -23,7 +23,7 @@ from storage_logic import (
 WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash'
 # Note: Using image_ffd419.png as an example logo filename since it was uploaded
-LOGO_FILENAME = "image_ffd419.png" 
+LOGO_FILENAME = "image_ffd419.png"
 ICON_SETTING = "💡"
 
 st.set_page_config(
@@ -33,15 +33,29 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
+# --- INITIALIZE GEMINI CLIENT (CRITICAL FIX FOR API KEY RETRIEVAL) ---
+client = None # Default to None
+
 try:
-    # Initialize the client only if the key is available
-    if os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY"):
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY"))
-        client = genai.GenerativeModel(MODEL) # Use GenerativeModel directly
+    # 1. Safely retrieve the API key first
+    api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
+
+    if api_key:
+        # 2. Only proceed to configure and initialize if the key is found
+        genai.configure(api_key=api_key)
+        client = genai.GenerativeModel(MODEL)
+        # st.success("Gemini Client successfully initialized!") # Optional feedback
     else:
-        client = None
-except Exception:
+        # Key not found, client remains None.
+        pass # The "Using Mock Response" warning will handle this.
+
+except Exception as e:
+    # If genai configuration or model initialization fails for any reason
     client = None
+    # st.error(f"Gemini API Setup Error: {e}") # Optional detailed error for debugging
+
+# --- END INITIALIZE GEMINI CLIENT ---
+
 
 # --- SYSTEM INSTRUCTION LOADING (RAW CONTENT) ---
 SYSTEM_INSTRUCTION_FALLBACK = """
@@ -285,10 +299,10 @@ FEATURE_EXAMPLES = {
 # --- AI GENERATION FUNCTION ---
 def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_image: Image.Image = None) -> str:
     """
-    Executes the selected feature function. Uses the real Gemini API if available, 
+    Executes the selected feature function. Uses the real Gemini API if available,
     otherwise falls back to the mock functions.
     """
-    
+
     # 1. Fallback/Mock execution
     if client is None:
         st.warning("Gemini Client is NOT initialized. Using Mock Response.")
@@ -297,10 +311,10 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
             if feature_function_key in category_features:
                 selected_function = category_features[feature_function_key]
                 break
-        
+
         if selected_function:
             is_teacher_aid_proxy = feature_function_key == "Teacher_Aid_Routing"
-            
+
             if feature_function_key == "9. Image-to-Calorie Estimate":
                 return selected_function(uploaded_image, prompt_text)
             elif is_teacher_aid_proxy:
@@ -318,9 +332,9 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
             img_byte_arr = BytesIO()
             uploaded_image.save(img_byte_arr, format=uploaded_image.format or 'PNG')
             img_byte_arr = img_byte_arr.getvalue()
-            
+
             contents.append(genai.types.Blob(mime_type="image/jpeg", data=img_byte_arr))
-        
+
         contents.append(prompt_text)
 
         # For GenerativeModel, system_instruction is part of generation_config
@@ -333,7 +347,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
             generation_config=generation_config
         )
         return response.text
-    
+
     except APIError as e:
         return f"Gemini API Error: Could not complete request. Details: {e}"
     except Exception as e:
@@ -351,7 +365,7 @@ if st.session_state.logged_in:
 
     # --- Load Storage Tracker (Ensures Tier/User data is consistent) ---
     storage_data = load_storage_tracker(user_email)
-    
+
     # Apply plan override if available
     plan_overrides = load_plan_overrides()
     if user_email in plan_overrides:
@@ -363,14 +377,14 @@ if st.session_state.logged_in:
 
 
     # --- CRITICAL FIX: Load DBs and ensure structure on every run (Persistence) ---
-    
+
     # 1. Utility DB
     db_file_path_utility = get_file_path("utility_data_", user_email)
     st.session_state['utility_db'] = load_db_file(db_file_path_utility, UTILITY_DB_INITIAL)
-    
+
     if 'history' not in st.session_state['utility_db'] or not isinstance(st.session_state['utility_db']['history'], list):
          st.session_state['utility_db']['history'] = UTILITY_DB_INITIAL.get('history', [])
-         
+
     # 2. Teacher DB
     db_file_path_teacher = get_file_path("teacher_data_", user_email)
     st.session_state['teacher_db'] = load_db_file(db_file_path_teacher, TEACHER_DB_INITIAL)
@@ -389,7 +403,7 @@ if st.session_state.logged_in:
         st.session_state['28_in_1_output'] = ""
     if 'teacher_output' not in st.session_state:
         st.session_state['teacher_output'] = ""
-        
+
     if 'selected_28_in_1_category' not in st.session_state:
         st.session_state['selected_28_in_1_category'] = list(UTILITY_CATEGORIES.keys())[0]
     if 'selected_28_in_1_feature' not in st.session_state:
@@ -521,9 +535,9 @@ def render_utility_hub_content(can_interact, universal_error_msg):
         user_input_placeholder = "Enter your request here..."
         if selected_feature == "9. Image-to-Calorie Estimate":
             user_input_placeholder = "Describe the food in the image and provide any specific details (e.g., '1 cup of rice with chicken')."
-        
+
         needs_image = selected_feature == "9. Image-to-Calorie Estimate"
-        
+
         uploaded_file = None
         uploaded_image = None
         if needs_image:
@@ -535,21 +549,21 @@ def render_utility_hub_content(can_interact, universal_error_msg):
             if uploaded_file:
                 uploaded_image = Image.open(uploaded_file)
                 st.image(uploaded_image, caption="Uploaded Image", use_column_width=False, width=150)
-            
-        
+
+
         prompt_input = st.text_area(
             "Your Request/Input:",
             placeholder=user_input_placeholder,
             height=150,
             key="28_in_1_prompt_input"
         )
-        
+
         if st.button("Generate Result", key="28_in_1_generate_btn", use_container_width=True):
-            if not prompt_input and not uploaded_image:
+            if not prompt_input and not (needs_image and uploaded_image): # Ensure input or image for feature 9
                 st.warning("Please enter a request or upload an image (for Feature 9).")
             else:
                 with st.spinner(f"Running Feature: {selected_feature}..."):
-                    
+
                     generated_output = run_ai_generation(
                         feature_function_key=selected_feature,
                         prompt_text=prompt_input,
@@ -566,15 +580,15 @@ def render_utility_hub_content(can_interact, universal_error_msg):
                             "output_size_bytes": calculate_mock_save_size(generated_output),
                             "output_content": generated_output
                         }
-                        
+
                         st.session_state.utility_db['history'].append(data_to_save)
                         save_db_file(get_file_path("utility_data_", st.session_state.current_user), st.session_state.utility_db)
-                        
+
                         mock_size = data_to_save["output_size_bytes"]
                         st.session_state.storage['current_utility_storage'] += mock_size
                         st.session_state.storage['current_universal_storage'] += mock_size
                         save_storage_tracker(st.session_state.storage, st.session_state.current_user)
-                        
+
                         st.success(f"Result saved to Utility History (Mock Size: {mock_size} bytes).")
                     else:
                         st.error(f"⚠️ **Utility History Save Blocked:** {utility_error_msg}. Result is displayed below but not saved.")
@@ -598,33 +612,33 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
 
     teacher_modes = ["Resource Dashboard (AI Generation)", "Curriculum Planner (Stub)", "Student Manager (Stub)"]
     st.session_state['teacher_mode'] = st.radio(
-        "Select Teacher Mode", 
+        "Select Teacher Mode",
         teacher_modes,
         index=teacher_modes.index(st.session_state.get('teacher_mode', "Resource Dashboard (AI Generation)"))
     )
     st.markdown("---")
 
     if st.session_state['teacher_mode'] == "Resource Dashboard (AI Generation)":
-        
+
         st.subheader("Generate Resource")
-        
+
         example_input = "Create a **Lesson Plan** for teaching the causes of World War I."
         st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
-        
+
         teacher_prompt = st.text_area(
             "Resource Request:",
             placeholder=example_input,
             height=150,
             key="teacher_ai_prompt"
         )
-        
+
         if st.button("Generate Resource", key="teacher_generate_btn", use_container_width=True):
             if not teacher_prompt:
                 st.warning("Please enter a request.")
                 return
 
-            feature_key_proxy = "Teacher_Aid_Routing" 
-            
+            feature_key_proxy = "Teacher_Aid_Routing"
+
             with st.spinner("Generating specialized teacher resource..."):
                 generated_output = run_ai_generation(
                     feature_function_key=feature_key_proxy,
@@ -640,15 +654,15 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
                         "output_size_bytes": calculate_mock_save_size(generated_output),
                         "output_content": generated_output
                     }
-                    
+
                     st.session_state.teacher_db['history'].append(data_to_save)
                     save_db_file(get_file_path("teacher_data_", st.session_state.current_user), st.session_state.teacher_db)
-                    
+
                     mock_size = data_to_save["output_size_bytes"]
                     st.session_state.storage['current_teacher_storage'] += mock_size
                     st.session_state.storage['current_universal_storage'] += mock_size
                     save_storage_tracker(st.session_state.storage, st.session_state.current_user)
-                    
+
                     st.success(f"Resource saved to Teacher History (Mock Size: {mock_size} bytes).")
                 else:
                     st.error(f"⚠️ **Teacher History Save Blocked:** {teacher_error_msg}. Result is displayed below but not saved.")
@@ -659,7 +673,7 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
             st.markdown(st.session_state['teacher_output'])
         else:
             st.info("Your generated resource will appear here.")
-            
+
     else:
         st.info(f"The **{st.session_state['teacher_mode']}** functionality is a placeholder.")
 
@@ -669,19 +683,19 @@ def render_usage_dashboard():
     st.title("📊 Usage Dashboard")
     st.markdown("---")
     st.subheader(f"Current Plan: {st.session_state.storage['tier']} ({TIER_PRICES.get(st.session_state.storage['tier'])})")
-    
+
     current_uni = st.session_state.storage['current_universal_storage']
     limit_uni_raw = TIER_LIMITS.get(st.session_state.storage['tier'], {}).get('universal_storage_limit_bytes', 0)
-    
+
     # Safely handle infinite limit for display
     if limit_uni_raw == float('inf'):
-        limit_uni = "Unlimited"
+        limit_uni_display = "Unlimited"
         st.progress(0.0, text=f"Universal Storage Used: {current_uni:,} Bytes (Unlimited)") # Show 0% progress, but current usage
     else:
-        limit_uni = int(limit_uni_raw)
-        if limit_uni > 0:
-            percent = min(100, (current_uni / limit_uni) * 100)
-            st.progress(percent / 100, text=f"Universal Storage Used: {percent:.1f}% ({current_uni:,} / {limit_uni:,} Bytes)")
+        limit_uni_display = f"{int(limit_uni_raw):,}"
+        if limit_uni_raw > 0:
+            percent = min(100, (current_uni / limit_uni_raw) * 100)
+            st.progress(percent / 100, text=f"Universal Storage Used: {percent:.1f}% ({current_uni:,} / {limit_uni_display} Bytes)")
         else:
             st.info(f"Universal Storage Used: {current_uni:,} Bytes (No limit configured for this tier).")
 
@@ -691,7 +705,7 @@ def render_usage_dashboard():
         st.dataframe(utility_df[['timestamp', 'feature', 'input', 'output_size_bytes']].tail(5).sort_values(by='timestamp', ascending=False), use_container_width=True)
     else:
         st.info("No utility history saved yet.")
-        
+
 
 # --- PLAN MANAGER RENDERER ---
 def render_plan_manager():
@@ -707,14 +721,14 @@ def render_data_clean_up():
     st.title("🧹 Data Clean Up")
     st.markdown("---")
     st.warning("Deleting data is permanent. Use with caution.")
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         if st.button("Wipe Utility History", key="wipe_utility_btn", use_container_width=True):
             st.session_state.utility_db['history'] = UTILITY_DB_INITIAL['history']
             save_db_file(get_file_path("utility_data_", st.session_state.current_user), st.session_state.utility_db)
-            
+
             utility_size_cleared = st.session_state.storage.get('current_utility_storage', 0)
             st.session_state.storage['current_utility_storage'] = 0
             st.session_state.storage['current_universal_storage'] -= utility_size_cleared
@@ -722,7 +736,7 @@ def render_data_clean_up():
             if st.session_state.storage['current_universal_storage'] < 0:
                 st.session_state.storage['current_universal_storage'] = 0
             save_storage_tracker(st.session_state.storage, st.session_state.current_user)
-            
+
             st.success("Utility History has been reset and storage cleared.")
             st.rerun() # Rerun to update dashboard immediately
 
@@ -730,7 +744,7 @@ def render_data_clean_up():
         if st.button("Wipe Teacher History", key="wipe_teacher_btn", use_container_width=True):
             st.session_state.teacher_db['history'] = TEACHER_DB_INITIAL['history']
             save_db_file(get_file_path("teacher_data_", st.session_state.current_user), st.session_state.teacher_db)
-            
+
             teacher_size_cleared = st.session_state.storage.get('current_teacher_storage', 0)
             st.session_state.storage['current_teacher_storage'] = 0
             st.session_state.storage['current_universal_storage'] -= teacher_size_cleared
@@ -738,7 +752,7 @@ def render_data_clean_up():
             if st.session_state.storage['current_universal_storage'] < 0:
                 st.session_state.storage['current_universal_storage'] = 0
             save_storage_tracker(st.session_state.storage, st.session_state.current_user)
-            
+
             st.success("Teacher History has been reset and storage cleared.")
             st.rerun() # Rerun to update dashboard immediately
 
@@ -750,7 +764,7 @@ if not st.session_state.logged_in:
 else:
     # --- 1. Navigation ---
     render_main_navigation_sidebar()
-    
+
     # Check universal access based on storage limits
     # This now safely calls check_storage_limit which handles float('inf')
     can_interact, universal_error_msg, _ = check_storage_limit(st.session_state.storage, 'universal_storage')
@@ -770,6 +784,6 @@ else:
 
     elif st.session_state.app_mode == "Plan Manager":
         render_plan_manager()
-        
+
     elif st.session_state.app_mode == "Data Clean Up":
         render_data_clean_up()
