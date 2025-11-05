@@ -131,8 +131,14 @@ try:
         
         # CRITICAL FIX: Pass system instruction at model instantiation.
         # This works because SYSTEM_INSTRUCTION is now DEFINED above this block.
+if api_key and api_key.strip():
+        # Use the standard, modern configuration method
+        genai.configure(api_key=api_key) 
+        
+        # CRITICAL FIX: Pass system instruction at model instantiation.
+        # This works because SYSTEM_INSTRUCTION is now DEFINED above this block.
         client = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_INSTRUCTION) 
-        st.sidebar.success(f"✅ Gemini Client Initialized (Key from {api_key_source}).")
+        # Success message 'st.sidebar.success(...)' removed to display nothing on successful connection, as requested.
     else:
         st.sidebar.warning("⚠️ Gemini API Key not found or is empty. Running in MOCK MODE.")
         
