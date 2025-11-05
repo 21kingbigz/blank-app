@@ -12,7 +12,6 @@ from google import genai
 from google.genai.errors import APIError
 
 # Import custom modules (Assuming these files exist and are correct)
-# NOTE: The persistence of login requires proper implementation in auth.py
 from auth import render_login_page, logout, load_users, load_plan_overrides
 from storage_logic import (
     load_storage_tracker, save_storage_tracker, check_storage_limit,
@@ -33,20 +32,12 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# --- INITIALIZE GEMINI CLIENT (FIXED LOGIC) ---
+# --- INITIALIZE GEMINI CLIENT ---
 client = None # Default to None
 
 try:
-    # 1. Safely retrieve the API key first from various common Streamlit locations
-    api_key = st.secrets.get("GEMINI_API_KEY") # Try user's stated direct key name
-    
-    if not api_key and "gemini" in st.secrets and isinstance(st.secrets["gemini"], dict):
-        # Try common nested structure: [gemini] api_key = "..."
-        api_key = st.secrets["gemini"].get("api_key")
-
-    # Fallback to environment variable if secrets didn't yield a key
-    if not api_key:
-        api_key = os.getenv("GEMINI_API_KEY")
+    # 1. Safely retrieve the API key first
+    api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
 
     if api_key:
         # 2. Only proceed to configure and initialize if the key is found
@@ -54,7 +45,7 @@ try:
         client = genai.GenerativeModel(MODEL)
         # st.success("Gemini Client successfully initialized!") # Optional feedback for debugging
     else:
-        # Key not found, client remains None. The run_ai_generation function handles the error message.
+        # Key not found, client remains None. The warning will be shown in run_ai_generation.
         pass
 
 except Exception as e:
@@ -627,7 +618,6 @@ The system has received your request. For a more structured output, please inclu
 # --- INITIALIZATION BLOCK (CRITICAL FOR PERSISTENCE & ERROR FIXES) ---
 
 # Check for 'logged_in' state
-# This uses Streamlit's session_state for persistence across refreshes.
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -668,6 +658,7 @@ if st.session_state.logged_in:
         st.session_state['app_mode'] = "Dashboard"
     if '28_in_1_output' not in st.session_state:
         st.session_state['28_in_1_output'] = ""
+    # NOTE: The old 'teacher_output' and 'teacher_view' states are now obsolete/deleted.
 
 
     if 'selected_28_in_1_category' not in st.session_state:
@@ -732,7 +723,7 @@ def render_main_dashboard():
             st.markdown("Access curriculum planning tools, resource generation, and saved resources.")
             if st.button("Launch Teacher Aid", key="launch_teacher_btn", use_container_width=True):
                 st.session_state['app_mode'] = "Teacher Aid"
-                st.session_state['teacher_view'] = 'generation' # Reset teacher view on launch
+                # Removed obsolete teacher view state reset
                 st.rerun()
 
     with col_utility:
@@ -743,7 +734,6 @@ def render_main_dashboard():
                 st.session_state['app_mode'] = "28-in-1 Utilities"
                 st.rerun()
 
-# --- MODIFIED: Added history tab for 28/1 Utilities ---
 def render_utility_hub_content(can_interact, universal_error_msg):
     """The 28-in-1 Stateless AI Utility Hub"""
 
@@ -758,155 +748,109 @@ def render_utility_hub_content(can_interact, universal_error_msg):
 
     can_save_utility, utility_error_msg, utility_limit = check_storage_limit(st.session_state.storage, 'utility_save')
 
-    # Use Streamlit Tabs for the requested layout: Generation and History
-    tab_gen, tab_history = st.tabs(
-        ["📝 Generation Hub", "📚 Saved History"]
-    )
-    
-    # --- TAB: GENERATION HUB (The original content) ---
-    with tab_gen:
-        col_left, col_right = st.columns([1, 2])
+    col_left, col_right = st.columns([1, 2])
 
-        # --- LEFT COLUMN: CATEGORY SELECTION ---
-        with col_left:
-            st.subheader("Select a Category:")
-            category_options = list(UTILITY_CATEGORIES.keys())
+    # --- LEFT COLUMN: CATEGORY SELECTION ---
+    with col_left:
+        st.subheader("Select a Category:")
+        category_options = list(UTILITY_CATEGORIES.keys())
 
-            if st.session_state['selected_28_in_1_category'] not in category_options:
-                 st.session_state['selected_28_in_1_category'] = category_options[0]
+        if st.session_state['selected_28_in_1_category'] not in category_options:
+             st.session_state['selected_28_in_1_category'] = category_options[0]
 
-            selected_category = st.radio(
-                "Category",
-                category_options,
-                key="28_in_1_category_radio",
-                index=category_options.index(st.session_state['selected_28_in_1_category']),
-                label_visibility="collapsed"
+        selected_category = st.radio(
+            "Category",
+            category_options,
+            key="28_in_1_category_radio",
+            index=category_options.index(st.session_state['selected_28_in_1_category']),
+            label_visibility="collapsed"
+        )
+        st.session_state['selected_28_in_1_category'] = selected_category
+
+    # --- RIGHT COLUMN: FEATURE SELECTION & INPUT ---
+    with col_right:
+        st.subheader("Select Feature & Input:")
+        features_in_category = UTILITY_CATEGORIES[selected_category]
+
+        if st.session_state['selected_28_in_1_feature'] not in features_in_category:
+            st.session_state['selected_28_in_1_feature'] = list(features_in_category.keys())[0]
+
+        selected_feature = st.selectbox(
+            "Select a Feature/Module:",
+            list(features_in_category.keys()),
+            key="28_in_1_feature_selector",
+            index=list(features_in_category.keys()).index(st.session_state['selected_28_in_1_feature'])
+        )
+        st.session_state['selected_28_in_1_feature'] = selected_feature
+
+        example_input = FEATURE_EXAMPLES.get(selected_feature, "Enter your request here...")
+        st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
+
+
+        user_input_placeholder = "Enter your request here..."
+        if selected_feature == "9. Image-to-Calorie Estimate":
+            user_input_placeholder = "Describe the food in the image and provide any specific details (e.g., '1 cup of rice with chicken')."
+
+        needs_image = selected_feature == "9. Image-to-Calorie Estimate"
+
+        uploaded_file = None
+        uploaded_image = None
+        if needs_image:
+            uploaded_file = st.file_uploader(
+                "Upload Image for Calorie Estimate (Feature 9 Only)",
+                type=["png", "jpg", "jpeg"],
+                key="28_in_1_image_uploader"
             )
-            st.session_state['selected_28_in_1_category'] = selected_category
-
-        # --- RIGHT COLUMN: FEATURE SELECTION & INPUT ---
-        with col_right:
-            st.subheader("Select Feature & Input:")
-            features_in_category = UTILITY_CATEGORIES[selected_category]
-
-            if st.session_state['selected_28_in_1_feature'] not in features_in_category:
-                st.session_state['selected_28_in_1_feature'] = list(features_in_category.keys())[0]
-
-            selected_feature = st.selectbox(
-                "Select a Feature/Module:",
-                list(features_in_category.keys()),
-                key="28_in_1_feature_selector",
-                index=list(features_in_category.keys()).index(st.session_state['selected_28_in_1_feature'])
-            )
-            st.session_state['selected_28_in_1_feature'] = selected_feature
-
-            example_input = FEATURE_EXAMPLES.get(selected_feature, "Enter your request here...")
-            st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
+            if uploaded_file:
+                uploaded_image = Image.open(uploaded_file)
+                st.image(uploaded_image, caption="Uploaded Image", use_column_width=False, width=150)
 
 
-            user_input_placeholder = "Enter your request here..."
-            if selected_feature == "9. Image-to-Calorie Estimate":
-                user_input_placeholder = "Describe the food in the image and provide any specific details (e.g., '1 cup of rice with chicken')."
+        prompt_input = st.text_area(
+            "Your Request/Input:",
+            placeholder=user_input_placeholder,
+            height=150,
+            key="28_in_1_prompt_input"
+        )
 
-            needs_image = selected_feature == "9. Image-to-Calorie Estimate"
+        if st.button("Generate Result", key="28_in_1_generate_btn", use_container_width=True):
+            if not prompt_input and not (needs_image and uploaded_image): # Ensure input or image for feature 9
+                st.warning("Please enter a request or upload an image (for Feature 9).")
+            else:
+                with st.spinner(f"Running Feature: {selected_feature}..."):
 
-            uploaded_file = None
-            uploaded_image = None
-            if needs_image:
-                uploaded_file = st.file_uploader(
-                    "Upload Image for Calorie Estimate (Feature 9 Only)",
-                    type=["png", "jpg", "jpeg"],
-                    key="28_in_1_image_uploader"
-                )
-                if uploaded_file:
-                    uploaded_image = Image.open(uploaded_file)
-                    st.image(uploaded_image, caption="Uploaded Image", use_column_width=False, width=150)
-
-
-            prompt_input = st.text_area(
-                "Your Request/Input:",
-                placeholder=user_input_placeholder,
-                height=150,
-                key="28_in_1_prompt_input"
-            )
-
-            if st.button("Generate Result", key="28_in_1_generate_btn", use_container_width=True):
-                if not prompt_input and not (needs_image and uploaded_image): # Ensure input or image for feature 9
-                    st.warning("Please enter a request or upload an image (for Feature 9).")
-                else:
-                    with st.spinner(f"Running Feature: {selected_feature}..."):
-
-                        generated_output = run_ai_generation(
-                            feature_function_key=selected_feature,
-                            prompt_text=prompt_input,
-                            uploaded_image=uploaded_image
-                        )
-
-                        st.session_state['28_in_1_output'] = generated_output
-
-                        if can_save_utility:
-                            data_to_save = {
-                                "timestamp": pd.Timestamp.now().isoformat(),
-                                "feature": selected_feature,
-                                "input": prompt_input[:100] + "..." if len(prompt_input) > 100 else prompt_input,
-                                "output_size_bytes": calculate_mock_save_size(generated_output),
-                                "output_content": generated_output
-                            }
-
-                            st.session_state.utility_db['history'].append(data_to_save)
-                            save_db_file(get_file_path("utility_data_", st.session_state.current_user), st.session_state.utility_db)
-
-                            mock_size = data_to_save["output_size_bytes"]
-                            st.session_state.storage['current_utility_storage'] += mock_size
-                            st.session_state.storage['current_universal_storage'] += mock_size
-                            save_storage_tracker(st.session_state.storage, st.session_state.current_user)
-
-                            st.success(f"Result saved to Utility History (Mock Size: {mock_size} bytes).")
-                        else:
-                            st.error(f"⚠️ **Utility History Save Blocked:** {utility_error_msg}. Result is displayed below but not saved.")
-
-            st.markdown("---")
-            st.subheader("Output Result")
-            st.markdown(st.session_state['28_in_1_output'])
-
-    # --- TAB: SAVED HISTORY ---
-    with tab_history:
-        st.subheader("28-in-1 Utility Saved History")
-        utility_df = pd.DataFrame(st.session_state.utility_db['history'])
-        
-        if not utility_df.empty:
-            utility_df['timestamp'] = pd.to_datetime(utility_df['timestamp']).dt.strftime('%Y-%m-%d %H:%M')
-            # Drop the 'output_content' column for the main table view to keep it clean
-            display_df = utility_df.drop(columns=['output_content'], errors='ignore')
-            # Limit the input column to be viewable
-            display_df['input_snippet'] = display_df['input'].str.slice(0, 50) + '...'
-            
-            st.dataframe(
-                display_df[['timestamp', 'feature', 'input_snippet', 'output_size_bytes']].sort_values(by='timestamp', ascending=False), 
-                use_container_width=True
-            )
-            
-            # Display detailed view for selected item
-            history_indices = display_df.index.tolist()
-            if history_indices:
-                selected_row_index_df = st.selectbox(
-                    "Select History Item for Full Content View:",
-                    history_indices,
-                    format_func=lambda i: f"[{i+1}] {display_df.loc[i, 'feature']} ({display_df.loc[i, 'input_snippet']})",
-                    key="utility_history_selector"
-                )
-                
-                if selected_row_index_df is not None:
-                    st.markdown("---")
-                    st.subheader("Full Result Content")
-                    st.text_area(
-                        f"Content for {utility_df.loc[selected_row_index_df, 'feature']}",
-                        utility_df.loc[selected_row_index_df, 'output_content'],
-                        height=300,
-                        key="full_utility_content_display"
+                    generated_output = run_ai_generation(
+                        feature_function_key=selected_feature,
+                        prompt_text=prompt_input,
+                        uploaded_image=uploaded_image
                     )
-        else:
-            st.info("No 28-in-1 utility results have been saved yet.")
+
+                    st.session_state['28_in_1_output'] = generated_output
+
+                    if can_save_utility:
+                        data_to_save = {
+                            "timestamp": pd.Timestamp.now().isoformat(),
+                            "feature": selected_feature,
+                            "input": prompt_input[:100] + "..." if len(prompt_input) > 100 else prompt_input,
+                            "output_size_bytes": calculate_mock_save_size(generated_output),
+                            "output_content": generated_output
+                        }
+
+                        st.session_state.utility_db['history'].append(data_to_save)
+                        save_db_file(get_file_path("utility_data_", st.session_state.current_user), st.session_state.utility_db)
+
+                        mock_size = data_to_save["output_size_bytes"]
+                        st.session_state.storage['current_utility_storage'] += mock_size
+                        st.session_state.storage['current_universal_storage'] += mock_size
+                        save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+
+                        st.success(f"Result saved to Utility History (Mock Size: {mock_size} bytes).")
+                    else:
+                        st.error(f"⚠️ **Utility History Save Blocked:** {utility_error_msg}. Result is displayed below but not saved.")
+
+        st.markdown("---")
+        st.subheader("Output Result")
+        st.markdown(st.session_state['28_in_1_output'])
 
 
 # --- TEACHER AID RENDERERS (FIXED TO MULTIPLE TABS) ---
@@ -932,7 +876,7 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
     if 'teacher_outputs_by_type' not in st.session_state:
         st.session_state['teacher_outputs_by_type'] = {tag: "" for tag in RESOURCE_TAGS}
 
-    # Create the tabs
+    # Create the tabs (6 resource tabs + 1 history tab = 7 tabs)
     tabs = st.tabs(RESOURCE_TAGS + ["📚 Saved History"])
 
     # Loop through each resource tag to create its corresponding tab content
@@ -1127,9 +1071,7 @@ def render_usage_dashboard():
     st.subheader("Utility History (Last 5 Saves)")
     utility_df = pd.DataFrame(st.session_state.utility_db['history'])
     if not utility_df.empty:
-        # Prepare a snippet for viewing
-        utility_df['input_snippet'] = utility_df['input'].str.slice(0, 50) + '...'
-        st.dataframe(utility_df[['timestamp', 'feature', 'input_snippet', 'output_size_bytes']].tail(5).sort_values(by='timestamp', ascending=False), use_container_width=True)
+        st.dataframe(utility_df[['timestamp', 'feature', 'input', 'output_size_bytes']].tail(5).sort_values(by='timestamp', ascending=False), use_container_width=True)
     else:
         st.info("No utility history saved yet.")
 
