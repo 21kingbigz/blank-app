@@ -32,30 +32,46 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# --- INITIALIZE GEMINI CLIENT (FIXED) ---
+# --- INITIALIZE GEMINI CLIENT (REVISED FOR MAX ROBUSTNESS) ---
 client = None # Default to None
+api_key_found = False
 
 try:
-    # 1. Safely retrieve the API key first, explicitly checking the secrets dictionary
+    # Prioritize Streamlit secrets as the primary source
     if "GEMINI_API_KEY" in st.secrets:
         api_key = st.secrets["GEMINI_API_KEY"]
+        api_key_source = "Streamlit Secrets"
+        if api_key and api_key.strip(): # Check if it's not empty or just whitespace
+            os.environ["GEMINI_API_KEY"] = api_key # Force set environment variable for genai
+            genai.configure(api_key=api_key)
+            client = genai.GenerativeModel(MODEL)
+            api_key_found = True
+            st.success(f"Gemini Client successfully initialized from {api_key_source}!") # Temporary success message
+        else:
+            st.warning("⚠️ Streamlit Secret 'GEMINI_API_KEY' found, but its value is empty.")
     else:
-        # Fallback to os.getenv if not in secrets (for local testing)
+        # Fallback to os.getenv if not in st.secrets (less secure for prod, but for robustness)
         api_key = os.getenv("GEMINI_API_KEY")
+        api_key_source = "Environment Variable"
+        if api_key and api_key.strip():
+            genai.configure(api_key=api_key)
+            client = genai.GenerativeModel(MODEL)
+            api_key_found = True
+            st.success(f"Gemini Client successfully initialized from {api_key_source}!") # Temporary success message
+        else:
+            st.warning("⚠️ GEMINI_API_KEY not found in Streamlit Secrets or Environment Variables.")
 
-    if api_key:
-        # 2. Only proceed to configure and initialize if the key is found
-        genai.configure(api_key=api_key)
-        client = genai.GenerativeModel(MODEL)
-        st.success("Gemini Client successfully initialized!") # Add this line temporarily for confirmation
-    else:
-        # Key not found, client remains None. The warning will be shown in run_ai_generation.
-        pass
-        
+except APIError as e:
+    client = None
+    st.error(f"Gemini API Setup Error during configuration: {e}")
+    st.warning("⚠️ MOCK MODE: Gemini Client initialization failed due to API error. Using Mock Response.")
 except Exception as e:
     client = None
-    # If the app fails here, it's often due to a structural issue with the key
-    # st.error(f"Gemini API Setup Error: {e}") # Optional detailed error for debugging
+    st.error(f"An unexpected error occurred during Gemini API setup: {e}")
+    st.warning("⚠️ MOCK MODE: Gemini Client initialization failed. Using Mock Response.")
+
+if not api_key_found:
+    st.warning("⚠️ MOCK MODE: Gemini Client is NOT initialized. Using Mock Response. To enable the real AI, please ensure your `GEMINI_API_KEY` is correctly set in your Streamlit app's secrets.")
 
 # --- END INITIALIZE GEMINI CLIENT ---
 
