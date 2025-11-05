@@ -110,7 +110,6 @@ st.markdown(
 
 # --- 1. THE 28 FUNCTION LIST (Internal Mapping for Mocking) ---
 # NOTE: Mock functions remain the same as previous iterations.
-# (Removed mock functions for brevity in this final response, assuming they were kept intact from previous steps)
 
 def daily_schedule_optimizer(tasks_time: str) -> str:
     return f"**Feature 1: Daily Schedule Optimizer**\nTime-blocked schedule for: {tasks_time}\n9:00 AM - Focus Work, 11:00 AM - Meeting, 1:00 PM - Deep Dive Task."
@@ -223,7 +222,7 @@ UTILITY_CATEGORIES = {
     "Cognitive & Productivity": {
         "1. Daily Schedule Optimizer": daily_schedule_optimizer,
         "2. Task Deconstruction Expert": task_deconstruction_expert,
-        "3. 'Get Unstuck' Prompter": get_unstuck_prompter,
+        "3. 'Get Unstuck" Prompter': get_unstuck_prompter,
         "4. Habit Breaker": habit_breaker,
         "5. One-Sentence Summarizer": one_sentence_summarizer,
     },
@@ -491,7 +490,7 @@ def render_main_dashboard():
     with col_teacher:
         with st.container(border=True):
             st.header("🎓 Teacher Aid")
-            st.markdown("Access curriculum planning tools, resource generation, and student management features.")
+            st.markdown("Access curriculum planning tools, resource generation, and saved resources.")
             if st.button("Launch Teacher Aid", key="launch_teacher_btn", use_container_width=True):
                 st.session_state['app_mode'] = "Teacher Aid"
                 st.session_state['teacher_view'] = 'generation' # Reset teacher view on launch
@@ -718,27 +717,73 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
             st.info("No teacher resources have been saved yet.")
 
 
-# --- USAGE DASHBOARD RENDERER ---
+# --- USAGE DASHBOARD RENDERER (GRAPHS RESTORED) ---
 def render_usage_dashboard():
     st.title("📊 Usage Dashboard")
     st.markdown("---")
     st.subheader(f"Current Plan: {st.session_state.storage['tier']} ({TIER_PRICES.get(st.session_state.storage['tier'])})")
 
-    current_uni = st.session_state.storage['current_universal_storage']
-    limit_uni_raw = TIER_LIMITS.get(st.session_state.storage['tier'], {}).get('universal_storage_limit_bytes', 0)
+    # --- RESTORED USAGE GRAPHS (Progress Bars) ---
+    st.markdown("### Storage Usage")
 
-    # Safely handle infinite limit for display
+    storage_data = st.session_state.storage
+    tier = storage_data['tier']
+
+    # 1. Universal Storage
+    current_uni = storage_data.get('current_universal_storage', 0)
+    limit_uni_raw = TIER_LIMITS.get(tier, {}).get('universal_storage_limit_bytes', 0)
+    
     if limit_uni_raw == float('inf'):
-        limit_uni_display = "Unlimited"
-        st.progress(0.0, text=f"Universal Storage Used: {current_uni:,} Bytes (Unlimited)") # Show 0% progress, but current usage
+        uni_percent = 0.0 # Display 0% progress for unlimited, but show usage
+        uni_limit_display = "Unlimited"
     else:
-        limit_uni_display = f"{int(limit_uni_raw):,}"
-        if limit_uni_raw > 0:
-            percent = min(100, (current_uni / limit_uni_raw) * 100)
-            st.progress(percent / 100, text=f"Universal Storage Used: {percent:.1f}% ({current_uni:,} / {limit_uni_display} Bytes)")
-        else:
-            st.info(f"Universal Storage Used: {current_uni:,} Bytes (No limit configured for this tier).")
+        uni_limit_display = f"{int(limit_uni_raw):,}"
+        uni_percent = min(1.0, current_uni / limit_uni_raw) if limit_uni_raw > 0 else 0.0
 
+    st.progress(uni_percent, text=f"**Universal Storage:** {current_uni:,} / {uni_limit_display} Bytes")
+
+    # 2. Utility Storage
+    current_utility = storage_data.get('current_utility_storage', 0)
+    limit_utility_raw = TIER_LIMITS.get(tier, {}).get('utility_save_limit_bytes', 0)
+    
+    if limit_utility_raw == float('inf'):
+        utility_percent = 0.0
+        utility_limit_display = "Unlimited"
+    else:
+        utility_limit_display = f"{int(limit_utility_raw):,}"
+        utility_percent = min(1.0, current_utility / limit_utility_raw) if limit_utility_raw > 0 else 0.0
+
+    st.progress(utility_percent, text=f"**28-in-1 Utility History:** {current_utility:,} / {utility_limit_display} Bytes")
+
+    # 3. Teacher Storage
+    current_teacher = storage_data.get('current_teacher_storage', 0)
+    limit_teacher_raw = TIER_LIMITS.get(tier, {}).get('teacher_save_limit_bytes', 0)
+    
+    if limit_teacher_raw == float('inf'):
+        teacher_percent = 0.0
+        teacher_limit_display = "Unlimited"
+    else:
+        teacher_limit_display = f"{int(limit_teacher_raw):,}"
+        teacher_percent = min(1.0, current_teacher / limit_teacher_raw) if limit_teacher_raw > 0 else 0.0
+
+    st.progress(teacher_percent, text=f"**Teacher Aid History:** {current_teacher:,} / {teacher_limit_display} Bytes")
+    
+    # 4. File Storage (Placeholder/Mock - using Teacher limit for size tracking example)
+    current_file = storage_data.get('current_file_storage', 0)
+    limit_file_raw = TIER_LIMITS.get(tier, {}).get('file_upload_limit_bytes', 0)
+    
+    if limit_file_raw == float('inf'):
+        file_percent = 0.0
+        file_limit_display = "Unlimited"
+    else:
+        file_limit_display = f"{int(limit_file_raw):,}"
+        file_percent = min(1.0, current_file / limit_file_raw) if limit_file_raw > 0 else 0.0
+
+    st.progress(file_percent, text=f"**File Uploads/Images:** {current_file:,} / {file_limit_display} Bytes")
+    
+    st.markdown("---")
+    
+    # --- History Tables (The content that was NOT deleted) ---
     st.subheader("Utility History (Last 5 Saves)")
     utility_df = pd.DataFrame(st.session_state.utility_db['history'])
     if not utility_df.empty:
