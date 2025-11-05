@@ -4,4 +4,3 @@ streamlit
 sift-stack-py
 passlib
 pandas
-google-generativeai
