@@ -641,12 +641,18 @@ The system has received your request. For a more structured output, please inclu
         contents.append(prompt_text)
 
         # For GenerativeModel, system_instruction is part of generation_config
-        generation_config = GenerationConfig(
-            system_instruction=SYSTEM_INSTRUCTION,
-        )
+# CRITICAL FIX: The system instruction is passed directly in older SDKs.
+        # We need to create an empty GenerationConfig and pass the system
+        # instruction as a separate argument to client.generate_content.
+        
+        # 1. Create the config object without system_instruction (to avoid the error)
+        generation_config = GenerationConfig() 
 
+        # 2. Call generate_content, passing system_instruction as a direct parameter
+        #    This is the format required by the older SDK version you have.
         response = client.generate_content(
             contents=contents,
+            system_instruction=SYSTEM_INSTRUCTION, # Pass instruction directly
             generation_config=generation_config
         )
         return response.text
