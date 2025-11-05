@@ -357,6 +357,9 @@ if 'utility_db' not in st.session_state:
 if 'app_mode' not in st.session_state:
     st.session_state['app_mode'] = "Usage Dashboard" 
 
+if 'dashboard_view' not in st.session_state:
+    st.session_state['dashboard_view'] = "Overview"
+
 # AI client and system instruction setup
 try:
     client = genai.Client()
@@ -420,112 +423,146 @@ def calculate_mock_save_size(content: str) -> float:
 
 # --- APPLICATION PAGE RENDERERS ---
 
+def render_dashboard_content(view_name):
+    """Renders the dynamic content for the Usage Dashboard based on the selected view."""
+    if view_name == "Overview":
+        # --- MOCK DATA GENERATION ---
+        np.random.seed(42)
+        dates = pd.date_range(start='2024-01-01', periods=12, freq='M')
+        monthly_data = pd.DataFrame({
+            'Month': dates,
+            'Revenue': np.cumsum(np.random.randint(100, 300, 12) + np.arange(12) * 50),
+            'Cost': np.cumsum(np.random.randint(50, 150, 12) + np.arange(12) * 20)
+        }).set_index('Month')
+
+        market_share_data = pd.DataFrame({
+            'Segment': ['Primary', 'Secondary', 'Tertiary', 'Other'],
+            'Value': [87, 8, 3, 2]
+        }).set_index('Segment')
+        
+        uline_si_data = pd.DataFrame({
+            'Category': ['A', 'B', 'C', 'D', 'E'],
+            'Score': [25, 35, 50, 75, 90]
+        }).set_index('Category')
+
+        # --- MAIN CONTENT AREA (Left side: Charts/Metrics) ---
+        col_left, col_right = st.columns([0.75, 0.25])
+
+        # --- LEFT COLUMN: FOUR CARDS (Functional Charts) ---
+        with col_left:
+            # --- ROW 1: Monthly Metrics and Market Share ---
+            row1_col1, row1_col2 = st.columns(2)
+            
+            with row1_col1:
+                # Card 1: Monthly Performance Metrics (Line Chart)
+                with st.container(border=True):
+                    st.markdown("##### Monthly Performance Metrics")
+                    st.line_chart(monthly_data, use_container_width=True, height=200)
+            
+            with row1_col2:
+                # Card 2: Market Share (Doughnut Chart Mock using Metrics/Progress)
+                with st.container(border=True):
+                    st.markdown("##### Market Share")
+                    col_metric, col_donut = st.columns([0.4, 0.6])
+                    
+                    with col_metric:
+                        st.metric("Expected Share", "81.8%")
+                        st.caption("Target Performance")
+
+                    with col_donut:
+                        # Use HTML/CSS for the visual Doughnut style, but driven by a real variable (87%)
+                        current_share = market_share_data.loc['Primary']['Value']
+                        st.markdown(
+                            f"""
+                            <div style="display: flex; align-items: center; justify-content: center; height: 100px;">
+                                <div style="width: 100px; height: 100px; position: relative;">
+                                    <div style="width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(
+                                        #2D6BBE 0% {current_share}%, 
+                                        #E0E0E0 {current_share}% 100%
+                                    ); position: relative; display: flex; align-items: center; justify-content: center;">
+                                        <div style="width: 60%; height: 60%; border-radius: 50%; background: white; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333;">
+                                            {current_share}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+            # --- ROW 2: Market Share Distribution and Uline SI Distribution ---
+            row2_col1, row2_col2 = st.columns(2)
+            
+            with row2_col1:
+                # Card 3: Market Share Distribution (Bar Chart)
+                with st.container(border=True):
+                    st.markdown("##### Market Share Distribution")
+                    st.bar_chart(market_share_data, use_container_width=True, height=200)
+                    
+                    # Nested info block for Regional Sales (Mocked data display)
+                    st.markdown("###### Regional Sales")
+                    st.markdown("North: **$1.2M**, South: **$0.8M**, West: **$1.5M**")
+
+
+            with row2_col2:
+                # Card 4: Uline SI Distribution (Bar Chart)
+                with st.container(border=True):
+                    st.markdown("##### Uline SI Distribution")
+                    st.bar_chart(uline_si_data, use_container_width=True, height=200)
+    
+    elif view_name == "Historical Trends":
+        st.subheader("📈 Historical Trends Report")
+        st.info("Showing 5-year data on revenue, customer churn, and regional growth.")
+        
+        # Mock data for historical trends
+        data_trends = pd.DataFrame({
+            'Year': pd.date_range(start='2020', periods=6, freq='Y'),
+            'Revenue': [100, 150, 180, 220, 300, 350],
+            'Churn_Rate': [15, 12, 10, 8, 6, 5]
+        }).set_index('Year')
+        
+        st.line_chart(data_trends[['Revenue']], title="Annual Revenue (in Millions)")
+        st.bar_chart(data_trends[['Churn_Rate']], color="#D64545", title="Customer Churn Rate (%)")
+        
+    elif view_name == "Data Input":
+        st.subheader("📝 Data Input & Validation")
+        st.warning("Feature Mock: This area is reserved for users to upload and clean proprietary business data.")
+        
+        st.file_uploader("Upload CSV or XLSX Data File", type=['csv', 'xlsx'])
+        st.text_area("Manual Data Entry (JSON/Text)", height=200)
+        st.button("Validate and Ingest Data", type="primary")
+
+    elif view_name == "Dashboard":
+        st.subheader("🖥️ Main Dashboard Summary")
+        st.info("This view provides a high-level summary of all data sources and application usage.")
+        
+        col_a, col_b = st.columns(2)
+        col_a.metric("Total Saved Items", len(st.session_state.utility_db['saved_items']) + sum(len(v) for v in st.session_state.teacher_db.values()))
+        col_b.metric("Total Storage Used (MB)", f"{st.session_state.storage['total_used_mb']:.2f} MB")
+        
+        st.dataframe(pd.DataFrame({
+            'Category': ['Teacher Aid', '28/1 Utilities', 'General'],
+            'Used (MB)': [st.session_state.storage['teacher_used_mb'], st.session_state.storage['utility_used_mb'], st.session_state.storage['general_used_mb']],
+            'Items Saved': [sum(len(v) for v in st.session_state.teacher_db.values()), len(st.session_state.utility_db['saved_items']), '-']
+        }), use_container_width=True)
+
+
 def render_usage_dashboard():
-    """Renders the main landing page, visually mimicking the provided image."""
+    """Renders the main landing page structure, including the dynamic right-hand navigation."""
     
     current_tier = st.session_state.storage['tier']
-    total_used = st.session_state.storage['total_used_mb']
-    limit = TIER_LIMITS[current_tier]
     
-    # Hide the Streamlit main page title/header area for a cleaner look
     st.markdown("<h1 style='visibility: hidden; height: 0;'>Dashboard</h1>", unsafe_allow_html=True)
-
-    # --- MAIN CONTENT AREA (Left side: Charts/Metrics) ---
+    
+    # --- MAIN STRUCTURE ---
     col_left, col_right = st.columns([0.75, 0.25])
 
-    # --- LEFT COLUMN: FOUR CARDS (Visually Mapped to the Image) ---
+    # --- LEFT COLUMN: Dynamic Content ---
     with col_left:
-        # --- ROW 1: Monthly Metrics and Market Share ---
-        row1_col1, row1_col2 = st.columns(2)
-        
-        with row1_col1:
-            # Card 1: Monthly Performance Metrics (Line Chart Mock)
-            with st.container(border=True):
-                st.markdown("##### Monthly Performance Metrics")
-                # Using an image or a styled div to mock the chart appearance
-                st.markdown("""
-                <div style="height: 150px; background-color: #FFFFFF; border-radius: 8px; 
-                            display: flex; align-items: center; justify-content: center; 
-                            color: #A0A0A0; font-size: 0.8em; border: 1px solid #F0F0F0; padding: 10px;">
-                    
-                </div>
-                """, unsafe_allow_html=True)
-        
-        with row1_col2:
-            # Card 2: Market Share (Doughnut Chart Mock)
-            with st.container(border=True):
-                st.markdown("##### Market Share")
-                
-                # --- CORRECTED DOUGHNUT CHART MOCK ---
-                st.markdown(
-                f"""
-                <div style="display: flex; align-items: center; justify-content: space-around;">
-                    <div style="font-size: 1.5em; font-weight: 600; color: #333333;">
-                        81.8%<br><span style="font-size: 0.8em; color: #888888;">Expected Share</span>
-                    </div>
-                    
-                    <div style="width: 100px; height: 100px; position: relative;">
-                        <div style="width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(
-                            #2D6BBE 0% 87%, 
-                            #E0E0E0 87% 100%
-                        ); position: relative; display: flex; align-items: center; justify-content: center;">
-                            <div style="width: 60%; height: 60%; border-radius: 50%; background: white; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333;">
-                                87%
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                """
-                , unsafe_allow_html=True)
-                # --- END OF CORRECTED DOUGHNUT CHART MOCK ---
-
-        # --- ROW 2: Market Share Distribution and Uline SI Distribution ---
-        row2_col1, row2_col2 = st.columns(2)
-        
-        with row2_col1:
-            # Card 3: Market Share Distribution (Line Chart Mock)
-            with st.container(border=True):
-                st.markdown("##### Market Share Distribution")
-                st.markdown("""
-                <div style="height: 150px; background-color: #FFFFFF; border-radius: 8px; 
-                            display: flex; align-items: center; justify-content: center; 
-                            color: #A0A0A0; font-size: 0.8em; border: 1px solid #F0F0F0; padding: 10px;">
-                    
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Nested row for Regional Sales (Mock Bar Chart)
-                st.markdown("###### Regional Sales")
-                st.markdown("""
-                <div style="height: 50px; display: flex; align-items: flex-end; justify-content: space-around; padding: 0 10px;">
-                    <div style="width: 10%; height: 60%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                    <div style="width: 10%; height: 30%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                    <div style="width: 10%; height: 80%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                    <div style="width: 10%; height: 20%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                    <div style="width: 10%; height: 90%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                    <div style="width: 10%; height: 45%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                </div>
-                """, unsafe_allow_html=True)
-
-        with row2_col2:
-            # Card 4: Uline SI Distribution (Bar Chart Mock)
-            with st.container(border=True):
-                st.markdown("##### Uline SI Distribution")
-                # Custom bar chart mock (simulating the blue color and structure)
-                st.markdown("""
-                <div style="height: 200px; display: flex; align-items: flex-end; justify-content: space-around; padding: 10px 0;">
-                    <div style="width: 15%; height: 25%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                    <div style="width: 15%; height: 35%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                    <div style="width: 15%; height: 50%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                    <div style="width: 15%; height: 75%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                    <div style="width: 15%; height: 90%; background-color: #2D6BBE; border-radius: 3px;"></div>
-                </div>
-                """, unsafe_allow_html=True)
+        render_dashboard_content(st.session_state['dashboard_view'])
 
 
-    # --- RIGHT COLUMN: NAVIGATION AND FILTERS (Visually Mapped to the Image) ---
+    # --- RIGHT COLUMN: NAVIGATION AND FILTERS (Functional) ---
     with col_right:
-        # Card 5: Navigation (Dashboard)
+        # Card 5: Navigation Header
         with st.container(border=True):
             st.markdown(f"""
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
@@ -537,45 +574,63 @@ def render_usage_dashboard():
             </div>
             """, unsafe_allow_html=True)
             
-            # --- Custom Navigation Buttons ---
-            def nav_button(label, icon, key):
-                is_active = (label == 'Dashboard Overview')
+            # --- Functional Navigation Buttons ---
+            def nav_button(label, icon, view_name):
+                is_active = (view_name == st.session_state['dashboard_view'])
                 css_class = "custom-nav-active" if is_active else "custom-nav-inactive"
                 
+                # Using st.button hidden by CSS to trigger state change
+                if st.button(f"{icon} {label}", key=f"dash_nav_{view_name}", use_container_width=True):
+                    st.session_state['dashboard_view'] = view_name
+                    st.rerun()
+
+                # Applying the visual styling after the button (Streamlit trick)
                 st.markdown(f"""
-                <div class="{css_class}" style="
+                <style>
+                div[data-testid="stVerticalBlock"] > div > div:has(button[kind="primary"][data-testid="stButton"][key="dash_nav_{view_name}"]) {{
+                    margin-top: -15px; /* Pull the visual up to hide the default button container margin */
+                    margin-bottom: 5px;
+                }}
+                /* Style the button itself to look like the nav bar */
+                button[key="dash_nav_{view_name}"] {{
+                    background-color: transparent !important;
+                    color: #333333 !important;
+                    border: none !important;
+                    text-align: left;
                     padding: 10px 15px; 
                     margin: 5px 0; 
                     border-radius: 8px; 
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
                     font-weight: 500;
                     transition: all 0.2s;
-                ">
-                    <span style="margin-right: 15px; font-size: 1.1em;">{icon}</span>
-                    {label}
-                </div>
+                }}
+                button[key="dash_nav_{view_name}"]:hover {{
+                    background-color: #F0F2F6 !important;
+                }}
+                /* Apply active style if necessary */
+                button[key="dash_nav_{view_name}"][data-testid="stButton"] {{
+                    background-color: {'#2D6BBE !important' if is_active else 'transparent !important'};
+                    color: {'#FFFFFF !important' if is_active else '#333333 !important'};
+                    box-shadow: {'0 2px 5px rgba(0,0,0,0.2)' if is_active else 'none'};
+                }}
+                </style>
                 """, unsafe_allow_html=True)
 
-            # NOTE: These are visually styled mock buttons, not functional Streamlit buttons.
-            nav_button("Dashboard Overview", "🏠", "nav_overview")
-            nav_button("Dashboard", "🖥️", "nav_dash")
-            nav_button("Data Input", "📝", "nav_input")
-            nav_button("Historical Trends", "📈", "nav_trends")
 
+            # Render the functional navigation buttons
+            nav_button("Dashboard Overview", "🏠", "Overview")
+            nav_button("Dashboard", "🖥️", "Dashboard")
+            nav_button("Data Input", "📝", "Data Input")
+            nav_button("Historical Trends", "📈", "Historical Trends")
+            
         # Card 6: Filter Options
         with st.container(border=True):
             st.markdown("##### Filter Options")
-            # Using st.toggle for the switch/toggle appearance
             st.toggle("Date Range", key="filter_date", value=True)
             st.toggle("Product Type", key="filter_product", value=False)
             st.toggle("Region", key="filter_region", value=True)
             st.toggle("Product Type", key="filter_product_2", value=False)
             st.toggle("Region", key="filter_region_2", value=False)
-            
-            # Simulated Slider
-            st.slider("Region", 0, 100, 50, key="filter_slider")
+            st.slider("Metric Sensitivity", 0, 100, 50, key="filter_slider")
 
 def render_main_dashboard():
     """Renders the split-screen selection for Teacher Aid and 28/1 Utilities."""
@@ -928,6 +983,7 @@ def render_teacher_aid_navigated(can_interact):
                     if col_delete.button("Delete", key=f"clean_teacher_{item['category']}_{item['index']}_{i}"):
                         
                         # Find the true index in the original DB list before deletion
+                        # --- FIX APPLIED HERE: Changed '&&' to 'and' ---
                         true_index = next((idx for idx, res in enumerate(st.session_state['teacher_db'][item['category']]) if res['name'] == item['name'] and res['size_mb'] == item['size_mb']), -1)
                         
                         if true_index != -1:
