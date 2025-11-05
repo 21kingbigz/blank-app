@@ -67,10 +67,10 @@ st.set_page_config(
     page_title=WEBSITE_TITLE,
     page_icon=ICON_SETTING,
     layout="wide",
-    initial_sidebar_state="expanded" # Keep sidebar enabled for Teacher Aid menu
+    initial_sidebar_state="collapsed" # CRITICAL: Hide Streamlit's default sidebar
 )
 
-# --- CRITICAL CSS FOR THEME AND NAVIGATION FIX ---
+# --- CRITICAL CSS FOR LAYOUT FIXES ---
 st.markdown(
     f"""
     <style>
@@ -87,47 +87,48 @@ st.markdown(
     }}
 
     /* === 1. NAVIGATION COLUMN FIX: Create a fixed-width left column for the main menu === */
-    /* Target the main block that holds the application content */
-    div[data-testid="stVerticalBlock"] {{
-        padding: 0;
-    }}
-    
-    /* Ensure the main content block pushes to the right of the navigation */
-    .app-main-content-container {{
-        padding-top: 20px;
-        padding-left: 30px;
-        padding-right: 30px;
-    }}
-    
     .st-main-nav {{
-        width: 250px; /* Fixed width for navigation */
-        background-color: #F0F2F6; /* Sidebar background color */
+        width: 180px; /* Reduced width for main navigation */
+        background-color: #F0F2F6; 
         position: fixed;
         top: 0;
         left: 0;
         height: 100vh;
-        padding: 20px;
+        padding: 20px 10px; /* Reduced padding */
         border-right: 1px solid #E0E0E0;
         z-index: 100;
     }}
     
-    .st-content-wrapper {{
-        margin-left: 250px; /* Offset the main content to the right of the navigation */
-        width: calc(100% - 250px);
+    /* === 2. INTERNAL NAVIGATION COLUMN FIX: For Teacher Aid's menu === */
+    .st-internal-nav {{
+        width: 200px; 
+        background-color: #FFFFFF; /* White background to blend with main content area */
+        position: fixed;
+        top: 0;
+        left: 180px; /* Starts right after the main nav column (180px) */
+        height: 100vh;
+        padding: 20px;
+        border-right: 1px solid #E0E0E0;
+        z-index: 90;
     }}
     
-    /* Adjust Streamlit's container to honor the new left margin */
+    /* === 3. CONTENT OFFSET ADJUSTMENT === */
+    /* Adjust Streamlit's container to honor the new left margin (Base offset) */
     .main > div {{
-        margin-left: 250px !important;
+        margin-left: 180px !important; /* Base offset for main nav */
     }}
 
-    /* Sidebar Styling (used only for Teacher Aid internal navigation) */
-    .stSidebar {{
-        background-color: #F0F2F6; 
-        padding-top: 20px;
-        border-right: 1px solid #E0E0E0; 
+    /* Specific offset for pages with Internal Nav (Teacher Aid) */
+    .teacher-aid-content-wrapper {{
+        margin-left: 200px !important; /* Additional offset for internal nav */
+        padding: 20px 30px;
     }}
 
+    /* General content offset for pages without Internal Nav */
+    .app-main-content-container {{
+        padding: 20px 30px;
+    }}
+    
     /* Card-like containers for the Usage Dashboard and general use */
     div[data-testid="stVerticalBlock"] > div > div:nth-child(1) > div:has([data-testid="stMarkdownContainer"]) > div:first-child,
     div[data-testid="stColumn"] > div:nth-child(1) > [data-testid="stVerticalBlock"] > div > div:nth-child(1) {{
@@ -140,11 +141,11 @@ st.markdown(
         height: 100%; 
     }}
 
-    /* Navigation Button Styling */
+    /* Navigation Button Styling (Main Nav) */
     .nav-button {{
         width: 100%;
         text-align: left;
-        padding: 12px 15px;
+        padding: 12px 10px;
         margin-bottom: 5px;
         border-radius: 8px;
         border: none;
@@ -162,6 +163,30 @@ st.markdown(
         background-color: #2D6BBE !important;
         color: white !important;
     }}
+    
+    /* Internal Nav Radio Button Styling */
+    .stRadio > label {{
+        padding: 12px 10px;
+        margin-bottom: 5px;
+        border-radius: 8px;
+        font-weight: 600;
+        display: block;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }}
+    .stRadio > label:hover {{
+        background-color: #E0E0E0;
+    }}
+    .stRadio div[role="radio"][aria-checked="true"] {{
+        background-color: #2D6BBE !important;
+        color: white !important;
+    }}
+    
+    /* Hide the default radio button circle/dot */
+    .stRadio div[role="radio"] > div:first-child {{
+        display: none;
+    }}
+
 
     /* Standard App Buttons (Primary/Darker Blue) */
     .stButton>button {{
@@ -211,8 +236,8 @@ st.markdown(
         margin-bottom: 15px;
         display: block;
     }}
-    /* Hide Streamlit footer and menu button */
-    #MainMenu, footer, header {{visibility: hidden;}}
+    /* Hide Streamlit footer, menu button, and default sidebar remnants */
+    #MainMenu, footer, header, [data-testid="stSidebar"] {{visibility: hidden;}}
     </style>
     """,
     unsafe_allow_html=True
@@ -425,17 +450,17 @@ def render_main_navigation():
     # Logo and Title
     col_logo, col_title = st.columns([0.25, 0.75])
     with col_logo:
-        st.image(ICON_SETTING, width=40)
+        st.image(ICON_SETTING, width=30)
     with col_title:
-        st.markdown(f"## {WEBSITE_TITLE}")
+        st.markdown(f"**{WEBSITE_TITLE}**") # Use bold text instead of large heading for better fit
     
     st.markdown("---")
-    st.markdown(f"**Plan:** {st.session_state.storage['tier']}")
+    st.markdown(f"**Plan:** *{st.session_state.storage['tier']}*")
     st.markdown("---")
 
     menu_options = [
         {"label": "📊 Usage Dashboard", "mode": "Usage Dashboard"},
-        {"label": "🖥️ Dashboard", "mode": "Dashboard"}, # This is the main 28/1 and Teacher Aid selector
+        {"label": "🖥️ Dashboard", "mode": "Dashboard"},
         {"label": "💳 Plan Manager", "mode": "Plan Manager"},
         {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"}
     ]
@@ -444,34 +469,50 @@ def render_main_navigation():
         mode = item["mode"]
         active_class = " active" if st.session_state['app_mode'] == mode else ""
         
-        # Streamlit button to handle click, styled with CSS
-        if st.markdown(
-            f'<button class="nav-button{active_class}" onclick="document.getElementById(\'nav_button_{mode.replace(" ", "_")}\').click();">{item["label"]}</button>',
+        # Render the clickable styled button via HTML/CSS
+        st.markdown(
+            f'<button class="nav-button{active_class}" id="nav_button_{mode.replace(" ", "_")}" onclick="Streamlit.setComponentValue(\'nav_button_{mode.replace(" ", "_")}\', true);">{item["label"]}</button>',
             unsafe_allow_html=True
-        ):
-            pass # Keep this block empty for the HTML markdown
+        )
 
-        # Hidden Streamlit button that triggers the action via JavaScript hack
-        if st.button(item["label"], key=f"nav_button_{mode.replace(' ', '_')}", help="Hidden Button", disabled=True): 
-             # The actual logic is below the button definitions, this button is just a JS target
-             pass 
-
-        # Check if the hidden button was clicked (via JS in the markdown button)
-        # This is a hack, but necessary for complex fixed navigation outside the sidebar
+        # Use a hidden Streamlit element to capture the click action via JavaScript (Hack)
         if st.session_state.get(f"nav_button_{mode.replace(' ', '_')}"):
             st.session_state['app_mode'] = mode
             st.session_state.pop('utility_view', None)
             st.session_state.pop('utility_active_category', None)
             st.rerun()
-
+        
+        # Reset the session state for the button to allow future clicks
+        if f"nav_button_{mode.replace(' ', '_')}" in st.session_state:
+            del st.session_state[f"nav_button_{mode.replace(' ', '_')}"]
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+def render_internal_navigation_teacher_aid():
+    """Renders the fixed internal navigation column for Teacher Aid pages."""
+    
+    # Use HTML/CSS to create the fixed-position internal navigation column
+    st.markdown('<div class="st-internal-nav">', unsafe_allow_html=True)
+    
+    st.header("Teacher Aid Menu")
+    
+    # Radio buttons for internal navigation
+    teacher_mode = st.radio(
+        "Select View:",
+        options=["Resource Dashboard", "Saved Data", "Data Management"],
+        key="teacher_nav_radio"
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    return teacher_mode
+
 
 # --- APPLICATION PAGE RENDERERS ---
 
 def render_usage_dashboard():
     """Renders the main landing page structure with functional storage graphs."""
     
+    # The content will be rendered inside the 'app-main-content-container' div defined later
     st.title("📊 Usage Dashboard")
     st.caption("Monitor your storage usage and plan benefits.")
     st.markdown("---")
@@ -812,12 +853,12 @@ def render_utility_hub_navigated(can_interact, universal_error_msg):
                         st.error(f"🛑 Cannot save: {block_message_for_generation_save}")
 
 
-def render_teacher_aid_navigated(can_interact, universal_error_msg):
-    """Renders the teacher aid app with internal navigation sidebar."""
+def render_teacher_aid_content(can_interact, universal_error_msg, teacher_mode):
+    """Renders the main content of the Teacher Aid app."""
     
     # Check dedicated limit for teacher saves
     can_save_dedicated, error_message_dedicated, _ = check_storage_limit('teacher_save')
-    
+
     # Back button logic
     if st.button("← Back to Dashboard", key="teacher_back_main_btn"):
         st.session_state['app_mode'] = "Dashboard"
@@ -828,15 +869,6 @@ def render_teacher_aid_navigated(can_interact, universal_error_msg):
     
     st.markdown("---")
     
-    # Internal sidebar for Teacher Aid (now correctly in the Streamlit sidebar)
-    with st.sidebar:
-        st.header("Teacher Aid Menu")
-        teacher_mode = st.radio(
-            "Select View:",
-            options=["Resource Dashboard", "Saved Data", "Data Management"],
-            key="teacher_nav_radio"
-        )
-
     # Determine if *any* interaction within this section (generation/saving) is blocked
     is_fully_blocked_for_generation_save = not can_interact or not can_save_dedicated
     block_message_for_generation_save = universal_error_msg if not can_interact else error_message_dedicated
@@ -1107,16 +1139,23 @@ def render_data_cleanup():
 
 # --- MAIN APP LOGIC AND NAVIGATION CONTROL ---
 
-# 1. RENDER MAIN FIXED NAVIGATION
+# 1. RENDER MAIN FIXED NAVIGATION (180px wide)
 render_main_navigation()
-
-# 2. RENDER MAIN CONTENT WRAPPER
-# This div ensures the content starts 250px to the right, avoiding the fixed nav.
-st.markdown('<div class="app-main-content-container">', unsafe_allow_html=True) 
 
 # --- GLOBAL TIER RESTRICTION CHECK (Runs on every page load) ---
 universal_limit_reached, universal_error_msg, _ = check_storage_limit('universal')
 can_interact_universally = not universal_limit_reached
+
+# --- RENDER INTERNAL FIXED NAVIGATION (Teacher Aid Only - 200px wide) ---
+# If the app is in Teacher Aid mode, render the internal navigation column.
+teacher_mode = None
+if st.session_state['app_mode'] == "Teacher Aid" and can_interact_universally:
+    teacher_mode = render_internal_navigation_teacher_aid()
+    # If in Teacher Aid mode, the content needs a larger offset (180px main + 200px internal = 380px)
+    st.markdown('<div class="app-main-content-container teacher-aid-content-wrapper">', unsafe_allow_html=True)
+else:
+    # If in any other mode, the content only needs the 180px main offset
+    st.markdown('<div class="app-main-content-container">', unsafe_allow_html=True) 
 
 # Render the tier label at the top of the main content area
 st.markdown(f'<p class="tier-label">Current Plan: {st.session_state.storage["tier"]}</p>', unsafe_allow_html=True)
@@ -1153,7 +1192,8 @@ elif st.session_state['app_mode'] == "Teacher Aid":
             st.session_state['app_mode'] = "Dashboard"
             st.rerun()
     else:
-        render_teacher_aid_navigated(can_interact_universally, universal_error_msg)
+        # Note: teacher_mode is set by render_internal_navigation_teacher_aid() above
+        render_teacher_aid_content(can_interact_universally, universal_error_msg, teacher_mode)
 
 # 3. CLOSE MAIN CONTENT WRAPPER
 st.markdown('</div>', unsafe_allow_html=True)
