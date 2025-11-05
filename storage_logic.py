@@ -8,7 +8,7 @@ BASE_DIR = "user_data"
 NEW_SAVE_COST_BASE_MB = 0.5 
 
 TIER_LIMITS = {
-    'Free Tier': 500.0,      # 0.5 GB universal for general usage
+    'Free Tier': 500.0,      # 0.5 GB universal for general usage and default for specific areas
     '28/1 Pro': 3000.0,      # 3 GB dedicated to utility; universal limit for app navigation is Free Tier's 500MB
     'Teacher Pro': 3000.0,   # 3 GB dedicated to teacher; universal limit for app navigation is Free Tier's 500MB
     'Universal Pro': 5000.0, # 5 GB total for all tools combined
@@ -60,7 +60,7 @@ def load_storage_tracker(user_email: str) -> Dict:
         'total_used_mb': 0.0,
         'utility_used_mb': 0.0,
         'teacher_used_mb': 0.0,
-        'general_used_mb': 0.0
+        'general_used_mb': 0.0 # Added general_used_mb for 28-in-1 hub tracking
     }
     
     loaded_data = {}
@@ -69,15 +69,10 @@ def load_storage_tracker(user_email: str) -> Dict:
             try:
                 loaded_data = json.load(f)
             except json.JSONDecodeError:
-                # If file is corrupted, it acts as if it's a new file, using default_tracker
-                pass 
+                pass # If file is corrupted, it acts as if it's a new file, using default_tracker
     
     # Merge loaded data with default to ensure all keys exist and default values are set for new keys.
-    # Importantly, ensure 'tier' is loaded if it exists in the file.
     tracker = {**default_tracker, **loaded_data} 
-    
-    # Ensure tier from user profile (if available) overrides the file's tier if loaded via auth.py
-    # This part is handled by streamlit_app.py's initialization for st.session_state['storage']['tier']
     
     return tracker
 
@@ -91,7 +86,8 @@ def calculate_mock_save_size(data_content: str) -> float:
     """Calculates a mock size for saved data based on length.
     Using a fixed multiplier for predictability.
     """
-    return NEW_SAVE_COST_BASE_MB + (len(data_content) / 1000000) * 0.3
+    # A base cost plus a variable cost based on content length
+    return NEW_SAVE_COST_BASE_MB + (len(data_content) / 1000000) * 0.3 # 0.3MB per 1MB of text
 
 def check_storage_limit(storage: Dict, action_area: str) -> Tuple[bool, Optional[str], float]:
     """Checks if the user can perform an action based on their tier and usage.
@@ -102,24 +98,23 @@ def check_storage_limit(storage: Dict, action_area: str) -> Tuple[bool, Optional
     if current_tier == "Unlimited":
         return True, None, TIER_LIMITS['Unlimited'] # Unlimited access
 
-    # --- Universal Limit Check (for overall app interaction) ---
-    if action_area == 'universal':
-        total_used_mb = storage.get('total_used_mb', 0.0)
-        universal_limit_for_tier = TIER_LIMITS['Free Tier'] # Default universal limit for Free, 28/1, Teacher
-        
-        if current_tier == 'Universal Pro':
-            universal_limit_for_tier = TIER_LIMITS['Universal Pro'] # Universal Pro gets its higher limit
-        
-        # This is the core check: if total_used_mb is >= the limit, block.
-        # For a new user, total_used_mb is 0.0, so this should pass unless limit is also 0.
+    total_used_mb = storage.get('total_used_mb', 0.0)
+
+    # Determine the universal limit for the current tier for overall app access
+    universal_limit_for_tier = TIER_LIMITS['Free Tier'] # Default universal limit for Free, 28/1, Teacher
+    if current_tier == 'Universal Pro' or current_tier == 'Unlimited':
+        universal_limit_for_tier = TIER_LIMITS.get(current_tier, TIER_LIMITS['Universal Pro'])
+    
+    # --- Universal Access Check (for overall app interaction and general usage) ---
+    # This applies to 'universal' (login) and 'general_usage' (28-in-1 hub, etc.)
+    if action_area in ['universal', 'general_usage']:
         if total_used_mb >= universal_limit_for_tier:
             return False, f"Total storage limit reached ({total_used_mb:.2f}MB / {universal_limit_for_tier:.0f}MB). Please upgrade or clean up data.", universal_limit_for_tier
         
         return True, None, universal_limit_for_tier # Allow interaction if within universal limit
 
 
-    # --- Specific Action Area Checks (for saving data) ---
-    # These checks are for *attempting to save* data, not just navigating the app.
+    # --- Specific Action Area Checks (for saving data in dedicated tools) ---
     used_mb_for_area = 0.0
     area_limit = 0.0
     
