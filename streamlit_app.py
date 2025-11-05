@@ -10,19 +10,14 @@ import time
 from datetime import datetime, timedelta
 
 # --- 1. CORE LIBRARY IMPORTS AND FALLBACK SETUP ---
-# This ensures the app doesn't crash if the Gemini library isn't installed.
 try:
     from google import genai
     from google.genai.errors import APIError
 except ImportError:
-    # Set up mock objects for graceful failure
     genai = None
     APIError = type("APIError", (Exception,), {})
-    # st.error("The 'google-genai' library is not installed. AI features will be mocked.")
 
 # --- 2. MOCK AUTHENTICATION AND STORAGE LOGIC ---
-# In a real deployment, these functions would interact with a database or external service.
-
 def load_users():
     """Loads mock user credentials."""
     return {"teacher@example.com": {"password": "password123", "tier": "Teacher Pro"}}
@@ -64,7 +59,7 @@ def render_login_page():
 
 WEBSITE_TITLE = "Artorius"
 MODEL = 'gemini-2.5-flash'
-LOGO_FILENAME = "image_ffd419.png" # Assuming a logo file exists
+LOGO_FILENAME = "image_ffd419.png" 
 ICON_SETTING = "💡"
 
 st.set_page_config(
@@ -78,17 +73,11 @@ st.set_page_config(
 client = None
 
 def initialize_gemini_client():
-    """
-    Initializes the Gemini client, prioritizing the user-entered API key
-    from session state over environment/secrets variables.
-    This resolves the issue where the App Settings key wasn't binding correctly.
-    """
+    """Initializes the Gemini client, prioritizing the user-entered API key."""
     global client
     
-    # Priority 1: User-entered key from App Settings (session state)
     api_key = st.session_state.get('user_gemini_api_key')
     
-    # Priority 2: Environment/Secrets key
     if not api_key:
         api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", None)
 
@@ -96,111 +85,132 @@ def initialize_gemini_client():
         try:
             genai.configure(api_key=api_key)
             client = genai.GenerativeModel(MODEL)
-            # st.success("Gemini client successfully configured.") # Optional debugging message
         except Exception as e:
             client = None
-            # st.error(f"Gemini API Setup Error: {e}")
     else:
-        client = None # Ensure client is None if the key is missing or library is unavailable
+        client = None 
 
 initialize_gemini_client()
 
 
-# --- 5. SYSTEM INSTRUCTION (Defines the 6 distinct resource formats) ---
-# This lengthy instruction block ensures the model provides structured output.
+# --- 5. SYSTEM INSTRUCTION (FIXED: NO PRESET COUNTS) ---
 SYSTEM_INSTRUCTION = """
 You are the "Teacher Aid AI." Your response MUST be the direct, full output of the selected resource format. Do not add conversational text or pre-amble. Adhere strictly to the rubric below.
 
 --- Teacher Resource Tags and Rubrics ---
 
-* **Unit Overview:** Output must include four mandatory, clearly labelled sections: **A) Unit Objectives** (3-5 objectives), **B) Key Topics/Subtopics** (4-6 core topics), **C) Suggested Activities (3-5)**, and **D) Assessment Overview** (main methods, e.g., Test, Project).
-* **Lesson Plan:** Output must follow a structured plan with four main sections: **A) Objective** (The measurable learning outcome), **B) Materials** (List of items needed), **C) Procedure (Warm-up, Main Activity, Wrap-up)**, and **D) Assessment Strategy** (How learning is checked).
-* **Vocabulary List:** Output must be a list of 5-10 terms, where each entry contains three parts: **A) Term**, **B) Concise Definition** (1-2 sentences), and **C) Example Sentence** relevant to the topic.
-* **Worksheet:** Output must be a numbered list of **10 varied questions** (must include matching, short answer, and fill-in-the-blank types) followed immediately by a separate **Answer Key** listing 10 corresponding answers.
-* **Quiz:** Output must be a concise, **5-question Multiple Choice Quiz** with four options (A, B, C, D) for each question, followed by a separate **Answer Key** listing 5 answers.
-* **Test:** Output must be comprehensive, organized into two main sections: **A) Multiple Choice (15 Questions)** and **B) Short/Long Answer (4 Questions)**. This must be followed by a detailed **Answer Key/Rubric** covering all 19 items.
+* **Unit Overview:** Output must include four mandatory, clearly labelled sections: **A) Unit Objectives**, **B) Key Topics/Subtopics**, **C) Suggested Activities**, and **D) Assessment Overview**.
+* **Lesson Plan:** Output must follow a structured plan with four main sections: **A) Objective**, **B) Materials**, **C) Procedure (Warm-up, Main Activity, Wrap-up)**, and **D) Assessment Strategy**.
+* **Vocabulary List:** Output must be a list of terms, where each entry contains three parts: **A) Term**, **B) Concise Definition**, and **C) Example Sentence** relevant to the topic.
+* **Worksheet:** Output must be a numbered list of varied questions (e.g., matching, short answer, fill-in-the-blank) followed immediately by a separate **Answer Key** corresponding to the generated questions.
+* **Quiz:** Output must be a Multiple Choice Quiz with four options (A, B, C, D) for each question, followed by a separate **Answer Key**. The number of questions will be determined by the user's prompt.
+* **Test:** Output must be organized into two main sections: **A) Multiple Choice Questions** and **B) Short/Long Answer Questions**. This must be followed by a detailed **Answer Key/Rubric** covering all generated items. The number of questions will be determined by the user's prompt.
 """
 
-# --- 6. UI STYLING (For visual clarity) ---
+# --- 6. UI STYLING (FIX: Increased Size for Readability) ---
 st.markdown(
     """
     <style>
-    .tier-label {
-        font-size: 0.8em;
-        color: #888;
-        margin-top: -15px;
-        margin-bottom: 20px;
+    /* Base Font Size Increase */
+    html, body, [class*="stApp"] {
+        font-size: 110%; 
     }
+    
+    /* Header Scaling */
+    h1 { font-size: 2.5em !important; }
+    h2 { font-size: 2.0em !important; }
+    h3 { font-size: 1.5em !important; }
+
+    /* Key UI Elements */
     .stRadio > label {
         padding-right: 0;
-        margin-bottom: 5px;
+        margin-bottom: 8px; 
+        font-size: 1.1em;   
+    }
+    
+    /* Input/Select Labels */
+    .stTextInput label, .stSelectbox label {
+        font-size: 1.15em;
+        font-weight: bold;
+    }
+
+    /* Smaller elements (like tier tag) */
+    .tier-label {
+        font-size: 1.0em; 
+        color: #888;
+        margin-top: -10px; 
+        margin-bottom: 25px;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# --- 7. MOCK GENERATION FUNCTIONS (Ensuring specific format adherence) ---
+# --- 7. MOCK GENERATION FUNCTIONS (FIXED: Outputs Instructions, not Content) ---
 
 def mock_generate_unit_overview(topic: str) -> str:
-    """Generates mock Unit Overview content based on the strict rubric."""
-    return f"""### Unit Overview: {topic} (MOCK)
-**A) Unit Objectives:**
-1. Analyze the core themes of the {topic}.
-2. Evaluate the historical context.
-3. Synthesize information into a coherent argument.
-**B) Key Topics/Subtopics:** Introduction, Primary Sources, Key Figures, Major Events, Conclusion.
-**C) Suggested Activities (3-5):** 1. Timeline creation. 2. Paired reading. 3. Short essay response.
-**D) Assessment Overview:** Final Test (70%) and Presentation (30%).
+    """Mock output provides the instruction set for the requested resource."""
+    return f"""### Unit Overview Generation Instructions (MOCK)
+
+This output was generated by the mock system because the API key is missing.
+
+**To create the Unit Overview for '{topic}', the AI was instructed to:**
+1.  Define 3-5 **Unit Objectives**.
+2.  List 4-6 **Key Topics/Subtopics**.
+3.  Suggest 3-5 **Activities**.
+4.  Provide an **Assessment Overview** (e.g., Test and Project).
 """
 def mock_generate_lesson_plan(topic: str) -> str:
-    """Generates mock Lesson Plan content based on the strict rubric."""
-    return f"""### Lesson Plan: {topic} (MOCK)
-**A) Objective:** Students will accurately describe the main components of {topic}.
-**B) Materials:** Whiteboard, internet access, copies of source material.
-**C) Procedure:**
-* Warm-up (5 min): Quick 2-question review.
-* Main Activity (35 min): Guided discussion and note-taking.
-* Wrap-up (5 min): Partner-share of key takeaways.
-**D) Assessment Strategy:** Teacher observation during discussion and collection of notes.
+    """Mock output provides the instruction set for the requested resource."""
+    return f"""### Lesson Plan Generation Instructions (MOCK)
+
+This output was generated by the mock system because the API key is missing.
+
+**To create the Lesson Plan for '{topic}', the AI was instructed to:**
+1.  Define a single, measurable **Objective**.
+2.  List **Materials** needed.
+3.  Structure a **Procedure** into Warm-up, Main Activity, and Wrap-up.
+4.  Provide an **Assessment Strategy**.
 """
 def mock_generate_vocabulary_list(topic: str) -> str:
-    """Generates mock Vocabulary List content based on the strict rubric."""
-    return f"""### Vocabulary List: {topic} (MOCK)
-1. **Term:** Hegemony. **Concise Definition:** Dominance by one country or social group over others. **Example Sentence:** The state established economic hegemony over its neighbors.
-2. **Term:** Paradigm. **Concise Definition:** A typical example or pattern of something; a model. **Example Sentence:** The discovery shifted the entire scientific paradigm.
-3. **Term:** Synthesis. **Concise Definition:** The combination of ideas to form a theory or system. **Example Sentence:** Her final paper was a synthesis of three different theories.
+    """Mock output provides the instruction set for the requested resource."""
+    return f"""### Vocabulary List Generation Instructions (MOCK)
+
+This output was generated by the mock system because the API key is missing.
+
+**To create the Vocabulary List for '{topic}', the AI was instructed to:**
+1.  Generate 5-10 terms relevant to the topic.
+2.  For each term, provide a **Concise Definition** and an **Example Sentence**.
 """
 def mock_generate_worksheet(topic: str) -> str:
-    """Generates mock Worksheet content (10 questions + 10 answers)."""
-    return f"""### Worksheet: {topic} (10 Questions - MOCK)
-1. **Fill-in-the-Blank:** The primary catalyst for this event was the __________.
-2. **Matching:** Match 'A' to its corresponding outcome 'B'.
-3. **Short Answer:** Briefly explain why the event occurred in 1865.
-... (Questions 4-10 continue)
-**--- Answer Key (10 items) ---**
-1. Economic disparity. 2. A-Outcome 2. 3. Due to legislative change X. ... (Answers 4-10 continue)
+    """Mock output provides the instruction set for the requested resource."""
+    return f"""### Worksheet Generation Instructions (MOCK)
+
+This output was generated by the mock system because the API key is missing.
+
+**To create the Worksheet for '{topic}', the AI was instructed to:**
+1.  Generate a numbered list of varied questions (matching, short answer, fill-in-the-blank). The number of questions should be based on the user's specific prompt.
+2.  Follow this immediately with a corresponding **Answer Key**.
 """
 def mock_generate_quiz(topic: str) -> str:
-    """Generates mock Quiz content (5 MC questions + 5 answers)."""
-    return f"""### Quiz: {topic} (5-Question Multiple Choice - MOCK)
-1. Which is the main factor? (A, B, C, D) 2. What year was X founded? (A, B, C, D) 3. Who wrote Y? (A, B, C, D) 4. Which is not true? (A, B, C, D) 5. The definition of Z is? (A, B, C, D)
-**--- Answer Key (5 items) ---**
-1. C. 2. A. 3. B. 4. D. 5. A.
+    """Mock output provides the instruction set for the requested resource."""
+    return f"""### Quiz Generation Instructions (MOCK)
+
+This output was generated by the mock system because the API key is missing.
+
+**To create the Quiz for '{topic}', the AI was instructed to:**
+1.  Generate Multiple Choice Questions with four options (A, B, C, D). **The number of questions is set by the user's prompt.**
+2.  Follow this immediately with a corresponding **Answer Key**.
 """
 def mock_generate_test(topic: str) -> str:
-    """Generates mock Test content (15 MC + 4 Long Answer + Rubric)."""
-    return f"""### Test: {topic} (19 Questions Total - MOCK)
-**A) Multiple Choice (15 Questions)**
-1. What year did the event start? (A, B, C, D) ... (Q2-Q15 continue)
-**B) Short/Long Answer (4 Questions)**
-16. Describe the long-term economic effects. (6 points)
-17. Analyze the primary source attached. (10 points)
-18. Define and provide an example of concept Z. (4 points)
-19. Compare and contrast two major viewpoints on this topic. (8 points)
-**--- Answer Key/Rubric (19 items) ---**
-**A) Multiple Choice:** 1. B, 2. D, ... (Answers for 3-15)
-**B) Short/Long Answer Rubric:** 16. (Must cover inflation and unemployment). 17. (Must identify bias and main argument). 18. (Definition + Example). 19. (Requires minimum 2 points of comparison and 2 points of contrast).
+    """Mock output provides the instruction set for the requested resource."""
+    return f"""### Test Generation Instructions (MOCK)
+
+This output was generated by the mock system because the API key is missing.
+
+**To create the Test for '{topic}', the AI was instructed to:**
+1.  Generate a Test organized into **A) Multiple Choice Questions** and **B) Short/Long Answer Questions**. **The number of questions for both sections is set by the user's prompt.**
+2.  Follow this immediately with a detailed **Answer Key/Rubric**.
 """
 
 TEACHER_RESOURCES = {
@@ -216,10 +226,7 @@ TEACHER_RESOURCES = {
 # --- 8. PAGE RENDERING FUNCTIONS ---
 
 def render_usage_dashboard():
-    """
-    Renders the Usage Dashboard with 4 distinct charts and KPI metrics.
-    Data is generated to show a positive, upward trend.
-    """
+    """Renders the Usage Dashboard with 4 distinct charts and KPI metrics."""
     st.title("📊 Usage Dashboard")
     st.markdown("##### Resource Generation Analytics")
     st.markdown("---")
@@ -228,12 +235,10 @@ def render_usage_dashboard():
     num_days = 30
     date_range = pd.to_datetime(pd.date_range(end=datetime.now(), periods=num_days, freq='D'))
     
-    # Calculate Resources Generated (Cumulative, Upward Trend)
     start_cumulative = 100 
     daily_increase = [random.randint(5, 20) for _ in range(num_days)]
     resources_generated = [start_cumulative + sum(daily_increase[:i+1]) for i in range(num_days)]
     
-    # Other Mock Data
     daily_logins = [random.randint(5, 50) for _ in range(num_days)]
     saved_items = [random.randint(10, 80) for _ in range(num_days)]
     
@@ -281,7 +286,7 @@ def render_usage_dashboard():
 def run_teacher_aid_generation(resource_type: str, topic: str, grade_level: str, client) -> str:
     """
     Executes the generation process using the AI client or a mock function.
-    Ensures the prompt includes the resource type and grade level for structured output.
+    The prompt is built to rely on the user's input for specific resource details (like question count).
     """
     if not topic:
         return ""
@@ -289,15 +294,16 @@ def run_teacher_aid_generation(resource_type: str, topic: str, grade_level: str,
     st.info(f"Generating **{resource_type}** for **{topic}** (Grade {grade_level})...")
 
     if not client:
-        # Fallback to Mock Generation
+        # Fallback to Mock Generation (now outputs instructions)
         mock_func = TEACHER_RESOURCES.get(resource_type)
         if mock_func:
             time.sleep(1) # Simulate network latency
             return mock_func(topic)
         return "Error: Generation logic not found."
 
-    # --- AI GENERATION CALL ---
-    prompt = f"Topic: {topic}. Grade Level: {grade_level}. Resource Type: {resource_type}."
+    # --- AI GENERATION CALL (Actual content generation relies on prompt) ---
+    prompt = f"Topic: {topic}. Grade Level: {grade_level}. Resource Type: {resource_type}. **Include all requested question counts or specifications mentioned in the Topic field.**"
+    
     full_prompt = f"{SYSTEM_INSTRUCTION}\n\nBased on the resource type '{resource_type}', and the prompt: '{prompt}', generate the full, structured output according to the rubric."
 
     try:
@@ -305,6 +311,7 @@ def run_teacher_aid_generation(resource_type: str, topic: str, grade_level: str,
             full_prompt,
             system_instruction=SYSTEM_INSTRUCTION
         )
+        # For actual AI output, we just return the text
         return response.text
     except APIError as e:
         st.error(f"Gemini API Error: {e}. Falling back to mock data.")
@@ -326,8 +333,10 @@ def render_teacher_aid_content():
         horizontal=True
     )
 
-    # Input Fields
-    topic = st.text_input("Topic/Subject (e.g., The causes and effects of the French Revolution)")
+    # Input Fields - Topic should contain specific counts (e.g., "10 MC questions")
+    st.markdown(f"**Topic/Subject** (If creating a Quiz or Test, specify the question count here, e.g., 'The French Revolution: create 8 MC questions and 2 long answer questions')")
+    topic = st.text_input("Topic/Subject Input")
+    
     col1, col2 = st.columns(2)
     with col1:
         grade_level = st.selectbox("Grade Level", ["K-2", "3-5", "6-8", "9-12", "College"])
@@ -336,10 +345,6 @@ def render_teacher_aid_content():
         if 'logged_in' not in st.session_state or not st.session_state['logged_in']:
             st.error("Please log in to use the resource generation tool.")
             return
-        
-        # Check if client is available before running
-        if not client:
-            st.warning("AI Client not fully initialized. Generating mock data. Please check **App Settings** for API key configuration.")
             
         with st.spinner("Contacting AI Model..."):
             generated_content = run_teacher_aid_generation(resource_type, topic, grade_level, client)
@@ -407,8 +412,10 @@ def render_app_settings():
     if st.button("Save & Apply Key"):
         if user_key and user_key.startswith("AIza"):
             st.session_state['user_gemini_api_key'] = user_key
-            st.success("API Key saved and applied for this session! Rerunning app to initialize AI client.")
-            st.rerun() # Rerun forces the client initialization to pick up the new key
+            # IMPORTANT: Re-initialize client immediately after saving
+            initialize_gemini_client() 
+            st.success("API Key saved and applied for this session! Rerunning app to confirm initialization.")
+            st.rerun()
         elif not user_key:
             if 'user_gemini_api_key' in st.session_state:
                 del st.session_state['user_gemini_api_key']
@@ -436,8 +443,8 @@ def render_tutorials_content():
     st.markdown("""
     ### 1. Resource Generation
     This is the core tool where the magic happens.
-    * **Select Resource:** Choose the specific format you need (Unit Overview, Lesson Plan, etc.). Remember, **Quiz** is 5 MC questions, and **Test** is 15 MC + 4 Long Answer.
-    * **Topic Input:** Provide clear, detailed instructions here. The quality of your input dictates the quality of the AI's output.
+    * **Crucial Tip:** When generating a **Quiz** or **Test**, you must specify the exact number of questions you want in the **Topic/Subject** input field (e.g., "12 multiple choice questions on atomic structure"). The AI will follow your count.
+    * **Structure:** The output will follow a strict format (e.g., Test = Multiple Choice section + Long Answer section + Answer Key).
     
     ### 2. Usage Dashboard
     The dashboard helps you track your usage patterns.
@@ -445,7 +452,7 @@ def render_tutorials_content():
     * **Resource Breakdown:** See which resource types (Worksheet, Lesson Plan, etc.) you use the most.
 
     ### 3. Troubleshooting: API Key
-    If the generation button runs but only gives mock data, or throws an error:
+    If the generation button runs but only gives mock instruction output, or throws an error:
     * Go to **App Settings**.
     * Enter your valid **Gemini API Key** and click **Save & Apply Key**. This resolves connectivity issues instantly.
     """)
@@ -457,16 +464,13 @@ def render_main_app():
     
     # 1. Sidebar Setup
     with st.sidebar:
-        # Display logo or title
         st.header(WEBSITE_TITLE)
         st.markdown(f'<div class="tier-label">Logged in as: {st.session_state.get("user_email")} | Tier: **{st.session_state.get("user_tier", "Free Tier")}**</div>', unsafe_allow_html=True)
         st.markdown("## 🍎 Teacher Aid")
 
-        # Set default to Usage Dashboard
         if 'app_mode' not in st.session_state:
             st.session_state['app_mode'] = "Usage Dashboard"
             
-        # Navigation Radio Button
         navigation_options = ["Usage Dashboard", "Resource Generation", "Saved History", "App Settings", "Tutorials"]
         
         app_mode = st.radio(
@@ -496,7 +500,6 @@ def render_main_app():
 
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
-    # Set mock defaults for first run
     if 'user_email' not in st.session_state: st.session_state['user_email'] = "teacher@example.com"
     if 'user_tier' not in st.session_state: st.session_state['user_tier'] = "Teacher Pro"
 
