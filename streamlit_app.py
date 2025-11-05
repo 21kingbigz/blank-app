@@ -10,7 +10,7 @@ from google.genai.errors import APIError
 from auth import render_login_page, logout, load_users, load_plan_overrides
 from storage_logic import (
     load_storage_tracker, save_storage_tracker, check_storage_limit, 
-    calculate_mock_save_size, get_file_path, save_db_file, 
+    calculate_mock_save_size, get_file_path, save_db_file, load_db_file, # Added load_db_file
     UTILITY_DB_INITIAL, TEACHER_DB_INITIAL, TIER_LIMITS
 )
 
@@ -20,7 +20,6 @@ MODEL = 'gemini-2.5-flash'
 LOGO_FILENAME = "image_fd0b7e.png" 
 ICON_SETTING = "💡" 
 
-# Set browser tab title, favicon, and layout.
 st.set_page_config(
     page_title=WEBSITE_TITLE,
     page_icon=ICON_SETTING,
@@ -28,7 +27,6 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# AI client setup (Assume client setup is correct)
 try:
     client = genai.Client()
 except Exception:
@@ -52,7 +50,6 @@ TIER_PRICES = {
     "Universal Pro": "$12/month", "Unlimited": "$18/month"
 }
 
-# --- CRITICAL CSS FOR LAYOUT FIXES (Simplified) ---
 st.markdown(
     """
     <style>
@@ -102,7 +99,7 @@ def run_ai_generation(prompt_text: str, uploaded_file: BytesIO = None, max_token
         return f"Error: An unexpected error occurred during generation: {e}"
 
 
-# --- INITIALIZATION BLOCK (CRITICAL FIX FOR PERSISTENCE) ---
+# --- INITIALIZATION BLOCK ---
 
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
@@ -110,21 +107,23 @@ if 'logged_in' not in st.session_state:
 if st.session_state.logged_in:
     user_email = st.session_state.current_user
     
-    # 1. Load user's profile FIRST to ensure we have the correct tier
     user_profile = load_users().get(user_email, {})
     
-    # 2. Load user-specific DBs and Storage 
     if 'storage' not in st.session_state:
         
         storage_data = load_storage_tracker(user_email)
         
-        # Force the tier from the users.json profile, which was set by auth.py
         if user_profile.get('tier'):
             storage_data['tier'] = user_profile['tier']
         
         st.session_state['storage'] = storage_data
         
-    # 3. Set default application mode (Dashboard is the hub)
+    # CRITICAL: Load DBs into session state upon login/initialization
+    if 'utility_db' not in st.session_state:
+        st.session_state['utility_db'] = load_db_file(get_file_path("utility_data_", user_email), UTILITY_DB_INITIAL)
+    if 'teacher_db' not in st.session_state:
+        st.session_state['teacher_db'] = load_db_file(get_file_path("teacher_data_", user_email), TEACHER_DB_INITIAL)
+
     if 'app_mode' not in st.session_state:
         st.session_state['app_mode'] = "Dashboard" 
     if 'utility_view' not in st.session_state:
@@ -133,7 +132,7 @@ if st.session_state.logged_in:
         st.session_state['teacher_mode'] = "Resource Dashboard" 
 
 
-# --- NAVIGATION RENDERER (Fixed Image Loading) ---
+# --- NAVIGATION RENDERER ---
 
 def render_main_navigation_sidebar():
     """Renders the main navigation using Streamlit's sidebar for responsiveness."""
@@ -156,23 +155,21 @@ def render_main_navigation_sidebar():
 
         menu_options = [
             {"label": "📊 Usage Dashboard", "mode": "Usage Dashboard"},
-            {"label": "🖥️ Dashboard", "mode": "Dashboard"}, # This is the hub
+            {"label": "🖥️ Dashboard", "mode": "Dashboard"},
             {"label": "💳 Plan Manager", "mode": "Plan Manager"},
             {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"},
-            {"label": "🚪 Logout", "mode": "Logout"} # Add Logout option
+            {"label": "🚪 Logout", "mode": "Logout"}
         ]
         
-        # Use native st.button, and apply CSS class based on active mode
         for item in menu_options:
             mode = item["mode"]
             button_id = f"sidebar_nav_button_{mode.replace(' ', '_')}"
             
             if st.button(item["label"], key=button_id, use_container_width=True):
                 if mode == "Logout":
-                    logout() # Call the logout function
+                    logout() 
                 else:
                     st.session_state['app_mode'] = mode
-                    # Reset internal views when switching main mode
                     st.session_state.pop('utility_view', None)
                     st.session_state['teacher_mode'] = "Resource Dashboard"
                     st.rerun()
@@ -189,7 +186,6 @@ def render_main_dashboard():
     
     col_teacher, col_utility = st.columns(2)
     
-    # Navigation to Teacher Aid
     with col_teacher:
         with st.container(border=True):
             st.header("🎓 Teacher Aid")
@@ -198,7 +194,6 @@ def render_main_dashboard():
                 st.session_state['app_mode'] = "Teacher Aid"
                 st.rerun()
 
-    # Navigation to 28/1 Utilities
     with col_utility:
         with st.container(border=True):
             st.header("💡 28/1 Utilities")
@@ -484,8 +479,6 @@ def render_usage_dashboard():
     
     storage = st.session_state.storage
     
-    # Check the universal limit for the current tier
-    # No need to use the check_storage_limit function here, we calculate limits for display
     current_tier = storage['tier']
 
     # --- Prepare Data for Charts ---
@@ -495,7 +488,7 @@ def render_usage_dashboard():
         used_percent = 0 
         remaining_mb_display = "Unlimited"
         total_limit_display = "Unlimited"
-        universal_limit_for_calc = 10000.0 # Just a large number for calculation purposes
+        universal_limit_for_calc = 10000.0
     else:
         if current_tier == 'Universal Pro':
              limit = TIER_LIMITS['Universal Pro']
@@ -591,6 +584,7 @@ def render_usage_dashboard():
                         deleted_size = item['size_mb']
                         user_email = st.session_state.current_user
                         
+                        # Reload DBs to ensure consistency before deletion
                         st.session_state['utility_db'] = load_db_file(get_file_path("utility_data_", user_email), UTILITY_DB_INITIAL)
                         st.session_state['teacher_db'] = load_db_file(get_file_path("teacher_data_", user_email), TEACHER_DB_INITIAL)
                         
@@ -680,26 +674,20 @@ def render_data_cleanup():
 if not st.session_state.logged_in:
     render_login_page()
 else:
-    # 1. RENDER MAIN NAVIGATION
     render_main_navigation_sidebar()
 
-    # --- GLOBAL TIER RESTRICTION CHECK (FIXED LOGIC) ---
-    # We check the tier first. If Unlimited, access is always granted.
     current_tier = st.session_state.storage.get('tier', 'Free Tier')
     universal_error_msg = None
     
     if current_tier == "Unlimited":
         can_interact_universally = True
     else:
-        # If not Unlimited, proceed with the storage check
         universal_limit_reached, universal_error_msg, _ = check_storage_limit(st.session_state.storage, 'universal')
         can_interact_universally = not universal_limit_reached
 
-    # Render the tier label at the top of the main content area
     st.markdown(f'<p class="tier-label">Current Plan: {current_tier}</p>', unsafe_allow_html=True)
 
 
-    # --- RENDERER DISPATCHER ---
     if st.session_state['app_mode'] == "Usage Dashboard":
         render_usage_dashboard()
         
@@ -707,11 +695,9 @@ else:
         render_main_dashboard()
         
     elif st.session_state['app_mode'] == "Teacher Aid":
-        # Pass the result of the new, corrected check
         render_teacher_aid_content(can_interact_universally, universal_error_msg)
     
     elif st.session_state['app_mode'] == "28/1 Utilities":
-        # Pass the result of the new, corrected check
         render_utility_hub_content(can_interact_universally, universal_error_msg)
 
     elif st.session_state['app_mode'] == "Plan Manager":
