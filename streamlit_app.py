@@ -257,6 +257,7 @@ UTILITY_CATEGORIES = {
         "28. Grade Calculator": grade_calculator,
     }
 }
+}
 
 # --- FEATURE EXAMPLE MAPPING ---
 FEATURE_EXAMPLES = {
