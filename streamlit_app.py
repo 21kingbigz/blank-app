@@ -24,8 +24,6 @@ except ImportError:
         class APIError(Exception):
             """Generic fallback for missing APIError class."""
             pass
-        st.warning("⚠️ Could not import 'APIError'. API errors may be handled generically.")
-
 
 try:
     from google.generativeai.types import GenerationConfig
