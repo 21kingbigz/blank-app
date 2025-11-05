@@ -6,7 +6,6 @@ import hashlib
 from typing import Optional, Dict
 
 USERS_FILE = "users.json"
-# Renamed file to handle all plan overrides
 USER_OVERRIDES_FILE = "user_overrides.csv" 
 
 # --- Utility Functions ---
@@ -30,7 +29,6 @@ def save_users(users: Dict):
     with open(USERS_FILE, 'w') as f:
         json.dump(users, f, indent=4)
 
-# --- FIX: Load all plan overrides from CSV ---
 def load_plan_overrides() -> Dict:
     """Loads whitelisted emails and their specified tiers from a CSV file."""
     if os.path.exists(USER_OVERRIDES_FILE):
@@ -51,6 +49,7 @@ def load_plan_overrides() -> Dict:
                     overrides[row['email']] = tier_map[row['plan_code']]
             return overrides
         except Exception:
+            # st.warning("Error reading user_overrides.csv. Check format.")
             return {}
     return {}
 
@@ -65,28 +64,28 @@ def authenticate_user(email: str, password: str) -> Optional[str]:
         return email
     return None
 
-# --- FIX: Simplified registration; defaults to Free Tier unless overridden ---
 def register_user(email: str, password: str) -> str:
     """Registers a new user and returns a status message."""
     users = load_users()
+    email_lower = email.lower()
     
-    if email in users:
+    if email_lower in users:
         return "Error: This email is already registered."
     
     # Check for plan override
     overrides = load_plan_overrides()
     
-    # Default plan is Free Tier
-    initial_tier = overrides.get(email.lower(), 'Free Tier')
+    # Default plan is Free Tier, unless overridden by CSV
+    initial_tier = overrides.get(email_lower, 'Free Tier')
     
     # Create the user profile
-    users[email] = {
+    users[email_lower] = {
         'password': hash_password(password),
         'tier': initial_tier
     }
     
     save_users(users)
-    return f"Success: User {email} registered with {initial_tier} plan."
+    return f"Success: User {email} registered with {initial_tier} plan. Please log in."
 
 def render_login_page():
     """Renders the login/signup UI and sets session state upon success."""
@@ -102,7 +101,7 @@ def render_login_page():
 
     with col_login:
         st.subheader("Existing User Login")
-        login_email = st.text_input("Email (Login)", key="login_email")
+        login_email = st.text_input("Email (Login)", key="login_email").lower()
         login_password = st.text_input("Password (Login)", type="password", key="login_password")
         
         if st.button("Login", key="login_btn", use_container_width=True):
@@ -128,13 +127,7 @@ def render_login_page():
                 status = register_user(signup_email, signup_password)
                 if status.startswith("Success"):
                     st.success(status)
-                    # Attempt to log in immediately after successful registration
-                    user_email = authenticate_user(signup_email, signup_password)
-                    if user_email:
-                        st.session_state.logged_in = True
-                        st.session_state.current_user = user_email
-                        st.toast("Registration and Login successful! Welcome.")
-                        st.rerun()
+                    # No automatic login, force user to use the login panel
                 else:
                     st.error(status)
                     
