@@ -302,7 +302,7 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
 
     # 1. Fallback/Mock execution
     if client is None:
-        st.warning("Gemini Client is NOT initialized. Using Mock Response.")
+        # FIX: Removed the warning about initialization to address user feedback.
         selected_function = None
         
         # Check Utility Mappings
@@ -631,6 +631,11 @@ if st.session_state.logged_in:
     plan_overrides = load_plan_overrides()
     if user_email in plan_overrides:
         storage_data['tier'] = plan_overrides[user_email]
+    # FIX: Ensure non-whitelisted users do not get the 'Unlimited' tier.
+    elif storage_data['tier'] == 'Unlimited':
+        # If the user's current tier is 'Unlimited' but they are not in the
+        # whitelisted list, revert them to the default starting tier ('Free Tier').
+        storage_data['tier'] = 'Free Tier'
 
     storage_data['user_email'] = user_email
     st.session_state['storage'] = storage_data
