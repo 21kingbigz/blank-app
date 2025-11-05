@@ -668,10 +668,6 @@ if st.session_state.logged_in:
         st.session_state['app_mode'] = "Dashboard"
     if '28_in_1_output' not in st.session_state:
         st.session_state['28_in_1_output'] = ""
-    if 'teacher_output' not in st.session_state:
-        st.session_state['teacher_output'] = ""
-    if 'teacher_view' not in st.session_state: # Use this for teacher sub-view
-        st.session_state['teacher_view'] = 'generation' 
 
 
     if 'selected_28_in_1_category' not in st.session_state:
@@ -913,113 +909,150 @@ def render_utility_hub_content(can_interact, universal_error_msg):
             st.info("No 28-in-1 utility results have been saved yet.")
 
 
-# --- TEACHER AID RENDERERS (FIXED TO SIMPLE TABS) ---
+# --- TEACHER AID RENDERERS (FIXED TO MULTIPLE TABS) ---
 def render_teacher_aid_content(can_interact, universal_error_msg):
     st.title("🎓 Teacher Aid Hub")
-    st.caption("Generate specialized educational resources. Use the highlighted **Resource Tags** in your prompt.")
+    st.caption("Generate specialized educational resources using dedicated tabs for each resource type.")
     st.markdown("---")
 
     if not can_interact:
         st.error(f"🛑 **ACCESS BLOCKED:** {universal_error_msg}. Cannot interact.")
         return
 
-    # Use Streamlit Tabs for the requested layout: Generation and History
-    tab_gen, tab_history = st.tabs(
-        ["📝 Resource Generation", "📚 Saved History"]
-    )
-
     # Pass the save check results to the generation tab
     can_save_teacher, teacher_error_msg, teacher_limit = check_storage_limit(st.session_state.storage, 'teacher_save')
+    
+    # Define the Resource Tags to be used as tab names
+    RESOURCE_TAGS = [
+        "Unit Overview", "Lesson Plan", "Vocabulary List", 
+        "Worksheet", "Quiz", "Test"
+    ]
+    
+    # Dictionary to store outputs for each tab, to keep them separate
+    if 'teacher_outputs_by_type' not in st.session_state:
+        st.session_state['teacher_outputs_by_type'] = {tag: "" for tag in RESOURCE_TAGS}
 
-    with tab_gen:
-        st.subheader("Generate Resource")
-        
-        # RESTORED Resource Tags
-        st.markdown("**Available Resource Tags:** **Unit Overview**, **Lesson Plan**, **Vocabulary List**, **Worksheet**, **Quiz**, **Test**.")
-        example_input = "Create a **Lesson Plan** for teaching the causes of World War I."
-        st.markdown(f'<p class="example-text">Example: <code>{example_input}</code></p>', unsafe_allow_html=True)
+    # Create the tabs
+    tabs = st.tabs(RESOURCE_TAGS + ["📚 Saved History"])
 
-        teacher_prompt = st.text_area(
-            "Resource Request (e.g., 'Unit Overview for high school physics on momentum'):",
-            placeholder=example_input,
-            height=150,
-            key="teacher_ai_prompt"
-        )
+    # Loop through each resource tag to create its corresponding tab content
+    for i, resource_type in enumerate(RESOURCE_TAGS):
+        with tabs[i]:
+            st.subheader(f"Generate {resource_type}")
+            
+            example_input_map = {
+                "Unit Overview": f"Create a **Unit Overview** for 7th-grade history on ancient civilizations.",
+                "Lesson Plan": f"Develop a **Lesson Plan** for a high school chemistry class covering chemical reactions.",
+                "Vocabulary List": f"Generate a **Vocabulary List** for an English class on Shakespearean terminology.",
+                "Worksheet": f"Provide a **Worksheet** for pre-algebra students practicing order of operations.",
+                "Quiz": f"Make a **Quiz** on the basic functions of a plant cell.",
+                "Test": f"Create a **Test** for a 9th-grade biology course on genetics."
+            }
+            example_prompt_snippet = example_input_map.get(resource_type, f"Create a **{resource_type}** on your topic.")
+            st.markdown(f'<p class="example-text">Example Prompt: <code>{example_prompt_snippet}</code></p>', unsafe_allow_html=True)
 
-        if st.button("Generate Resource", key="teacher_generate_btn", use_container_width=True):
-            if not teacher_prompt:
-                st.warning("Please enter a request.")
-                return
+            teacher_prompt = st.text_area(
+                f"Enter your specific topic and details (The tag **{resource_type}** will be automatically added):",
+                placeholder=f"e.g., 'on the causes and effects of the American Civil War' for a {resource_type}",
+                height=150,
+                key=f"teacher_ai_prompt_{resource_type.replace(' ', '_')}"
+            )
+            
+            # The prompt sent to the AI function must contain the Resource Tag to trigger the mock/AI routing
+            final_prompt = f"{resource_type} {teacher_prompt}".strip()
 
-            feature_key_proxy = "Teacher_Aid_Routing"
+            if st.button(f"Generate {resource_type}", key=f"teacher_generate_btn_{resource_type.replace(' ', '_')}", use_container_width=True):
+                if not teacher_prompt:
+                    st.warning("Please enter a topic and details for the resource.")
+                    st.session_state['teacher_outputs_by_type'][resource_type] = "" 
+                    return
 
-            with st.spinner("Generating specialized teacher resource..."):
-                generated_output = run_ai_generation(
-                    feature_function_key=feature_key_proxy,
-                    prompt_text=teacher_prompt,
-                    uploaded_image=None
-                )
-                st.session_state['teacher_output'] = generated_output
+                feature_key_proxy = "Teacher_Aid_Routing" # All teacher aid goes through this proxy
 
-                if can_save_teacher:
-                    data_to_save = {
-                        "timestamp": pd.Timestamp.now().isoformat(),
-                        "request": teacher_prompt[:100] + "..." if len(teacher_prompt) > 100 else teacher_prompt,
-                        "output_size_bytes": calculate_mock_save_size(generated_output),
-                        "output_content": generated_output
-                    }
+                with st.spinner(f"Generating specialized {resource_type} resource..."):
+                    generated_output = run_ai_generation(
+                        feature_function_key=feature_key_proxy,
+                        prompt_text=final_prompt,
+                        uploaded_image=None
+                    )
+                    st.session_state['teacher_outputs_by_type'][resource_type] = generated_output
 
-                    st.session_state.teacher_db['history'].append(data_to_save)
-                    save_db_file(get_file_path("teacher_data_", st.session_state.current_user), st.session_state.teacher_db)
+                    if can_save_teacher:
+                        data_to_save = {
+                            "timestamp": pd.Timestamp.now().isoformat(),
+                            "request_type": resource_type, # Save the specific type
+                            "request": final_prompt[:100] + "..." if len(final_prompt) > 100 else final_prompt,
+                            "output_size_bytes": calculate_mock_save_size(generated_output),
+                            "output_content": generated_output
+                        }
 
-                    mock_size = data_to_save["output_size_bytes"]
-                    st.session_state.storage['current_teacher_storage'] += mock_size
-                    st.session_state.storage['current_universal_storage'] += mock_size
-                    save_storage_tracker(st.session_state.storage, st.session_state.current_user)
+                        st.session_state.teacher_db['history'].append(data_to_save)
+                        save_db_file(get_file_path("teacher_data_", st.session_state.current_user), st.session_state.teacher_db)
 
-                    st.success(f"Resource saved to Teacher History (Mock Size: {mock_size} bytes).")
-                else:
-                    st.error(f"⚠️ **Teacher History Save Blocked:** {teacher_error_msg}. Result is displayed below but not saved.")
+                        mock_size = data_to_save["output_size_bytes"]
+                        st.session_state.storage['current_teacher_storage'] += mock_size
+                        st.session_state.storage['current_universal_storage'] += mock_size
+                        save_storage_tracker(st.session_state.storage, st.session_state.current_user)
 
-        st.markdown("---")
-        st.subheader("Generated Resource Output")
-        if 'teacher_output' in st.session_state:
-            st.markdown(st.session_state['teacher_output'])
-        else:
-            st.info("Your generated resource will appear here. **Remember to use a Resource Tag (e.g., Quiz, Unit Overview) in your prompt.**")
+                        st.success(f"{resource_type} saved to Teacher History (Mock Size: {mock_size} bytes).")
+                    else:
+                        st.error(f"⚠️ **Teacher History Save Blocked:** {teacher_error_msg}. Result is displayed below but not saved.")
 
-    with tab_history:
+            st.markdown("---")
+            st.subheader(f"Generated {resource_type} Output")
+            if st.session_state['teacher_outputs_by_type'].get(resource_type):
+                st.markdown(st.session_state['teacher_outputs_by_type'][resource_type])
+            else:
+                st.info(f"Your generated {resource_type} will appear here.")
+
+    # --- Saved History Tab (Last tab) ---
+    history_tab_index = len(RESOURCE_TAGS)
+    with tabs[history_tab_index]: # Access the last tab
         st.subheader("Teacher Aid Saved History")
-        teacher_df = pd.DataFrame(st.session_state.teacher_db['history'])
+        
+        # CRITICAL FIX: Ensure all history entries have 'request_type' for display
+        teacher_history = st.session_state.teacher_db['history']
+        for item in teacher_history:
+            if 'request_type' not in item:
+                # Infer type from the prompt text for old entries
+                item['request_type'] = next((tag for tag in RESOURCE_TAGS if tag in item['request']), 'Resource')
+        
+        teacher_df = pd.DataFrame(teacher_history)
+
         if not teacher_df.empty:
             teacher_df['timestamp'] = pd.to_datetime(teacher_df['timestamp']).dt.strftime('%Y-%m-%d %H:%M')
             # Drop the 'output_content' column for the main table view to keep it clean
             display_df = teacher_df.drop(columns=['output_content'], errors='ignore')
             display_df['request_snippet'] = display_df['request'].str.slice(0, 50) + '...'
             
+            # Ensure 'request_type' exists for display
+            if 'request_type' not in display_df.columns:
+                 display_df['request_type'] = 'Resource'
+                 
             st.dataframe(
-                display_df[['timestamp', 'request_snippet', 'output_size_bytes']].sort_values(by='timestamp', ascending=False), 
+                display_df[['timestamp', 'request_type', 'request_snippet', 'output_size_bytes']].sort_values(by='timestamp', ascending=False), 
                 use_container_width=True
             )
             
-            # Display detailed view for selected item (optional, but good practice)
             history_indices = teacher_df.index.tolist()
-            selected_row_index_teacher = st.selectbox(
-                "Select History Item for Full Content View:", 
-                history_indices, 
-                format_func=lambda i: f"[{i+1}] {display_df.loc[i, 'request_snippet']}", 
-                key="teacher_history_selector"
-            )
-            
-            if selected_row_index_teacher is not None and not teacher_df.empty:
-                st.markdown("---")
-                st.subheader("Full Resource Content")
-                st.text_area(
-                    f"Content for {teacher_df.loc[selected_row_index_teacher, 'request']}",
-                    teacher_df.loc[selected_row_index_teacher, 'output_content'],
-                    height=300,
-                    key="full_teacher_content_display"
+            if history_indices:
+                selected_row_index_teacher = st.selectbox(
+                    "Select History Item for Full Content View:", 
+                    history_indices, 
+                    format_func=lambda i: f"[{i+1}] {display_df.loc[i, 'request_type']} - {display_df.loc[i, 'request_snippet']}", 
+                    key="teacher_history_selector"
                 )
+                
+                if selected_row_index_teacher is not None and not teacher_df.empty:
+                    st.markdown("---")
+                    st.subheader("Full Resource Content")
+                    # Use a text_area for better readability of large content
+                    st.text_area(
+                        f"Content for {teacher_df.loc[selected_row_index_teacher, 'request_type']}: {teacher_df.loc[selected_row_index_teacher, 'request']}",
+                        teacher_df.loc[selected_row_index_teacher, 'output_content'],
+                        height=300,
+                        key="full_teacher_content_display"
+                    )
         else:
             st.info("No teacher resources have been saved yet.")
 
