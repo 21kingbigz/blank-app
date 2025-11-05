@@ -7,7 +7,7 @@ import numpy as np
 from google import genai
 from PIL import Image
 from io import BytesIO
-from google.genai.errors import APIError
+from google.genai.errors import APIError # Correct Import
 from google.genai.types import HarmCategory, HarmBlockThreshold
 
 # --- 0. CONFIGURATION AND PERSISTENCE FILE PATHS ---
@@ -17,6 +17,35 @@ MODEL = 'gemini-2.5-flash'
 TEACHER_DATA_FILE = "teacher_data.json" 
 UTILITY_DATA_FILE = "utility_data.json" 
 STORAGE_TRACKER_FILE = "storage_tracker.json" 
+
+# Utility Hub Features (Required for 28/1 Utilities page)
+CATEGORIES_FEATURES = {
+    "Productivity": {
+        "icon": "📝",
+        "features": {
+            "1. Smart Email Drafts": "Draft an email to a client regarding the Q3 budget review.",
+            "2. Meeting Summarizer": "Summarize notes from a 30-minute standup meeting.",
+            "3. Project Planner": "Create a 5-step plan for launching a new website."
+        }
+    },
+    "Finance": {
+        "icon": "💰",
+        "features": {
+            "4. Budget Tracker": "Analyze spending habits for the last month based on these transactions.",
+            "5. Investment Idea Generator": "Suggest three low-risk investment ideas for a 30-year-old.",
+            "6. Tax Explanation": "Explain the capital gains tax implications of selling stocks held for two years."
+        }
+    },
+    "Health & Fitness": {
+        "icon": "🏋️",
+        "features": {
+            "7. Workout Generator": "Generate a 45-minute full-body workout using only dumbbells.",
+            "8. Meal Plan Creator": "Create a 7-day high-protein, low-carb meal plan.",
+            "9. Image-to-Calorie Estimate": "Estimate calories and macros for the uploaded meal image."
+        }
+    }
+}
+
 
 # Tier Definitions and Storage Limits (in MB)
 TIER_LIMITS = {
@@ -126,8 +155,10 @@ st.markdown(
         margin-right: 10px;
     }}
 
-    /* Card-like containers */
-    .stContainer, [data-testid="stVerticalBlock"] > div > div:has([data-testid="stExpander"]) {{
+    /* Card-like containers (for the dashboard and general use) */
+    .stContainer, [data-testid="stVerticalBlock"] > div > div:has([data-testid="stExpander"]), 
+    div[data-testid="stColumn"] > div > div > [data-testid="stVerticalBlock"] > div > div:not([data-testid="stTextarea"]) 
+    {{
         background-color: #FFFFFF;
         border: 1px solid #E0E0E0;
         border-radius: 12px;
@@ -212,6 +243,20 @@ st.markdown(
         color: #333333;
         padding: 8px 12px;
     }}
+    
+    /* Specific styling for the custom dashboard navigation */
+    .custom-nav-active {{
+        background-color: #2D6BBE !important; 
+        color: #FFFFFF !important; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+    }}
+    .custom-nav-inactive {{
+        background-color: transparent !important; 
+        color: #333333 !important;
+    }}
+    .custom-nav-inactive:hover {{
+        background-color: #F0F2F6 !important;
+    }}
     </style>
     """,
     unsafe_allow_html=True
@@ -255,7 +300,7 @@ def load_storage_tracker():
         current_limit = TIER_LIMITS[data['tier']]
         if data['tier'] in ["Free Tier", "Universal Pro"] and data['total_used_mb'] > current_limit:
             data['total_used_mb'] = current_limit
-            st.warning("Daily usage increment capped at tier limit.")
+            # st.warning("Daily usage increment capped at tier limit.")
         
     return data
 
@@ -281,12 +326,12 @@ def check_storage_limit(action_area: str):
     if action_area == 'utility_save':
         used_mb = st.session_state.storage['utility_used_mb']
         if current_tier == '28/1 Pro': effective_limit = TIER_LIMITS['28/1 Pro']
-        elif current_tier != 'Universal Pro': effective_limit = TIER_LIMITS['Free Tier']
+        elif current_tier not in ['Universal Pro', '28/1 Pro']: effective_limit = TIER_LIMITS['Free Tier']
         
     elif action_area == 'teacher_save':
         used_mb = st.session_state.storage['teacher_used_mb']
         if current_tier == 'Teacher Pro': effective_limit = TIER_LIMITS['Teacher Pro']
-        elif current_tier != 'Universal Pro': effective_limit = TIER_LIMITS['Free Tier']
+        elif current_tier not in ['Universal Pro', 'Teacher Pro']: effective_limit = TIER_LIMITS['Free Tier']
 
     elif action_area == 'universal':
         used_mb = st.session_state.storage['total_used_mb']
@@ -322,7 +367,9 @@ try:
     with open("system_instruction.txt", "r") as f:
         SYSTEM_INSTRUCTION = f.read()
 except FileNotFoundError:
-    st.error("❌ ERROR: 'system_instruction.txt' not found.")
+    # Use a basic default if the file is missing
+    SYSTEM_INSTRUCTION = "You are a helpful and detailed assistant."
+
 
 # --- CORE AI GENERATION FUNCTION (Live Integration) ---
 def run_ai_generation(prompt_text: str, uploaded_file: BytesIO = None, max_tokens=1500, temp=0.5):
@@ -374,95 +421,160 @@ def calculate_mock_save_size(content: str) -> float:
 # --- APPLICATION PAGE RENDERERS ---
 
 def render_usage_dashboard():
-    """Renders the main landing page with storage visualization and plan information."""
+    """Renders the main landing page, visually mimicking the provided image."""
     
     current_tier = st.session_state.storage['tier']
     total_used = st.session_state.storage['total_used_mb']
     limit = TIER_LIMITS[current_tier]
     
-    st.title("📊 Usage Dashboard")
-    st.caption(f"Your current plan: **{current_tier}**")
-    st.markdown("---")
-    
-    # --- TOP ROW: Storage Visuals ---
-    col_pie, col_bar = st.columns(2)
-    
-    with col_pie:
-        st.subheader("Storage Utilization")
-        if current_tier != 'Unlimited':
-            used_percent = min(100, (total_used / limit) * 100) if limit > 0 else 0
-            
-            st.metric(label="Total Storage Used", value=f"{total_used:.2f} MB", delta=f"{limit - total_used:.2f} MB Remaining")
-            st.progress(used_percent / 100)
-            st.markdown(f"**Limit:** {limit} MB")
-        else:
-            st.info("Storage is **Unlimited** for your current plan.")
+    # Hide the Streamlit main page title/header area for a cleaner look
+    st.markdown("<h1 style='visibility: hidden; height: 0;'>Dashboard</h1>", unsafe_allow_html=True)
 
-    with col_bar:
-        st.subheader("Usage Breakdown")
-        breakdown_data = pd.DataFrame({
-            "Category": ["28/1 Utilities", "Teacher Aid", "General Data"],
-            "Usage (MB)": [st.session_state.storage['utility_used_mb'], st.session_state.storage['teacher_used_mb'], st.session_state.storage['general_used_mb']]
-        })
-        st.bar_chart(breakdown_data.set_index("Category"))
+    # --- MAIN CONTENT AREA (Left side: Charts/Metrics) ---
+    col_left, col_right = st.columns([0.75, 0.25])
 
-    st.markdown("---")
-    
-    # --- BOTTOM ROW: Storage Cleanup & Plan Info ---
-    col_list, col_plans = st.columns(2)
-    
-    with col_list:
-        st.subheader("🗑️ Data Cleanup (Top Usage)")
+    # --- LEFT COLUMN: FOUR CARDS (Visually Mapped to the Image) ---
+    with col_left:
+        # --- ROW 1: Monthly Metrics and Market Share ---
+        row1_col1, row1_col2 = st.columns(2)
         
-        all_utility_items = [{"name": item['name'], "size_mb": item['size_mb'], "category": "28/1 Utility", "type": "utility", "index": i} 
-                             for i, item in enumerate(st.session_state.utility_db['saved_items'])]
-                             
-        all_teacher_items = []
-        for db_key, resources in st.session_state['teacher_db'].items():
-            all_teacher_items.extend([{"name": res['name'], "size_mb": res['size_mb'], "category": "Teacher Aid", "type": db_key, "index": i}
-                                      for i, res in enumerate(resources)])
-
-        all_saved_items = all_utility_items + all_teacher_items
-        all_saved_items_sorted = sorted(all_saved_items, key=lambda x: x.get('size_mb', 0), reverse=True)
+        with row1_col1:
+            # Card 1: Monthly Performance Metrics (Line Chart Mock)
+            with st.container(border=True):
+                st.markdown("##### Monthly Performance Metrics")
+                # Using an image or a styled div to mock the chart appearance
+                st.markdown("""
+                <div style="height: 150px; background-color: #FFFFFF; border-radius: 8px; 
+                            display: flex; align-items: center; justify-content: center; 
+                            color: #A0A0A0; font-size: 0.8em; border: 1px solid #F0F0F0; padding: 10px;">
+                    
+                </div>
+                """, unsafe_allow_html=True)
         
-        if all_saved_items_sorted:
-            for item in all_saved_items_sorted[:5]:
-                col_item, col_size, col_delete = st.columns([0.6, 0.2, 0.2])
-                col_item.write(f"*{item['category']}:* {item['name']}")
-                col_size.write(f"{item['size_mb']:.1f} MB")
+        with row1_col2:
+            # Card 2: Market Share (Doughnut Chart Mock)
+            with st.container(border=True):
+                st.markdown("##### Market Share")
+                st.markdown(f"""
+                <div style="display: flex; align-items: center; justify-content: space-around;">
+                    <div style="font-size: 1.5em; font-weight: 600; color: #333333;">
+                        81.8%<br><span style="font-size: 0.8em; color: #888888;">Expected Share</span>
+                    </div>
+                    
+                    <div style="width: 100px; height: 100px; position: relative;">
+                        { # This is a custom CSS doughnut chart mock
+                        f"""
+                        <div style="width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(
+                            #2D6BBE 0% 87%, 
+                            #E0E0E0 87% 100%
+                        ); position: relative; display: flex; align-items: center; justify-content: center;">
+                            <div style="width: 60%; height: 60%; border-radius: 50%; background: white; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333;">
+                                87%
+                            </div>
+                        </div>
+                        """
+                        }
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # --- ROW 2: Market Share Distribution and Uline SI Distribution ---
+        row2_col1, row2_col2 = st.columns(2)
+        
+        with row2_col1:
+            # Card 3: Market Share Distribution (Line Chart Mock)
+            with st.container(border=True):
+                st.markdown("##### Market Share Distribution")
+                st.markdown("""
+                <div style="height: 150px; background-color: #FFFFFF; border-radius: 8px; 
+                            display: flex; align-items: center; justify-content: center; 
+                            color: #A0A0A0; font-size: 0.8em; border: 1px solid #F0F0F0; padding: 10px;">
+                    
+                </div>
+                """, unsafe_allow_html=True)
                 
-                if col_delete.button("Delete", key=f"dash_delete_{item['name']}_{item['index']}_{item['type']}"):
-                    deleted_size = item['size_mb']
-                    
-                    if item['category'] == "28/1 Utility":
-                        st.session_state.utility_db['saved_items'].pop(item['index'])
-                        save_db_file(st.session_state.utility_db, UTILITY_DATA_FILE)
-                        st.session_state.storage['utility_used_mb'] = max(0, st.session_state.storage['utility_used_mb'] - deleted_size)
-                    
-                    elif item['category'] == "Teacher Aid":
-                        st.session_state['teacher_db'][item['type']].pop(item['index'])
-                        save_db_file(st.session_state['teacher_db'], TEACHER_DATA_FILE)
-                        st.session_state.storage['teacher_used_mb'] = max(0, st.session_state.storage['teacher_used_mb'] - deleted_size)
+                # Nested row for Regional Sales (Mock Bar Chart)
+                st.markdown("###### Regional Sales")
+                st.markdown("""
+                <div style="height: 50px; display: flex; align-items: flex-end; justify-content: space-around; padding: 0 10px;">
+                    <div style="width: 10%; height: 60%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                    <div style="width: 10%; height: 30%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                    <div style="width: 10%; height: 80%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                    <div style="width: 10%; height: 20%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                    <div style="width: 10%; height: 90%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                    <div style="width: 10%; height: 45%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                </div>
+                """, unsafe_allow_html=True)
 
-                    st.session_state.storage['total_used_mb'] = max(0, st.session_state.storage['total_used_mb'] - deleted_size)
-                    save_storage_tracker(st.session_state.storage)
-                    st.toast(f"🗑️ Deleted {item['name']} ({deleted_size:.1f}MB).")
-                    st.rerun()
-        else:
-            st.info("No saved data found.")
+        with row2_col2:
+            # Card 4: Uline SI Distribution (Bar Chart Mock)
+            with st.container(border=True):
+                st.markdown("##### Uline SI Distribution")
+                # Custom bar chart mock (simulating the blue color and structure)
+                st.markdown("""
+                <div style="height: 200px; display: flex; align-items: flex-end; justify-content: space-around; padding: 10px 0;">
+                    <div style="width: 15%; height: 25%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                    <div style="width: 15%; height: 35%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                    <div style="width: 15%; height: 50%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                    <div style="width: 15%; height: 75%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                    <div style="width: 15%; height: 90%; background-color: #2D6BBE; border-radius: 3px;"></div>
+                </div>
+                """, unsafe_allow_html=True)
 
-    with col_plans:
-        st.subheader("⭐ Plan Benefits Overview")
-        for tier, price in TIER_PRICES.items():
-            st.markdown(f"##### **{tier}** ({price})")
-            benefits = []
-            if tier == "Free Tier": benefits.append(f"**{TIER_LIMITS[tier]} MB** Universal Storage.")
-            elif tier == "28/1 Pro": benefits.append(f"**3 GB** Dedicated 28/1 Storage (Free Tier elsewhere).")
-            elif tier == "Teacher Pro": benefits.append(f"**3 GB** Dedicated Teacher Aid Storage (Free Tier elsewhere).")
-            elif tier == "Universal Pro": benefits.append(f"**5 GB** Total for ALL tools combined.")
-            elif tier == "Unlimited": benefits.append("Truly Unlimited Storage and Features!")
+
+    # --- RIGHT COLUMN: NAVIGATION AND FILTERS (Visually Mapped to the Image) ---
+    with col_right:
+        # Card 5: Navigation (Dashboard)
+        with st.container(border=True):
+            st.markdown(f"""
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <div style="display: flex; align-items: center;">
+                    <span style="font-size: 1.5em; color: #2D6BBE; margin-right: 10px; font-weight: 700;">A</span>
+                    <span style="font-size: 1.2em; font-weight: 700; color: #333333;">ARTORIOUS</span>
+                </div>
+                <span style="font-size: 1.5em; color: #888888;">⋮</span>
+            </div>
+            """, unsafe_allow_html=True)
             
-            st.markdown(f"> * {'; '.join(benefits)}")
+            # --- Custom Navigation Buttons ---
+            def nav_button(label, icon, key):
+                is_active = (label == 'Dashboard Overview')
+                css_class = "custom-nav-active" if is_active else "custom-nav-inactive"
+                
+                st.markdown(f"""
+                <div class="{css_class}" style="
+                    padding: 10px 15px; 
+                    margin: 5px 0; 
+                    border-radius: 8px; 
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    font-weight: 500;
+                    transition: all 0.2s;
+                ">
+                    <span style="margin-right: 15px; font-size: 1.1em;">{icon}</span>
+                    {label}
+                </div>
+                """, unsafe_allow_html=True)
+
+            # NOTE: These are visually styled mock buttons, not functional Streamlit buttons.
+            nav_button("Dashboard Overview", "🏠", "nav_overview")
+            nav_button("Dashboard", "🖥️", "nav_dash")
+            nav_button("Data Input", "📝", "nav_input")
+            nav_button("Historical Trends", "📈", "nav_trends")
+
+        # Card 6: Filter Options
+        with st.container(border=True):
+            st.markdown("##### Filter Options")
+            # Using st.toggle for the switch/toggle appearance
+            st.toggle("Date Range", key="filter_date", value=True)
+            st.toggle("Product Type", key="filter_product", value=False)
+            st.toggle("Region", key="filter_region", value=True)
+            st.toggle("Product Type", key="filter_product_2", value=False)
+            st.toggle("Region", key="filter_region_2", value=False)
+            
+            # Simulated Slider
+            st.slider("Region", 0, 100, 50, key="filter_slider")
 
 def render_main_dashboard():
     """Renders the split-screen selection for Teacher Aid and 28/1 Utilities."""
@@ -517,31 +629,31 @@ def render_utility_hub_navigated(can_interact):
         elif not st.session_state.utility_db['saved_items']:
             st.info("No 28/1 utility items saved yet.")
         else:
-            for i, item in enumerate(st.session_state.utility_db['saved_items']):
-                # Using a unique key based on the index to handle deletions properly
+            # Need to iterate over a copy or range to allow list modification (deletion)
+            items_to_display = st.session_state.utility_db['saved_items']
+            for i in range(len(items_to_display)):
+                item = items_to_display[i]
                 current_index = i 
                 with st.expander(f"**{item.get('name', f'Saved Item #{i+1}')}** ({item.get('category', 'N/A')}) - {item.get('size_mb', 0):.1f}MB"):
                     st.code(item['content'], language='markdown')
                     
-                    # Ensure we handle the case where the list changes size before saving
-                    if i < len(st.session_state.utility_db['saved_items']):
-                        new_name = st.text_input("Edit Save Name:", value=item.get('name', ''), key=f"edit_util_name_{current_index}")
-                        
-                        if new_name != item.get('name', '') and st.button("Update Name", key=f"update_util_name_btn_{current_index}"):
-                            st.session_state.utility_db['saved_items'][current_index]['name'] = new_name
-                            save_db_file(st.session_state.utility_db, UTILITY_DATA_FILE)
-                            st.toast("Name updated!")
-                            st.rerun()
-                        
-                        if st.button("🗑️ Delete This Save", key=f"delete_util_item_{current_index}"):
-                            deleted_size = st.session_state.utility_db['saved_items'][current_index]['size_mb']
-                            st.session_state.storage['utility_used_mb'] = max(0, st.session_state.storage['utility_used_mb'] - deleted_size)
-                            st.session_state.storage['total_used_mb'] = max(0, st.session_state.storage['total_used_mb'] - deleted_size)
-                            st.session_state.utility_db['saved_items'].pop(current_index)
-                            save_db_file(st.session_state.utility_db, UTILITY_DATA_FILE)
-                            save_storage_tracker(st.session_state.storage)
-                            st.toast("Item deleted!")
-                            st.rerun()
+                    new_name = st.text_input("Edit Save Name:", value=item.get('name', ''), key=f"edit_util_name_{current_index}")
+                    
+                    if new_name != item.get('name', '') and st.button("Update Name", key=f"update_util_name_btn_{current_index}"):
+                        st.session_state.utility_db['saved_items'][current_index]['name'] = new_name
+                        save_db_file(st.session_state.utility_db, UTILITY_DATA_FILE)
+                        st.toast("Name updated!")
+                        st.rerun()
+                    
+                    if st.button("🗑️ Delete This Save", key=f"delete_util_item_{current_index}"):
+                        deleted_size = st.session_state.utility_db['saved_items'][current_index]['size_mb']
+                        st.session_state.storage['utility_used_mb'] = max(0, st.session_state.storage['utility_used_mb'] - deleted_size)
+                        st.session_state.storage['total_used_mb'] = max(0, st.session_state.storage['total_used_mb'] - deleted_size)
+                        st.session_state.utility_db['saved_items'].pop(current_index)
+                        save_db_file(st.session_state.utility_db, UTILITY_DATA_FILE)
+                        save_storage_tracker(st.session_state.storage)
+                        st.toast("Item deleted!")
+                        st.rerun()
         
     elif st.session_state.get('utility_view') == 'main':
         st.header("Select a Utility Category")
@@ -724,8 +836,11 @@ def render_teacher_aid_navigated(can_interact):
                 if not can_interact_flag:
                     st.error(f"🛑 {error_msg_flag} Cannot access saved items while over limit.")
                 elif st.session_state['teacher_db'][db_key]:
-                    for i, resource_item in enumerate(reversed(st.session_state['teacher_db'][db_key])):
-                        display_idx = len(st.session_state['teacher_db'][db_key]) - 1 - i
+                    # Iterate over a list of indices to handle deletion
+                    indices = list(range(len(st.session_state['teacher_db'][db_key])))
+                    for i in reversed(indices):
+                        resource_item = st.session_state['teacher_db'][db_key][i]
+                        display_idx = i
                         expander_label = f"**{resource_item.get('name', f'{tab_name} #{display_idx+1}')}** - {resource_item.get('size_mb', 0):.1f}MB"
                         with st.expander(expander_label):
                             st.code(resource_item['content'], language='markdown')
@@ -754,7 +869,10 @@ def render_teacher_aid_navigated(can_interact):
             for db_key, resources in st.session_state['teacher_db'].items():
                 if resources:
                     st.subheader(f"📖 {db_key.replace('_', ' ').title()}")
-                    for i, resource_item in enumerate(resources):
+                    # Iterate over a copy or range to allow list modification (deletion)
+                    indices = list(range(len(resources)))
+                    for i in indices:
+                        resource_item = resources[i]
                         current_index = i
                         expander_label = f"**{resource_item.get('name', f'{db_key.title()} #{i+1}')}** - {resource_item.get('size_mb', 0):.1f}MB"
                         with st.expander(expander_label):
@@ -800,19 +918,28 @@ def render_teacher_aid_navigated(can_interact):
 
             if teacher_data_list_sorted:
                 st.subheader("All Teacher Aid Data Consumers")
-                for item in teacher_data_list_sorted:
+                # Iterate over a copy to allow list modification (deletion)
+                for i, item in enumerate(teacher_data_list_sorted):
                     col_item, col_size, col_delete = st.columns([0.6, 0.2, 0.2])
                     col_item.write(f"*{item['category'].title()}:* {item['name']}")
                     col_size.write(f"{item['size_mb']:.1f} MB")
-                    if col_delete.button("Delete", key=f"clean_teacher_{item['category']}_{item['index']}_{np.random.rand()}"):
-                        deleted_size = item['size_mb']
-                        st.session_state.storage['teacher_used_mb'] = max(0, st.session_state.storage['teacher_used_mb'] - deleted_size)
-                        st.session_state.storage['total_used_mb'] = max(0, st.session_state.storage['total_used_mb'] - deleted_size)
-                        st.session_state['teacher_db'][item['category']].pop(item['index'])
-                        save_db_file(st.session_state['teacher_db'], TEACHER_DATA_FILE)
-                        save_storage_tracker(st.session_state.storage)
-                        st.toast(f"🗑️ Deleted {item['name']}!")
-                        st.rerun()
+                    # Use unique index for button and a random number to avoid key conflicts
+                    if col_delete.button("Delete", key=f"clean_teacher_{item['category']}_{item['index']}_{i}"):
+                        
+                        # Find the true index in the original DB list before deletion
+                        true_index = next((idx for idx, res in enumerate(st.session_state['teacher_db'][item['category']]) if res['name'] == item['name'] and res['size_mb'] == item['size_mb']), -1)
+                        
+                        if true_index != -1:
+                            deleted_size = item['size_mb']
+                            st.session_state.storage['teacher_used_mb'] = max(0, st.session_state.storage['teacher_used_mb'] - deleted_size)
+                            st.session_state.storage['total_used_mb'] = max(0, st.session_state.storage['total_used_mb'] - deleted_size)
+                            st.session_state['teacher_db'][item['category']].pop(true_index)
+                            save_db_file(st.session_state['teacher_db'], TEACHER_DATA_FILE)
+                            save_storage_tracker(st.session_state.storage)
+                            st.toast(f"🗑️ Deleted {item['name']}!")
+                            st.rerun()
+                        else:
+                            st.error("Error finding item for deletion.")
             else:
                 st.info("No saved Teacher Aid data to manage.")
 
@@ -858,12 +985,6 @@ def render_plan_manager():
                         # --- MOCK PAYMENT INITIATION (Requires external service for LIVE payments) ---
                         st.warning(f"Initiating LIVE payment for {tier}... (Requires secure backend integration like Stripe)")
                         
-                        mock_payment_url = f"https://stripe.com/checkout?plan={tier.replace(' ', '-')}&price={TIER_PRICES[tier]}"
-                        
-                        st.markdown(f'<script>window.open("{mock_payment_url}", "_blank");</script>', unsafe_allow_html=True)
-                        
-                        st.info("Please complete the payment in the new browser tab that just opened.")
-                        
                         # DEMO ONLY: Simulate immediate upgrade
                         st.session_state.storage['tier'] = tier
                         save_storage_tracker(st.session_state.storage)
@@ -879,8 +1000,19 @@ def render_data_cleanup():
     st.markdown("---")
     
     can_proceed, error_msg, _ = check_storage_limit('universal')
+    
+    st.subheader("Storage Utilization")
+    total_used = st.session_state.storage['total_used_mb']
+    limit = TIER_LIMITS[st.session_state.storage['tier']]
+    used_percent = min(100, (total_used / limit) * 100) if limit != float('inf') and limit > 0 else 0
+    st.metric(label="Total Storage Used", value=f"{total_used:.2f} MB", delta=f"{limit if limit != float('inf') else '∞'} MB Total")
+    if limit != float('inf'):
+        st.progress(used_percent / 100)
+    
+    st.markdown("---")
+    
     if not can_proceed:
-        st.error(f"🛑 {error_msg} Cannot access detailed cleanup options while over limit. Consider quick deletes from Usage Dashboard or upgrading.")
+        st.error(f"🛑 {error_msg} Cannot perform cleanup. Please consider upgrading.")
         return
 
     st.subheader("Automated Suggestions (Simulated)")
