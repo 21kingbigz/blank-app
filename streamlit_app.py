@@ -58,52 +58,14 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# --- INITIALIZE GEMINI CLIENT (FINAL, CORRECT FIX) ---
-client = None # Default to None
-api_key_source = "None"
-
-try:
-    api_key = None
-    
-    # 1. Prioritize Streamlit secrets
-    if "GEMINI_API_KEY" in st.secrets:
-        api_key = st.secrets["GEMINI_API_KEY"]
-        api_key_source = "Streamlit Secrets"
-    # 2. Fallback to os.getenv 
-    elif os.getenv("GEMINI_API_KEY"):
-        api_key = os.getenv("GEMINI_API_KEY")
-        api_key_source = "Environment Variable"
-
-    if api_key and api_key.strip():
-        # Use the standard, modern configuration method
-        genai.configure(api_key=api_key) 
-        
-        # CRITICAL FIX: Pass system instruction at model instantiation.
-        # This resolves the 'unexpected keyword argument system_instruction' errors.
-        client = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_INSTRUCTION) 
-        st.sidebar.success(f"✅ Gemini Client Initialized (Key from {api_key_source}).")
-    else:
-        st.sidebar.warning("⚠️ Gemini API Key not found or is empty. Running in MOCK MODE.")
-        
-except APIError as e:
-    client = None
-    st.sidebar.error(f"❌ Gemini API Setup Error: {e}")
-    st.sidebar.info("Please ensure your Gemini API Key is valid and active.")
-except Exception as e:
-    client = None
-    # Log the full exception for remote debugging via Streamlit Cloud's logs
-    st.sidebar.error(f"❌ Unexpected Setup Error during Gemini client initialization. See Streamlit logs for details.")
-    st.exception(e)
-    
-# --- END INITIALIZE GEMINI CLIENT ---
-
-
 # --- SYSTEM INSTRUCTION LOADING (RAW CONTENT) ---
+# CRITICAL FIX: This block MUST come before the Gemini Client Initialization.
 SYSTEM_INSTRUCTION_FALLBACK = """
 <div><br class="Apple-interchange-newline">You are the "28-in-1 Stateless AI Utility Hub," a multi-modal tool built to handle 28 distinct tasks. Your primary directive is to immediately identify the user's intent and execute the exact, single function required, without engaging in conversation, retaining memory, or asking follow-up questions. Your response MUST be the direct result of the selected function.<br><br>**ROUTING DIRECTIVE:**<br>1. Analyze the User Input: Determine which of the 28 numbered features the user is requesting.<br>2. Assume the Role: Adopt the corresponding expert persona (e.g., Mathematics Expert AI) for features 22-28.<br>3. Execute & Output: Provide the immediate, concise, and definitive result. If the request is ambiguous, default to Feature #15 (Email/Text Reply Generator).<br><br>**THE 28 FUNCTION LIST:**<br>### I. Cognitive & Productivity (5)<br>1. Daily Schedule Optimizer: (Input: Tasks, time) Output: Time-blocked schedule.<br>2. Task Deconstruction Expert: (Input: Vague goal) Output: 3-5 concrete steps.<br>3. "Get Unstuck" Prompter: (Input: Problem) Output: 1 critical next-step question.<br>4. Habit Breaker: (Input: Bad habit) Output: 3 environmental changes for friction.<br>5. One-Sentence Summarizer: (Input: Long text) Output: Core idea in 1 sentence.<br><br>### II. Finance & Math (3)<br>6. Tip & Split Calculator: (Input: Bill, tip %, people) Output: Per-person cost.<br>7. Unit Converter: (Input: Value, units) Output: Precise conversion result.<br>8. Priority Spending Advisor: (Input: Goal, purchase) Output: Conflict analysis.<br><br>### III. Health & Multi-Modal (3)<br>9. Image-to-Calorie Estimate: (Input: Image of food) Output: A detailed nutritional analysis. You MUST break down the response into three sections: **A) Portion Estimate**, **B) Itemized Calorie Breakdown** (e.g., 4 oz chicken, 1 cup rice), and **C) Final Total**. Justify your portion sizes based on the visual data. **(Requires image input.)**<br>10. Recipe Improver: (Input: 3-5 ingredients) Output: Simple recipe instructions.<br>11. Symptom Clarifier: (Input: Non-emergency symptoms) Output: 3 plausible benign causes.<br><br>### IV. Communication & Writing (4)<br>12. Tone Checker & Rewriter: (Input: Text, desired tone) Output: Rewritten text.<br>13. Contextual Translator: (Input: Phrase, context) Output: Translation that matches the social register.<br>14. Metaphor Machine: (Input: Topic) Output: 3 creative analogies.<br>15. Email/Text Reply Generator: (Input: Message, points) Output: Drafted concise reply.<br><br>### V. Creative & Entertainment (3)<br>16. Idea Generator/Constraint Solver: (Input: Idea type, constraints) Output: List of unique options.<br>17. Random Fact Generator: (Input: Category) Output: 1 surprising, verified fact.<br>18. "What If" Scenario Planner": (Input: Hypothetical) Output: 3 pros and 3 cons analysis.<br><br>### VI. Tech & Logic (2)<br>19. Concept Simplifier: (Input: Complex topic) Output: Explanation using simple analogy.<br>20. Code Explainer: (Input: Code snippet) Output: Plain-language explanation of function.<br><br>### VII. Travel & Utility (1)<br>21. Packing List Generator: (Input: Trip details) Output: Categorized checklist.<br><br>### VIII. School Answers AI (8 Consolidated Experts)<br>22. Mathematics Expert AI: Answers, solves, and explains any problem or concept in the subject.<br>23. English & Literature Expert AI: Critiques writing, analyzes literature, and explains grammar, rhetoric, and composition.<br>24. History & Social Studies Expert AI: Provides comprehensive answers, context, and analysis for any event, figure, or social science theory.<br>25. Foreign Language Expert AI: Provides translations, conjugation, cultural context, vocabulary, and grammar.<br>26. Science Expert AI: Explains concepts, analyzes data, and answers questions across Physics, Chemistry, Biology, and Earth Science.<br>27. Vocational & Applied Expert AI: Acts as an expert for applied subjects like Computer Science (coding help), Business, Economics, and Trade skills.<br>28. Grade Calculator: (Input: Scores, weights) Output: Calculated final grade.<br><br>**--- Teacher Resource Tags (Separate Application Mode Directives) ---**<br>The following terms trigger specific, detailed output formats when requested from the separate Teacher's Aid mode:<br><br>* **Unit Overview:** Output must include four sections: **A) Unit Objectives**, **B) Key Topics/Subtopics**, **C) Suggested Activities (3-5)**, and **D) Assessment Overview**.<br>* **Lesson Plan:** Output must follow a structured plan: **A) Objective**, **B) Materials**, **C) Procedure (Warm-up, Main Activity, Wrap-up)**, and **D) Assessment Strategy**.<br>* **Vocabulary List:** Output must be a list of terms, each entry containing: **A) Term**, **B) Concise Definition**, and **C) Example Sentence** relevant to the topic.<br>* **Worksheet:** Output must be a numbered list of **10 varied questions** (e.g., matching, short answer, fill-in-the-blank) followed by a separate **Answer Key**.<br>* **Quiz:** Output must be a **5-question Multiple Choice Quiz** with four options for each question, followed by a separate **Answer Key**.<br>* **Test:** Output must be organized into two main sections: **A) Multiple Choice (15 Questions)** and **B) Short/Long Answer (4 Questions)**, followed by a detailed **Answer Key/Rubric**.<br></div>
 """
 
 try:
+    # This must be defined before the client uses it.
     with open("system_instruction.txt", "r") as f:
         SYSTEM_INSTRUCTION = f.read()
 except FileNotFoundError:
@@ -148,6 +110,46 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+# --- INITIALIZE GEMINI CLIENT (FINAL, CORRECT FIX) ---
+client = None # Default to None
+api_key_source = "None"
+
+try:
+    api_key = None
+    
+    # 1. Prioritize Streamlit secrets
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        api_key_source = "Streamlit Secrets"
+    # 2. Fallback to os.getenv 
+    elif os.getenv("GEMINI_API_KEY"):
+        api_key = os.getenv("GEMINI_API_KEY")
+        api_key_source = "Environment Variable"
+
+    if api_key and api_key.strip():
+        # Use the standard, modern configuration method
+        genai.configure(api_key=api_key) 
+        
+        # CRITICAL FIX: Pass system instruction at model instantiation.
+        # This works because SYSTEM_INSTRUCTION is now DEFINED above this block.
+        client = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_INSTRUCTION) 
+        st.sidebar.success(f"✅ Gemini Client Initialized (Key from {api_key_source}).")
+    else:
+        st.sidebar.warning("⚠️ Gemini API Key not found or is empty. Running in MOCK MODE.")
+        
+except APIError as e:
+    client = None
+    st.sidebar.error(f"❌ Gemini API Setup Error: {e}")
+    st.sidebar.info("Please ensure your Gemini API Key is valid and active.")
+except Exception as e:
+    client = None
+    # Log the full exception for remote debugging via Streamlit Cloud's logs
+    st.sidebar.error(f"❌ Unexpected Setup Error during Gemini client initialization. See Streamlit logs for details.")
+    st.exception(e)
+    
+# --- END INITIALIZE GEMINI CLIENT ---
+
 
 # --- 1. THE 28 FUNCTION LIST (Internal Mapping for Mocking) ---
 def daily_schedule_optimizer(tasks_time: str) -> str:
@@ -261,7 +263,7 @@ UTILITY_CATEGORIES = {
     "Cognitive & Productivity": {
         "1. Daily Schedule Optimizer": daily_schedule_optimizer,
         "2. Task Deconstruction Expert": task_deconstruction_expert,
-        "3. 'Get Unstuck' Prompter": get_unstuck_prompter,
+        "3. 'Get Unstuck" Prompter": get_unstuck_prompter,
         "4. Habit Breaker": habit_breaker,
         "5. One-Sentence Summarizer": one_sentence_summarizer,
     },
