@@ -36,7 +36,8 @@ st.set_page_config(
 try:
     # Initialize the client only if the key is available
     if os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY"):
-        client = genai.Client()
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY"))
+        client = genai.GenerativeModel(MODEL) # Use GenerativeModel directly
     else:
         client = None
 except Exception:
@@ -313,16 +314,23 @@ def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_imag
     try:
         contents = []
         if feature_function_key == "9. Image-to-Calorie Estimate" and uploaded_image:
-            contents.append(uploaded_image)
+            # Convert PIL Image to BytesIO for sending to Gemini
+            img_byte_arr = BytesIO()
+            uploaded_image.save(img_byte_arr, format=uploaded_image.format or 'PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+            
+            contents.append(genai.types.Blob(mime_type="image/jpeg", data=img_byte_arr))
         
         contents.append(prompt_text)
 
-        response = client.models.generate_content(
-            model=MODEL,
+        # For GenerativeModel, system_instruction is part of generation_config
+        generation_config = genai.types.GenerationConfig(
+            system_instruction=SYSTEM_INSTRUCTION,
+        )
+
+        response = client.generate_content(
             contents=contents,
-            config=genai.types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION,
-            )
+            generation_config=generation_config
         )
         return response.text
     
@@ -663,13 +671,19 @@ def render_usage_dashboard():
     st.subheader(f"Current Plan: {st.session_state.storage['tier']} ({TIER_PRICES.get(st.session_state.storage['tier'])})")
     
     current_uni = st.session_state.storage['current_universal_storage']
-    limit_uni = TIER_LIMITS.get(st.session_state.storage['tier'], {}).get('universal_storage_limit_bytes', 0)
+    limit_uni_raw = TIER_LIMITS.get(st.session_state.storage['tier'], {}).get('universal_storage_limit_bytes', 0)
     
-    if limit_uni > 0:
-        percent = min(100, (current_uni / limit_uni) * 100)
-        st.progress(percent / 100, text=f"Universal Storage Used: {percent:.1f}% ({current_uni:,} / {limit_uni:,} Bytes)")
+    # Safely handle infinite limit for display
+    if limit_uni_raw == float('inf'):
+        limit_uni = "Unlimited"
+        st.progress(0.0, text=f"Universal Storage Used: {current_uni:,} Bytes (Unlimited)") # Show 0% progress, but current usage
     else:
-        st.info("No universal storage limit applied to this tier.")
+        limit_uni = int(limit_uni_raw)
+        if limit_uni > 0:
+            percent = min(100, (current_uni / limit_uni) * 100)
+            st.progress(percent / 100, text=f"Universal Storage Used: {percent:.1f}% ({current_uni:,} / {limit_uni:,} Bytes)")
+        else:
+            st.info(f"Universal Storage Used: {current_uni:,} Bytes (No limit configured for this tier).")
 
     st.subheader("Utility History (Last 5 Saves)")
     utility_df = pd.DataFrame(st.session_state.utility_db['history'])
@@ -704,9 +718,13 @@ def render_data_clean_up():
             utility_size_cleared = st.session_state.storage.get('current_utility_storage', 0)
             st.session_state.storage['current_utility_storage'] = 0
             st.session_state.storage['current_universal_storage'] -= utility_size_cleared
+            # Ensure universal storage doesn't go below zero
+            if st.session_state.storage['current_universal_storage'] < 0:
+                st.session_state.storage['current_universal_storage'] = 0
             save_storage_tracker(st.session_state.storage, st.session_state.current_user)
             
             st.success("Utility History has been reset and storage cleared.")
+            st.rerun() # Rerun to update dashboard immediately
 
     with col2:
         if st.button("Wipe Teacher History", key="wipe_teacher_btn", use_container_width=True):
@@ -716,9 +734,13 @@ def render_data_clean_up():
             teacher_size_cleared = st.session_state.storage.get('current_teacher_storage', 0)
             st.session_state.storage['current_teacher_storage'] = 0
             st.session_state.storage['current_universal_storage'] -= teacher_size_cleared
+            # Ensure universal storage doesn't go below zero
+            if st.session_state.storage['current_universal_storage'] < 0:
+                st.session_state.storage['current_universal_storage'] = 0
             save_storage_tracker(st.session_state.storage, st.session_state.current_user)
             
             st.success("Teacher History has been reset and storage cleared.")
+            st.rerun() # Rerun to update dashboard immediately
 
 
 # --- MAIN APPLICATION LOGIC ---
@@ -730,7 +752,7 @@ else:
     render_main_navigation_sidebar()
     
     # Check universal access based on storage limits
-    # This now safely calls check_storage_limit which uses a numeric limit_value.
+    # This now safely calls check_storage_limit which handles float('inf')
     can_interact, universal_error_msg, _ = check_storage_limit(st.session_state.storage, 'universal_storage')
 
     # --- 2. Content Routing ---
