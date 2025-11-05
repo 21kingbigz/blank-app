@@ -8,17 +8,17 @@ import re
 import random
 import traceback # Import traceback for detailed error logging
 
-# --- Ensure you have google-genai installed and configured if you want real AI calls ---
+# --- CRITICAL FIX: Robust Imports for Gemini SDK ---
 import google.generativeai as genai
-from google.generativeai.errors import APIError
 
 # Attempt to import necessary components from their most likely locations,
 # providing fallbacks in case of version mismatch/conflicts.
+
 try:
     from google.generativeai import APIError # Primary location
 except ImportError:
     try:
-        from google.generativeai.errors import APIError # Secondary location (used in some versions)
+        from google.generativeai.errors import APIError # Secondary location
     except ImportError:
         # Fallback: Define a generic exception to allow the rest of the code to function
         class APIError(Exception):
@@ -35,9 +35,9 @@ except ImportError:
         def __init__(self, **kwargs):
             self.__dict__.update(kwargs)
     st.warning("⚠️ Could not import 'GenerationConfig'. Using a mock class.")
-    
+
+
 # Import custom modules (Assuming these files exist and are correct)
-# NOTE: These files (auth, storage_logic) MUST be present for the app to run.
 from auth import render_login_page, logout, load_users, load_plan_overrides
 from storage_logic import (
     load_storage_tracker, save_storage_tracker, check_storage_limit,
@@ -59,32 +59,41 @@ st.set_page_config(
 )
 
 # --- INITIALIZE GEMINI CLIENT (FINAL, CORRECT FIX) ---
-# --- INITIALIZE GEMINI CLIENT ---
 client = None # Default to None
+api_key_source = "None"
 
 try:
-    # 1. Safely retrieve the API key first
-    api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
+    api_key = None
+    
+    # 1. Prioritize Streamlit secrets
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        api_key_source = "Streamlit Secrets"
+    # 2. Fallback to os.getenv 
+    elif os.getenv("GEMINI_API_KEY"):
+        api_key = os.getenv("GEMINI_API_KEY")
+        api_key_source = "Environment Variable"
 
-    # Check if a key was found and is not just empty whitespace
     if api_key and api_key.strip():
-        # 2. Only proceed to configure and initialize if the key is found
-        genai.configure(api_key=api_key)
+        # Use the standard, modern configuration method
+        genai.configure(api_key=api_key) 
         
-        # CRITICAL FIX (Functional): Pass system instruction at model instantiation 
-        # This is the ONLY method accepted by your installed SDK version, resolving 
-        # the 'unexpected keyword argument system_instruction' errors.
-        client = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_INSTRUCTION)
-        # st.success("Gemini Client successfully initialized!") 
+        # CRITICAL FIX: Pass system instruction at model instantiation.
+        # This resolves the 'unexpected keyword argument system_instruction' errors.
+        client = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_INSTRUCTION) 
+        st.sidebar.success(f"✅ Gemini Client Initialized (Key from {api_key_source}).")
     else:
-        # Key not found, client remains None.
-        pass
-
+        st.sidebar.warning("⚠️ Gemini API Key not found or is empty. Running in MOCK MODE.")
+        
+except APIError as e:
+    client = None
+    st.sidebar.error(f"❌ Gemini API Setup Error: {e}")
+    st.sidebar.info("Please ensure your Gemini API Key is valid and active.")
 except Exception as e:
     client = None
-    # Report setup errors in the sidebar without crashing the main application
-    st.sidebar.error(f"Gemini API Setup Error: {e}") 
-
+    # Log the full exception for remote debugging via Streamlit Cloud's logs
+    st.sidebar.error(f"❌ Unexpected Setup Error during Gemini client initialization. See Streamlit logs for details.")
+    st.exception(e)
     
 # --- END INITIALIZE GEMINI CLIENT ---
 
@@ -327,23 +336,16 @@ FEATURE_EXAMPLES = {
     "28. Grade Calculator": "Quiz 80 (20%), Midterm 75 (30%), Final 90 (50%)",
 }
 
-# --- AI GENERATION FUNCTION (MODIFIED WARNING) ---
-# System instruction is now set at model instantiation (in the setup block). 
-        # Create an empty config object to satisfy the required argument.
-        generation_config = genai.types.GenerationConfig()
-
-        response = client.generate_content(
-            contents=contents,
-            generation_config=generation_config
-        )    """
+# --- AI GENERATION FUNCTION (FINAL VERSION) ---
+def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_image: Image.Image = None) -> str:
+    """
     Executes the selected feature function. Uses the real Gemini API if available,
     otherwise falls back to the mock functions.
     """
 
     # 1. Fallback/Mock execution
     if client is None:
-        # MODIFIED: Give specific instructions on how to fix the API key issue
-        st.warning("⚠️ **MOCK MODE:** Gemini Client is NOT initialized. Using Mock Response. To enable the real AI, please ensure your `GEMINI_API_KEY` is correctly set in your Streamlit app's secrets.")
+        st.warning("⚠️ **MOCK MODE:** Gemini Client is NOT initialized. Using Mock Response.")
         selected_function = None
         
         # Check Utility Mappings
@@ -364,7 +366,7 @@ FEATURE_EXAMPLES = {
             if "Unit Overview" in prompt_text:
                 topic = prompt_text.replace("Unit Overview", "").strip() or "a new unit"
                 return f"""
-**Teacher Aid Resource: Unit Overview (MOCK)**
+**Teacher Aid Resource: Unit Overview**
 **Request:** *{prompt_text}*
 
 ---
@@ -397,7 +399,7 @@ FEATURE_EXAMPLES = {
             elif "Lesson Plan" in prompt_text:
                 topic = prompt_text.replace("Lesson Plan", "").strip() or "a specific lesson"
                 return f"""
-**Teacher Aid Resource: Lesson Plan (MOCK)**
+**Teacher Aid Resource: Lesson Plan**
 **Request:** *{prompt_text}*
 
 ---
@@ -429,7 +431,7 @@ FEATURE_EXAMPLES = {
             elif "Vocabulary List" in prompt_text:
                 topic = prompt_text.replace("Vocabulary List", "").strip() or "general science"
                 return f"""
-**Teacher Aid Resource: Vocabulary List (MOCK)**
+**Teacher Aid Resource: Vocabulary List**
 **Request:** *{prompt_text}*
 
 ---
@@ -455,7 +457,7 @@ FEATURE_EXAMPLES = {
             elif "Worksheet" in prompt_text:
                 topic = prompt_text.replace("Worksheet", "").strip() or "basic math"
                 return f"""
-**Teacher Aid Resource: Worksheet (MOCK)**
+**Teacher Aid Resource: Worksheet**
 **Request:** *{prompt_text}*
 
 ---
@@ -494,7 +496,7 @@ FEATURE_EXAMPLES = {
             elif "Quiz" in prompt_text:
                 topic = prompt_text.replace("Quiz", "").strip() or "general knowledge"
                 return f"""
-**Teacher Aid Resource: Quiz (MOCK)**
+**Teacher Aid Resource: Quiz**
 **Request:** *{prompt_text}*
 
 ---
@@ -541,7 +543,7 @@ FEATURE_EXAMPLES = {
             elif "Test" in prompt_text:
                 topic = prompt_text.replace("Test", "").strip() or "comprehensive review"
                 return f"""
-**Teacher Aid Resource: Test (MOCK)**
+**Teacher Aid Resource: Test**
 **Request:** *{prompt_text}*
 
 ---
@@ -639,10 +641,9 @@ The system has received your request. For a more structured output, please inclu
 
         contents.append(prompt_text)
 
-        # For GenerativeModel, system_instruction is part of generation_config
-# System instruction is now set at model instantiation (in the setup block). 
+        # System instruction is now set at model instantiation (in the setup block). 
         # Create an empty config object to satisfy the required argument.
-        generation_config = GenerationConfig() 
+        generation_config = GenerationConfig()
 
         response = client.generate_content(
             contents=contents,
@@ -655,6 +656,9 @@ The system has received your request. For a more structured output, please inclu
     except Exception as e:
         return f"An unexpected error occurred during AI generation: {e}"
 
+
+# --- CATEGORY AND FEATURE MAPPING (REST OF FILE CONTENT FOLLOWS) ---
+# ... [The rest of your UTILITY_CATEGORIES, FEATURE_EXAMPLES, and rendering functions] ...
 
 # --- INITIALIZATION BLOCK (CRITICAL FOR PERSISTENCE & ERROR FIXES) ---
 
