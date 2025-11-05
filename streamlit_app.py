@@ -106,114 +106,69 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 1. THE 28 FUNCTION LIST (Internal Mapping for Mocking) ---
+# --- 1. THE 28 FUNCTION LIST (MOCK/EXAMPLE PLACEHOLDERS) ---
+# NOTE: These mock functions are kept for the sake of code structure/data mapping, 
+# but they are NOT used in run_ai_generation anymore.
 def daily_schedule_optimizer(tasks_time: str) -> str:
-    return f"**Feature 1: Daily Schedule Optimizer**\nTime-blocked schedule for: {tasks_time}\n9:00 AM - Focus Work, 11:00 AM - Meeting, 1:00 PM - Deep Dive Task."
+    return f"**Feature 1: Daily Schedule Optimizer**\nTime-blocked schedule for: {tasks_time}"
 def task_deconstruction_expert(vague_goal: str) -> str:
-    return f"**Feature 2: Task Deconstruction Expert**\n3 Concrete Steps for '{vague_goal}':\n* Define scope and audience.\n* Gather resources and outline structure.\n* Draft first section and seek feedback."
+    return f"**Feature 2: Task Deconstruction Expert**\n3 Concrete Steps for '{vague_goal}':"
 def get_unstuck_prompter(problem: str) -> str:
-    return f"**Feature 3: 'Get Unstuck' Prompter**\nCritical Next-Step Question for '{problem}': **What is the single, 5-minute action that moves you forward right now?**"
+    return f"**Feature 3: 'Get Unstuck' Prompter**\nCritical Next-Step Question for '{problem}':"
 def habit_breaker(bad_habit: str) -> str:
-    return f"**Feature 4: Habit Breaker**\n3 Environmental Changes for friction against '{bad_habit}':\n1. Move the trigger object out of sight.\n2. Set a digital blocker or reminder.\n3. Identify a healthy replacement activity."
+    return f"**Feature 4: Habit Breaker**\n3 Environmental Changes for friction against '{bad_habit}':"
 def one_sentence_summarizer(long_text: str) -> str:
-    return f"**Feature 5: One-Sentence Summarizer**\nCore Idea: The provided text discusses complex topics and requires concise distillation of its main argument."
-
+    return f"**Feature 5: One-Sentence Summarizer**\nCore Idea: {long_text}"
 def tip_split_calculator(bill_tip_people: str) -> str:
-    bill_match = re.search(r'bill:\s*[\$\s]*([\d\.]+)', bill_tip_people, re.IGNORECASE)
-    tip_match = re.search(r'tip:\s*([\d\.]+)\s*%', bill_tip_people, re.IGNORECASE)
-    people_match = re.search(r'people:\s*(\d+)', bill_tip_people, re.IGNORECASE)
-
-    bill = float(bill_match.group(1)) if bill_match else 50.0
-    tip_percent = float(tip_match.group(1)) if tip_match else 18.0
-    people = int(people_match.group(1)) if people_match else 2
-
-    total_bill = bill * (1 + (tip_percent / 100))
-    per_person = total_bill / people
-    return f"**Feature 6: Tip & Split Calculator**\nFor Bill: ${bill:.2f}, Tip: {tip_percent:.0f}%, People: {people}\n**Total Per Person Cost: ${per_person:.2f}**"
+    return f"**Feature 6: Tip & Split Calculator**\nCost per person calculated for: {bill_tip_people}"
 def unit_converter(value_units: str) -> str:
-    return f"**Feature 7: Unit Converter**\nPrecise conversion of '{value_units}':\n*10 miles is 16.0934 kilometers.*"
+    return f"**Feature 7: Unit Converter**\nPrecise conversion of '{value_units}':"
 def priority_spending_advisor(goal_purchase: str) -> str:
-    return f"**Feature 8: Priority Spending Advisor**\nConflict Analysis for '{goal_purchase}':\nThis purchase conflicts directly with your goal, delaying achievement by an estimated 6 weeks due to the opportunity cost."
-
+    return f"**Feature 8: Priority Spending Advisor**\nConflict Analysis for '{goal_purchase}':"
 def image_to_calorie_estimate(image: Image.Image, user_input: str) -> str:
-    st.warning("Feature 9: Image processing is mocked. A real implementation would use a vision AI model.")
-    return f"""
-**Feature 9: Image-to-Calorie Estimate**
-(Analysis for uploaded image: {image.filename if image else 'N/A'})
-**A) Portion Estimate:** One medium patty, two slices of bread, side salad.
-**B) Itemized Calorie Breakdown:**
-* Beef Patty (4oz, lean): ~200 cal
-* Whole Wheat Bread (2 slices): ~160 cal
-* Lettuce/Tomato/Dressing: ~50 cal
-**C) Final Total:** **~410 calories**
-"""
+    return f"**Feature 9: Image-to-Calorie Estimate**\nNutritional analysis for uploaded image and request: {user_input}"
 def recipe_improver(ingredients: str) -> str:
-    return f"**Feature 10: Recipe Improver**\nSimple recipe instructions for: {ingredients}\n1. Sauté the chicken and onions until browned. 2. Add vegetables and stock. 3. Simmer for 20 minutes and serve with rice."
+    return f"**Feature 10: Recipe Improver**\nSimple recipe instructions for: {ingredients}"
 def symptom_clarifier(symptoms: str) -> str:
-    return f"**Feature 11: Symptom Clarifier**\n3 plausible benign causes for '{symptoms}':\n1. Common seasonal allergies (pollen/dust).\n2. Mild fatigue due to poor sleep.\n3. Dehydration or temporary low blood sugar."
-
+    return f"**Feature 11: Symptom Clarifier**\n3 plausible benign causes for '{symptoms}':"
 def tone_checker_rewriter(text_tone: str) -> str:
-    return f"**Feature 12: Tone Checker & Rewriter**\nRewritten text (Desired tone: Professional):\n'I acknowledge receipt of your request and will provide the deliverable by the end of business tomorrow.'"
+    return f"**Feature 12: Tone Checker & Rewriter**\nRewritten text (Desired tone): {text_tone}"
 def contextual_translator(phrase_context: str) -> str:
-    return f"**Feature 13: Contextual Translator**\nTranslation (French, Formal Register): **'Pourriez-vous, s'il vous plaît, me donner les détails?'** (Could you, please, give me the details?)"
+    return f"**Feature 13: Contextual Translator**\nTranslation that matches social register for: {phrase_context}"
 def metaphor_machine(topic: str) -> str:
-    return f"**Feature 14: Metaphor Machine**\n3 Creative Analogies for '{topic}':\n1. The cloud is a global, shared library.\n2. Information flow is like an ocean tide.\n3. The network is a massive spider web."
+    return f"**Feature 14: Metaphor Machine**\n3 Creative Analogies for '{topic}':"
 def email_text_reply_generator(message_points: str) -> str:
-    return f"**Feature 15: Email/Text Reply Generator**\nDrafted concise reply for: {message_points}\n'Thank you for bringing this up. I will review the documents immediately and ensure the changes are implemented by 3 PM today.'"
-
+    return f"**Feature 15: Email/Text Reply Generator**\nDrafted concise reply for: {message_points}"
 def idea_generator_constraint_solver(idea_constraints: str) -> str:
-    return f"**Feature 16: Idea Generator/Constraint Solver**\nUnique options for '{idea_constraints}':\n- Idea A: Eco-friendly delivery service using electric bikes.\n- Idea B: Subscription box for local, artisanal products.\n- Idea C: Micro-consulting for remote teams."
+    return f"**Feature 16: Idea Generator/Constraint Solver**\nUnique options for '{idea_constraints}':"
 def random_fact_generator(category: str) -> str:
-    facts = ["A single cloud can weigh more than 1 million pounds.", "The shortest war in history lasted only 38 to 45 minutes.", "The smell of rain is called petrichor."]
-    return f"**Feature 17: Random Fact Generator**\nCategory: {category if category else 'General'}\n**Fact:** {random.choice(facts)}"
+    return f"**Feature 17: Random Fact Generator**\nCategory: {category if category else 'General'}\nFact: A true random fact."
 def what_if_scenario_planner(hypothetical: str) -> str:
-    return f"""
-**Feature 18: 'What If' Scenario Planner**
-Analysis for: What if global internet access was free?
-Pros: 1. Unprecedented educational equity. 2. Massive economic growth in developing nations. 3. Accelerated scientific collaboration.
-Cons: 1. Overwhelming infrastructure cost/upkeep. 2. Exponential increase in cyber-security threats. 3. Collapse of existing telecommunication revenue models.
-"""
-
+    return f"**Feature 18: 'What If' Scenario Planner**\nAnalysis for: {hypothetical}"
 def concept_simplifier(complex_topic: str) -> str:
-    return f"**Feature 19: Concept Simplifier**\nExplanation of '{complex_topic}' using simple analogy:\nQuantum entanglement is like having two special coins that always land on the opposite side, no matter how far apart you take them. Observing one instantly tells you the state of the other."
+    return f"**Feature 19: Concept Simplifier**\nExplanation of '{complex_topic}' using simple analogy."
 def code_explainer(code_snippet: str) -> str:
-    return f"**Feature 20: Code Explainer**\nPlain-language explanation of function:\nThis Python code snippet defines a function that takes a list of numbers, filters out any duplicates, sorts the remaining unique numbers, and returns the result."
-
+    return f"**Feature 20: Code Explainer**\nPlain-language explanation of function for: {code_snippet}"
 def packing_list_generator(trip_details: str) -> str:
-    return f"""
-**Feature 21: Packing List Generator**
-Checklist for: {trip_details}
-**Clothes:** 3 Shirts, 2 Pants, 1 Jacket, 1 Pair of Formal Shoes.
-**Essentials:** Passport, Wallet, Adapter, Phone Charger, Medications.
-**Toiletries:** Toothbrush, Paste, Shampoo (Travel size).
-"""
-
+    return f"**Feature 21: Packing List Generator**\nChecklist for: {trip_details}"
 def mathematics_expert_ai(problem: str) -> str:
-    return f"**Feature 22: Mathematics Expert AI**\nAnswer, Solve, and Explain: The solution to the equation **2x + 5 = 15** is **x = 5**. (The explanation involves isolating the variable by subtracting 5 and then dividing by 2)."
+    return f"**Feature 22: Mathematics Expert AI**\nAnswer, Solve, and Explain: {problem}"
 def english_literature_expert_ai(query: str) -> str:
-    return f"**Feature 23: English & Literature Expert AI**\nCritique/Analysis for '{query}':\nThe use of the color green in *The Great Gatsby* symbolizes the unattainable American Dream and Jay Gatsby's eternal hope for the past."
+    return f"**Feature 23: English & Literature Expert AI**\nCritique/Analysis for '{query}':"
 def history_social_studies_expert_ai(query: str) -> str:
-    return f"**Feature 24: History & Social Studies Expert AI**\nComprehensive Answer/Analysis for '{query}':\nThe major cause of the French Revolution was the stark inequality between the wealthy aristocracy and the impoverished Third Estate, exacerbated by famine and enlightenment ideas."
+    return f"**Feature 24: History & Social Studies Expert AI**\nComprehensive Answer/Analysis for '{query}':"
 def foreign_language_expert_ai(query: str) -> str:
-    return f"**Feature 25: Foreign Language Expert AI**\nTranslation/Context for '{query}':\n*German:* **Guten Tag! Wie geht es Ihnen?** (Formal: Hello! How are you?). *Context:* Use 'Ihnen' when speaking to strangers or elders."
+    return f"**Feature 25: Foreign Language Expert AI**\nTranslation/Context for '{query}':"
 def science_expert_ai(query: str) -> str:
-    return f"**Feature 26: Science Expert AI**\nExplanation/Analysis for '{query}':\nPhotosynthesis is the process by which plants convert light energy, carbon dioxide, and water into glucose (food) and oxygen. Its chemical formula is **6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂**."
+    return f"**Feature 26: Science Expert AI**\nExplanation/Analysis for '{query}':"
 def vocational_applied_expert_ai(query: str) -> str:
-    return f"**Feature 27: Vocational & Applied Expert AI**\nExpert Answer for '{query}':\nPolymorphism in Python allows objects of different classes to be treated as objects of a common interface (the same function name can be used on different types of objects)."
+    return f"**Feature 27: Vocational & Applied Expert AI**\nExpert Answer for '{query}':"
 def grade_calculator(scores_weights: str) -> str:
-    score_weight_pattern = re.compile(r'(\w+)\s*(\d+)\s*\((\d+)%\)')
-    matches = score_weight_pattern.findall(scores_weights)
-
-    total_score = sum(float(s) * (float(w) / 100) for _, s, w in matches)
-    total_weight = sum(float(w) / 100 for _, _, w in matches)
-
-    if total_weight > 0:
-        final_grade = (total_score / total_weight) if total_weight <= 1.0 else total_score
-        return f"**Feature 28: Grade Calculator**\nBased on input, your final calculated grade is: **{final_grade:.2f}%**"
-    return f"**Feature 28: Grade Calculator**\nInput data for calculation missing or invalid. Please provide Scores and Weights (e.g., Quiz 80 (20%))."
+    return f"**Feature 28: Grade Calculator**\nCalculated final grade based on: {scores_weights}"
 
 
 # --- CATEGORY AND FEATURE MAPPING ---
+# Maps the UI selection to the function names (the AI uses the prompt content for routing)
 UTILITY_CATEGORIES = {
     "Cognitive & Productivity": {
         "1. Daily Schedule Optimizer": daily_schedule_optimizer,
@@ -293,297 +248,17 @@ FEATURE_EXAMPLES = {
     "28. Grade Calculator": "Quiz 80 (20%), Midterm 75 (30%), Final 90 (50%)",
 }
 
-# --- AI GENERATION FUNCTION ---
+# --- AI GENERATION FUNCTION (MOCK LOGIC REMOVED) ---
 def run_ai_generation(feature_function_key: str, prompt_text: str, uploaded_image: Image.Image = None) -> str:
     """
-    Executes the selected feature function. Uses the real Gemini API if available,
-    otherwise falls back to the mock functions.
+    Executes the selected feature function using the real Gemini API.
+    All mock responses are removed, forcing an API call or an error.
     """
 
-    # 1. Fallback/Mock execution
+    # CRITICAL: If client is not initialized, return a clear error instead of a mock response.
     if client is None:
-        st.warning("Gemini Client is NOT initialized. Using Mock Response.")
-        selected_function = None
-        
-        # Check Utility Mappings
-        for category_features in UTILITY_CATEGORIES.values():
-            if feature_function_key in category_features:
-                selected_function = category_features[feature_function_key]
-                break
-        
-        is_teacher_aid_proxy = feature_function_key == "Teacher_Aid_Routing"
-        
-        if selected_function:
-            if feature_function_key == "9. Image-to-Calorie Estimate":
-                return selected_function(uploaded_image, prompt_text)
-            else:
-                return selected_function(prompt_text)
-        elif is_teacher_aid_proxy:
-            # --- CRITICAL FIX: Detailed Mock Responses for Teacher Aid Resources ---
-            if "Unit Overview:" in prompt_text:
-                topic = prompt_text.replace("Unit Overview:", "").strip() or "a new unit"
-                return f"""
-**Teacher Aid Resource: Unit Overview**
-**Request:** *{prompt_text}*
+        return "🛑 **AI Client Error:** The Gemini API Key is not configured. Please set the **GEMINI_API_KEY** in your environment or Streamlit secrets to enable AI generation."
 
----
-
-### Unit Overview: {topic.title()}
-
-**A) Unit Objectives:**
-1.  Students will be able to identify key concepts and theories related to {topic}.
-2.  Students will be able to analyze the impact of {topic} on real-world scenarios.
-3.  Students will be able to critically evaluate different perspectives on {topic}.
-
-**B) Key Topics/Subtopics:**
-* Introduction to {topic}
-* Historical Context and Development
-* Major Theories and Principles
-* Applications and Case Studies
-* Future Implications
-
-**C) Suggested Activities (3-5):**
-1.  **Debate:** Organize a classroom debate on a controversial aspect of {topic}.
-2.  **Research Project:** Assign small groups to research and present on a specific subtopic.
-3.  **Concept Mapping:** Students create visual concept maps connecting key terms.
-4.  **Guest Speaker:** Invite an expert in the field to speak to the class.
-5.  **Field Trip:** Visit a relevant museum or institution (if applicable).
-
-**D) Assessment Overview:**
-* Formative: Quizzes after each subtopic, participation in discussions.
-* Summative: A final essay (25%), a group presentation (25%), and a comprehensive test (50%).
-"""
-            elif "Lesson Plan:" in prompt_text:
-                topic = prompt_text.replace("Lesson Plan:", "").strip() or "a specific lesson"
-                return f"""
-**Teacher Aid Resource: Lesson Plan**
-**Request:** *{prompt_text}*
-
----
-
-### Lesson Plan: Introduction to {topic.title()}
-
-**A) Objective:**
-* Students will be able to define {topic} and explain its basic principles.
-* Students will be able to provide at least two examples of {topic} in daily life.
-
-**B) Materials:**
-* Whiteboard or projector
-* Markers/pens
-* Handout with key terms
-* Short video clip (5 minutes) related to {topic}
-
-**C) Procedure:**
-* **Warm-up (10 min):** Ask students to brainstorm what they already know about {topic}. Write ideas on the board.
-* **Main Activity (30 min):**
-    * Teacher explains core concepts using visual aids.
-    * Show video clip and discuss.
-    * Students work in pairs to answer questions on the handout.
-* **Wrap-up (10 min):** Review answers as a class. Assign a quick write for homework: "What is one new thing you learned about {topic} today?"
-
-**D) Assessment Strategy:**
-* Informal: Observe student participation in discussions and pair work.
-* Formative: Collect and review quick writes for understanding.
-"""
-            elif "Vocabulary List:" in prompt_text:
-                topic = prompt_text.replace("Vocabulary List:", "").strip() or "general science"
-                return f"""
-**Teacher Aid Resource: Vocabulary List**
-**Request:** *{prompt_text}*
-
----
-
-### Vocabulary List: {topic.title()}
-
-1.  **Term:** Photosynthesis
-    * **Concise Definition:** The process by which green plants and some other organisms use sunlight to synthesize foods from carbon dioxide and water.
-    * **Example Sentence:** During **photosynthesis**, plants absorb carbon dioxide from the atmosphere.
-2.  **Term:** Ecosystem
-    * **Concise Definition:** A biological community of interacting organisms and their physical environment.
-    * **Example Sentence:** The rainforest is a complex **ecosystem** teeming with biodiversity.
-3.  **Term:** Hypothesis
-    * **Concise Definition:** A proposed explanation made on the basis of limited evidence as a starting point for further investigation.
-    * **Example Sentence:** Her **hypothesis** was that increased sunlight would lead to faster plant growth.
-4.  **Term:** Molecule
-    * **Concise Definition:** A group of atoms bonded together, representing the smallest fundamental unit of a chemical compound that can take part in a chemical reaction.
-    * **Example Sentence:** A water **molecule** is made of two hydrogen atoms and one oxygen atom.
-5.  **Term:** Gravity
-    * **Concise Definition:** The force that attracts a body toward the center of the earth, or toward any other physical body having mass.
-    * **Example Sentence:** **Gravity** keeps our feet on the ground and planets in orbit.
-"""
-            elif "Worksheet:" in prompt_text:
-                topic = prompt_text.replace("Worksheet:", "").strip() or "basic math"
-                return f"""
-**Teacher Aid Resource: Worksheet**
-**Request:** *{prompt_text}*
-
----
-
-### Worksheet: {topic.title()} Practice
-
-**Instructions:** Answer all questions to the best of your ability.
-
-1.  What is the capital city of France? (Short Answer)
-2.  Fill in the blank: The Earth orbits the ______.
-3.  Match the following:
-    a) Dog             i) Feline
-    b) Cat             ii) Canine
-4.  Solve: $5 \times 7 = $ _____.
-5.  List three primary colors.
-6.  True or False: Birds are mammals.
-7.  What is the main function of the heart?
-8.  If you have 12 apples and eat 3, how many are left?
-9.  Write a sentence using the word "magnificent."
-10. Name a famous scientist.
-
----
-
-### Answer Key:
-1.  Paris
-2.  Sun
-3.  a) ii, b) i
-4.  35
-5.  Red, Yellow, Blue
-6.  False
-7.  To pump blood throughout the body.
-8.  9
-9.  (Accept any grammatically correct sentence using "magnificent")
-10. (Accept any famous scientist, e.g., Albert Einstein, Marie Curie)
-"""
-            elif "Quiz:" in prompt_text:
-                topic = prompt_text.replace("Quiz:", "").strip() or "general knowledge"
-                return f"""
-**Teacher Aid Resource: Quiz**
-**Request:** *{prompt_text}*
-
----
-
-### Quiz: {topic.title()}
-
-**Instructions:** Choose the best answer for each question.
-
-1.  What is the largest ocean on Earth?
-    a) Atlantic Ocean
-    b) Indian Ocean
-    c) Arctic Ocean
-    d) Pacific Ocean
-2.  Who painted the Mona Lisa?
-    a) Vincent van Gogh
-    b) Pablo Picasso
-    c) Leonardo da Vinci
-    d) Claude Monet
-3.  Which planet is known as the "Red Planet"?
-    a) Venus
-    b) Mars
-    c) Jupiter
-    d) Saturn
-4.  What is the chemical symbol for water?
-    a) O2
-    b) CO2
-    c) H2O
-    d) NaCl
-5.  How many continents are there?
-    a) 5
-    b) 6
-    c) 7
-    d) 8
-
----
-
-### Answer Key:
-1.  d) Pacific Ocean
-2.  c) Leonardo da Vinci
-3.  b) Mars
-4.  c) H2O
-5.  c) 7
-"""
-            elif "Test:" in prompt_text:
-                topic = prompt_text.replace("Test:", "").strip() or "comprehensive review"
-                return f"""
-**Teacher Aid Resource: Test**
-**Request:** *{prompt_text}*
-
----
-
-### Test: {topic.title()} Comprehensive Exam
-
-**A) Multiple Choice (15 Questions):**
-*Instructions: Select the best answer for each question.*
-
-1.  Question 1 about {topic}?
-    a) Option A
-    b) Option B
-    c) Option C
-    d) Option D
-2.  Question 2 about {topic}?
-    a) Option A
-    b) Option B
-    c) Option C
-    d) Option D
-... (13 more multiple choice questions) ...
-15. Question 15 about {topic}?
-    a) Option A
-    b) Option B
-    c) Option C
-    d) Option D
-
-**B) Short/Long Answer (4 Questions):**
-*Instructions: Answer the following questions in complete sentences or paragraphs.*
-
-1.  Explain the primary causes and effects of [key event/concept in topic]. (Short Answer)
-2.  Compare and contrast two different perspectives on [another key concept in topic]. (Short Answer)
-3.  Describe in detail how [element A] influences [element B] within the context of {topic}. (Long Answer)
-4.  Propose a solution to a problem related to {topic} and justify your reasoning. (Long Answer)
-
----
-
-### Answer Key/Rubric:
-
-**Multiple Choice Answers:**
-1.  [Correct Answer]
-2.  [Correct Answer]
-...
-15. [Correct Answer]
-
-**Short/Long Answer Rubric:**
-
-* **Question 1 (5 points):**
-    * 5 pts: Comprehensive explanation of both causes and effects with accurate details.
-    * 3 pts: Partial explanation or some inaccuracies.
-    * 1 pt: Minimal or incorrect information.
-* **Question 2 (5 points):**
-    * 5 pts: Clear comparison and contrast of two perspectives with supporting details.
-    * 3 pts: Adequate comparison but lacking depth or minor inaccuracies.
-    * 1 pt: Unclear or incorrect comparison.
-* **Question 3 (10 points):**
-    * 10 pts: Detailed description with relevant examples, demonstrating deep understanding.
-    * 6 pts: Good description, but examples may be weak or understanding is not fully demonstrated.
-    * 3 pts: Basic description with limited or no examples.
-* **Question 4 (10 points):**
-    * 10 pts: Well-reasoned solution with strong justification.
-    * 6 pts: Plausible solution with some justification, but may lack depth.
-    * 3 pts: Basic or unclear solution with weak justification.
-"""
-            else:
-                # Default generic response for Teacher Aid if no specific tag is found
-                return f"""
-**Teacher Aid Resource Generation (MOCK - Generic)**
-
-**Request:** *{prompt_text}*
-
----
-
-### Generic Resource Output
-The system has received your request. For a more structured output, please use one of the six dedicated resource tabs. Your prompt did not contain a specific Resource Tag.
-
----
-*This is a mock response because the Gemini API is not connected or the request did not match a specific teacher resource tag.*
-"""
-            # --- END CRITICAL FIX FOR TEACHER AID MOCK RESPONSES ---
-        else:
-            return "Error: Feature not found or not yet implemented."
-
-    # 2. Real AI execution (if client is available)
     try:
         contents = []
         if feature_function_key == "9. Image-to-Calorie Estimate" and uploaded_image:
@@ -592,7 +267,11 @@ The system has received your request. For a more structured output, please use o
             uploaded_image.save(img_byte_arr, format=uploaded_image.format or 'PNG')
             img_byte_arr = img_byte_arr.getvalue()
 
-            contents.append(genai.types.Blob(mime_type="image/jpeg", data=img_byte_arr))
+            # For the real API call, the image must be converted to a Part object
+            contents.append(genai.types.Part.from_bytes(
+                data=img_byte_arr,
+                mime_type=uploaded_image.format.lower() if uploaded_image.format else "image/png"
+            ))
 
         contents.append(prompt_text)
 
@@ -608,8 +287,10 @@ The system has received your request. For a more structured output, please use o
         return response.text
 
     except APIError as e:
+        # Catch and display specific API errors
         return f"Gemini API Error: Could not complete request. Details: {e}"
     except Exception as e:
+        # Catch any other unexpected errors
         return f"An unexpected error occurred during AI generation: {e}"
 
 
@@ -818,10 +499,14 @@ def render_utility_hub_content(can_interact, universal_error_msg):
                 st.warning("Please enter a request or upload an image (for Feature 9).")
             else:
                 with st.spinner(f"Running Feature: {selected_feature}..."):
+                    
+                    # CRITICAL: The prompt for the 28-in-1 hub includes the feature name 
+                    # for the AI to correctly route the request based on the system instructions.
+                    ai_prompt = f"Feature {selected_feature}: {prompt_input}"
 
                     generated_output = run_ai_generation(
                         feature_function_key=selected_feature,
-                        prompt_text=prompt_input,
+                        prompt_text=ai_prompt,
                         uploaded_image=uploaded_image
                     )
 
@@ -898,8 +583,9 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
                     return
 
                 # CRITICAL: Prepend the Resource Tag to the prompt for AI routing
+                # The resource tag is what the SYSTEM_INSTRUCTION.txt uses to format the output.
                 full_ai_prompt = f"{resource_type}: {teacher_prompt}"
-                feature_key_proxy = "Teacher_Aid_Routing"
+                feature_key_proxy = "Teacher_Aid_Routing" # Proxy key, the AI uses the full_ai_prompt
 
                 with st.spinner(f"Generating specialized {resource_type}..."):
                     generated_output = run_ai_generation(
@@ -972,7 +658,7 @@ def render_teacher_aid_content(can_interact, universal_error_msg):
 def render_usage_dashboard():
     st.title("📊 Usage Dashboard")
     st.markdown("---")
-    st.subheader(f"Current Plan: {st.session_state.storage['tier']} ({TIER_PRICES.get(st.session_state.storage['tier'])})")
+    st.subheader(f"Current Plan: {st.session_state.storage['tier']} ({TIER_PRICES.get(st.session_state.storage['tier'], 'N/A')})")
 
     # --- RESTORED USAGE GRAPHS (Progress Bars) ---
     st.markdown("### Storage Usage")
