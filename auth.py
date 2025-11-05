@@ -6,7 +6,8 @@ import hashlib
 from typing import Optional, Dict
 
 USERS_FILE = "users.json"
-UNLIMITED_USERS_FILE = "unlimited_users.csv"
+# Renamed file to handle all plan overrides
+USER_OVERRIDES_FILE = "user_overrides.csv" 
 
 # --- Utility Functions ---
 
@@ -29,16 +30,29 @@ def save_users(users: Dict):
     with open(USERS_FILE, 'w') as f:
         json.dump(users, f, indent=4)
 
-def load_unlimited_whitelist() -> set:
-    """Loads whitelisted emails from a CSV file."""
-    if os.path.exists(UNLIMITED_USERS_FILE):
+# --- FIX: Load all plan overrides from CSV ---
+def load_plan_overrides() -> Dict:
+    """Loads whitelisted emails and their specified tiers from a CSV file."""
+    if os.path.exists(USER_OVERRIDES_FILE):
         try:
-            # Assuming CSV has a column named 'email'
-            df = pd.read_csv(UNLIMITED_USERS_FILE)
-            return set(df['email'].str.lower().tolist())
+            # Assuming CSV has columns: 'email', 'plan_code'
+            df = pd.read_csv(USER_OVERRIDES_FILE)
+            df['email'] = df['email'].str.lower()
+            df['plan_code'] = df['plan_code'].str.lower().str.strip()
+            # Map codes to full tier names
+            tier_map = {
+                'un': 'Unlimited', 'tpro': 'Teacher Pro', '28pro': '28/1 Pro', 
+                'univ': 'Universal Pro'
+            }
+            # Create a dictionary mapping email -> full_tier_name
+            overrides = {}
+            for index, row in df.iterrows():
+                if row['plan_code'] in tier_map:
+                    overrides[row['email']] = tier_map[row['plan_code']]
+            return overrides
         except Exception:
-            return set()
-    return set()
+            return {}
+    return {}
 
 # --- Authentication Core Logic ---
 
@@ -51,31 +65,20 @@ def authenticate_user(email: str, password: str) -> Optional[str]:
         return email
     return None
 
-def register_user(email: str, password: str, plan_code: str) -> str:
+# --- FIX: Simplified registration; defaults to Free Tier unless overridden ---
+def register_user(email: str, password: str) -> str:
     """Registers a new user and returns a status message."""
     users = load_users()
     
     if email in users:
         return "Error: This email is already registered."
     
-    # Check whitelist for automatic Unlimited tier
-    whitelist = load_unlimited_whitelist()
+    # Check for plan override
+    overrides = load_plan_overrides()
     
-    # Map input code to full tier name
-    tier_map = {
-        'un': 'Unlimited', 'tpro': 'Teacher Pro', '28pro': '28/1 Pro', 
-        'univ': 'Universal Pro', 'free': 'Free Tier'
-    }
+    # Default plan is Free Tier
+    initial_tier = overrides.get(email.lower(), 'Free Tier')
     
-    initial_tier = 'Free Tier'
-    
-    if email.lower() in whitelist:
-        initial_tier = 'Unlimited'
-    elif plan_code in tier_map:
-        initial_tier = tier_map[plan_code]
-    else:
-        return "Error: Invalid plan code. Must be un, tpro, 28pro, univ, or free."
-
     # Create the user profile
     users[email] = {
         'password': hash_password(password),
@@ -114,15 +117,15 @@ def render_login_page():
 
     with col_signup:
         st.subheader("New User Sign Up")
+        st.markdown("*Note: All sign-ups default to **Free Tier** unless whitelisted by an administrator.*")
         signup_email = st.text_input("Email (Signup)", key="signup_email")
         signup_password = st.text_input("Password (Signup)", type="password", key="signup_password")
-        plan_code = st.text_input("Plan Code (un, tpro, 28pro, univ, free)", key="plan_code").lower().strip()
         
         if st.button("Register", key="register_btn", use_container_width=True):
-            if not signup_email or not signup_password or not plan_code:
-                st.error("All fields are required.")
+            if not signup_email or not signup_password:
+                st.error("Email and password are required.")
             else:
-                status = register_user(signup_email, signup_password, plan_code)
+                status = register_user(signup_email, signup_password)
                 if status.startswith("Success"):
                     st.success(status)
                     # Attempt to log in immediately after successful registration
