@@ -36,27 +36,22 @@ st.set_page_config(
 client = None # Default to None
 
 try:
-    # 1. Safely retrieve the API key first
-    api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
-
-    # FIX: Check for a common nested structure in st.secrets, just in case
-    if not api_key and "api_keys" in st.secrets and "GEMINI_API_KEY" in st.secrets["api_keys"]:
-         api_key = st.secrets["api_keys"]["GEMINI_API_KEY"]
-    
-    # Check for another common Streamlit secret name for Google
-    if not api_key and "google_api_key" in st.secrets:
-         api_key = st.secrets["google_api_key"]
-
+    # 1. Safely retrieve the API key first, explicitly checking the secrets dictionary
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
+    else:
+        # Fallback to os.getenv if not in secrets (for local testing)
+        api_key = os.getenv("GEMINI_API_KEY")
 
     if api_key:
         # 2. Only proceed to configure and initialize if the key is found
         genai.configure(api_key=api_key)
         client = genai.GenerativeModel(MODEL)
-        # The client is initialized, so we don't need to show the mock warning.
+        st.success("Gemini Client successfully initialized!") # Add this line temporarily for confirmation
     else:
         # Key not found, client remains None. The warning will be shown in run_ai_generation.
         pass
-
+        
 except Exception as e:
     client = None
     # If the app fails here, it's often due to a structural issue with the key
