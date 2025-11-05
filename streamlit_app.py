@@ -73,12 +73,13 @@ try:
         api_key = os.getenv("GEMINI_API_KEY")
         api_key_source = "Environment Variable"
 
-    if api_key and api_key.strip():
+if api_key and api_key.strip():
         # Use the standard, modern configuration method
         genai.configure(api_key=api_key) 
         
-        # Instantiate GenerativeModel (This is the class that was missing before)
-        client = genai.GenerativeModel(MODEL) 
+        # Instantiate GenerativeModel, passing the SYSTEM_INSTRUCTION here.
+        # This is the format required by SDK versions that reject it later.
+        client = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_INSTRUCTION) 
         st.sidebar.success(f"✅ Gemini Client Initialized (Key from {api_key_source}).")
     else:
         st.sidebar.warning("⚠️ Gemini API Key not found or is empty. Running in MOCK MODE.")
