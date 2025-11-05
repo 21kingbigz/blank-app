@@ -23,7 +23,6 @@ CATEGORIES_FEATURES = {
     "Productivity": {"icon": "📝", "features": {"1. Smart Email Drafts": "Draft an email to a client regarding the Q3 budget review.", "2. Meeting Summarizer": "Summarize notes from a 30-minute standup meeting.", "3. Project Planner": "Create a 5-step plan for launching a new website."}},
     "Finance": {"icon": "💰", "features": {"4. Budget Tracker": "Analyze spending habits for the last month based on these transactions.", "5. Investment Idea Generator": "Suggest three low-risk investment ideas for a 30-year-old.", "6. Tax Explanation": "Explain the capital gains tax implications of selling stocks held for two years."}},
     "Health & Fitness": {"icon": "🏋️", "features": {"7. Workout Generator": "Generate a 45-minute full-body workout using only dumbbells.", "8. Meal Plan Creator": "Create a 7-day high-protein, low-carb meal plan.", "9. Image-to-Calorie Estimate": "Estimate calories and macros for the uploaded meal image."}},
-    # Added more categories to demonstrate the "8 boxes" concept, even if they have mock features
     "Education": {"icon": "📚", "features": {"10. Study Guide Creator": "Create a study guide for linear algebra.", "11. Essay Outliner": "Outline an essay on climate change."}},
     "Coding": {"icon": "💻", "features": {"12. Code Debugger": "Find bugs in this Python script.", "13. Code Generator": "Write a simple JavaScript function."}},
     "Marketing": {"icon": "📈", "features": {"14. Ad Copy Generator": "Generate ad copy for a new coffee brand.", "15. Social Media Post": "Draft a tweet for a product launch."}},
@@ -44,23 +43,23 @@ TIER_PRICES = {
 }
 
 # Data consumption (simulated)
-DAILY_SAVED_DATA_COST_MB = 1.0  # Saved data increases by 1MB per day for each day passed
-NEW_SAVE_COST_BASE_MB = 10.0    # Base cost for a new permanent save (10MB)
+DAILY_SAVED_DATA_COST_MB = 1.0  
+NEW_SAVE_COST_BASE_MB = 10.0    
 
 # Initial structure for databases
 TEACHER_DB_INITIAL = {"units": [], "lessons": [], "vocab": [], "worksheets": [], "quizzes": [], "tests": []}
-UTILITY_DB_INITIAL = {"saved_items": []} # [{"name": "item_name", "content": "ai_output", "size_mb": 10, "category": "Productivity"}]
+UTILITY_DB_INITIAL = {"saved_items": []} 
 STORAGE_INITIAL = {
     "tier": "Free Tier", 
     "total_used_mb": 50.0,
     "utility_used_mb": 15.0, 
     "teacher_used_mb": 20.0,
-    "general_used_mb": 15.0, # This simulates other general app usage not tied to specific saves
+    "general_used_mb": 15.0, 
     "last_load_timestamp": pd.Timestamp.now().isoformat()
 }
 
 # --- LOGO & ICON CONFIGURATION ---
-LOGO_FILENAME = "image (13).png" # Ensure this file exists or use a default
+LOGO_FILENAME = "image (13).png" 
 ICON_SETTING = LOGO_FILENAME if os.path.exists(LOGO_FILENAME) else "💡"
 
 # Set browser tab title, favicon, and layout.
@@ -68,33 +67,65 @@ st.set_page_config(
     page_title=WEBSITE_TITLE,
     page_icon=ICON_SETTING,
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded" # Keep sidebar enabled for Teacher Aid menu
 )
 
-# --- CRITICAL CSS FOR THEME (White background, dark blue accents) ---
+# --- CRITICAL CSS FOR THEME AND NAVIGATION FIX ---
 st.markdown(
     f"""
     <style>
     /* Global font and background */
     html, body {{
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-        background-color: #FFFFFF; /* Pure white background */
-        color: #333333; /* Dark gray for text */
+        background-color: #FFFFFF;
+        color: #333333;
     }}
 
     /* Streamlit's main app container */
     .stApp {{
         background-color: #FFFFFF;
+    }}
+
+    /* === 1. NAVIGATION COLUMN FIX: Create a fixed-width left column for the main menu === */
+    /* Target the main block that holds the application content */
+    div[data-testid="stVerticalBlock"] {{
+        padding: 0;
+    }}
+    
+    /* Ensure the main content block pushes to the right of the navigation */
+    .app-main-content-container {{
         padding-top: 20px;
         padding-left: 30px;
         padding-right: 30px;
     }}
+    
+    .st-main-nav {{
+        width: 250px; /* Fixed width for navigation */
+        background-color: #F0F2F6; /* Sidebar background color */
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        padding: 20px;
+        border-right: 1px solid #E0E0E0;
+        z-index: 100;
+    }}
+    
+    .st-content-wrapper {{
+        margin-left: 250px; /* Offset the main content to the right of the navigation */
+        width: calc(100% - 250px);
+    }}
+    
+    /* Adjust Streamlit's container to honor the new left margin */
+    .main > div {{
+        margin-left: 250px !important;
+    }}
 
-    /* Sidebar Styling (mimicking the image's clean, light sidebar) */
+    /* Sidebar Styling (used only for Teacher Aid internal navigation) */
     .stSidebar {{
-        background-color: #F0F2F6; /* Light gray background for sidebar */
+        background-color: #F0F2F6; 
         padding-top: 20px;
-        border-right: 1px solid #E0E0E0; /* Subtle border */
+        border-right: 1px solid #E0E0E0; 
     }}
 
     /* Card-like containers for the Usage Dashboard and general use */
@@ -106,10 +137,33 @@ st.markdown(
         padding: 20px;
         margin-bottom: 20px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        height: 100%; /* Ensure uniform height within columns */
+        height: 100%; 
     }}
 
-    /* Buttons (Primary/Darker Blue) */
+    /* Navigation Button Styling */
+    .nav-button {{
+        width: 100%;
+        text-align: left;
+        padding: 12px 15px;
+        margin-bottom: 5px;
+        border-radius: 8px;
+        border: none;
+        background-color: transparent;
+        color: #333333;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s, color 0.2s;
+        display: block;
+    }}
+    .nav-button:hover {{
+        background-color: #E0E0E0;
+    }}
+    .nav-button.active {{
+        background-color: #2D6BBE !important;
+        color: white !important;
+    }}
+
+    /* Standard App Buttons (Primary/Darker Blue) */
     .stButton>button {{
         background-color: #2D6BBE;
         color: white;
@@ -129,7 +183,7 @@ st.markdown(
         color: #E0E0E0 !important;
     }}
 
-    /* Metrics (for storage display) */
+    /* Metrics and other styles remain the same */
     [data-testid="stMetric"] {{
         background-color: #F8F8F8;
         border-radius: 8px;
@@ -140,7 +194,6 @@ st.markdown(
         color: #2D6BBE;
     }}
     
-    /* Progress Bar (for storage) - make sure it's visible */
     .stProgress > div > div > div > div {{
         background-color: #2D6BBE;
     }}
@@ -149,7 +202,6 @@ st.markdown(
         border-radius: 5px;
     }}
 
-    /* Custom tier label (top left of content area) */
     .tier-label {{
         color: #888888;
         background-color: transparent;
@@ -160,12 +212,7 @@ st.markdown(
         display: block;
     }}
     /* Hide Streamlit footer and menu button */
-    #MainMenu, footer {{visibility: hidden;}}
-
-    /* Custom styles for the 28/1 Utilities category buttons */
-    .st-emotion-cache-1r6dmc3 {{ /* This targets the outer div of st.button */
-        margin-bottom: 1rem; /* Adjust as needed for spacing between buttons */
-    }}
+    #MainMenu, footer, header {{visibility: hidden;}}
     </style>
     """,
     unsafe_allow_html=True
@@ -203,36 +250,33 @@ def load_storage_tracker():
     days_passed = math.floor(time_delta.total_seconds() / (24 * 3600))
     
     if days_passed >= 1 and data['tier'] != 'Unlimited':
-        # Apply daily usage increase to *all saved items*
-        # This will need to iterate through actual saved items for true accuracy
-        # For simulation, we'll apply it to the general usage counters for simplicity
+        # Recalculate totals after applying daily cost to all saved items
         
-        # Calculate total saved items from both databases
+        # 1. Update utility items
         total_utility_items = len(st.session_state.get('utility_db', UTILITY_DB_INITIAL)['saved_items'])
-        total_teacher_items = sum(len(v) for v in st.session_state.get('teacher_db', TEACHER_DB_INITIAL).values())
-        total_saved_items = total_utility_items + total_teacher_items
-
-        if total_saved_items > 0:
-            # Distribute the daily cost evenly or based on current distribution
-            daily_cost_per_item = (days_passed * DAILY_SAVED_DATA_COST_MB) / total_saved_items if total_saved_items > 0 else 0
-            
-            # Apply to utility items
+        if total_utility_items > 0:
+            daily_cost_per_utility_item = (days_passed * DAILY_SAVED_DATA_COST_MB) / total_utility_items
             for item in st.session_state.get('utility_db', UTILITY_DB_INITIAL)['saved_items']:
-                item['size_mb'] += daily_cost_per_item
-            
-            # Apply to teacher items
-            for db_key in st.session_state.get('teacher_db', UTILITY_DB_INITIAL).keys():
-                for item in st.session_state.get('teacher_db', UTILITY_DB_INITIAL)[db_key]:
-                    item['size_mb'] += daily_cost_per_item
-            
-            # Recalculate totals
-            data['utility_used_mb'] = sum(item['size_mb'] for item in st.session_state.get('utility_db', UTILITY_DB_INITIAL)['saved_items'])
-            data['teacher_used_mb'] = sum(item['size_mb'] for db_key in st.session_state.get('teacher_db', UTILITY_DB_INITIAL).keys() for item in st.session_state.get('teacher_db', UTILITY_DB_INITIAL)[db_key])
-            data['total_used_mb'] = data['utility_used_mb'] + data['teacher_used_mb'] + data['general_used_mb']
-            
-            # Save the updated item sizes back to the files
-            save_db_file(st.session_state.get('utility_db', UTILITY_DB_INITIAL), UTILITY_DATA_FILE)
-            save_db_file(st.session_state.get('teacher_db', TEACHER_DB_INITIAL), TEACHER_DATA_FILE)
+                item['size_mb'] += daily_cost_per_utility_item
+        
+        # 2. Update teacher items
+        all_teacher_items = []
+        for db_key in st.session_state.get('teacher_db', TEACHER_DB_INITIAL).keys():
+            all_teacher_items.extend(st.session_state.get('teacher_db', TEACHER_DB_INITIAL)[db_key])
+        
+        total_teacher_items = len(all_teacher_items)
+        if total_teacher_items > 0:
+            daily_cost_per_teacher_item = (days_passed * DAILY_SAVED_DATA_COST_MB) / total_teacher_items
+            for item in all_teacher_items:
+                item['size_mb'] += daily_cost_per_teacher_item
+
+        # 3. Recalculate totals and save the updated item sizes back to the files
+        data['utility_used_mb'] = sum(item['size_mb'] for item in st.session_state.get('utility_db', UTILITY_DB_INITIAL)['saved_items'])
+        data['teacher_used_mb'] = sum(item['size_mb'] for db_key in st.session_state.get('teacher_db', UTILITY_DB_INITIAL).keys() for item in st.session_state.get('teacher_db', UTILITY_DB_INITIAL)[db_key])
+        data['total_used_mb'] = data['utility_used_mb'] + data['teacher_used_mb'] + data['general_used_mb']
+        
+        save_db_file(st.session_state.get('utility_db', UTILITY_DB_INITIAL), UTILITY_DATA_FILE)
+        save_db_file(st.session_state.get('teacher_db', TEACHER_DB_INITIAL), TEACHER_DATA_FILE)
         
     data['last_load_timestamp'] = pd.Timestamp.now().isoformat()
     return data
@@ -254,13 +298,16 @@ def check_storage_limit(action_area: str):
         return True, None, float('inf')
         
     # --- Universal Limit Check (Most restrictive for Free/Universal) ---
-    universal_limit = TIER_LIMITS[current_tier]
+    universal_limit = TIER_LIMITS['Universal Pro'] if current_tier == 'Universal Pro' else TIER_LIMITS['Free Tier']
     
     if action_area == 'universal':
         used_mb = storage['total_used_mb']
-        if used_mb >= universal_limit:
-            return False, f"Total storage limit reached ({used_mb:.2f}MB / {universal_limit}MB). Please upgrade or clean up data.", universal_limit
-        return True, None, universal_limit
+        # If Universal Pro, use the higher limit, otherwise use Free Tier limit
+        effective_limit = TIER_LIMITS[current_tier] if current_tier == 'Universal Pro' else TIER_LIMITS['Free Tier']
+        
+        if used_mb >= effective_limit:
+            return False, f"Total storage limit reached ({used_mb:.2f}MB / {effective_limit}MB). Please upgrade or clean up data.", effective_limit
+        return True, None, effective_limit
 
     # --- Tiered/Dedicated Limit Check ---
     used_mb = 0.0
@@ -303,6 +350,7 @@ if 'teacher_db' not in st.session_state:
 if 'storage' not in st.session_state:
     st.session_state['storage'] = load_storage_tracker()
 
+# Default to Usage Dashboard view
 if 'app_mode' not in st.session_state:
     st.session_state['app_mode'] = "Usage Dashboard" 
 
@@ -312,9 +360,8 @@ if 'utility_view' not in st.session_state:
 # AI client setup (Assume system_instruction.txt exists or use default)
 try:
     client = genai.Client()
-except Exception as e:
-    # st.error(f"❌ ERROR: Gemini Client initialization failed. Check API Key: {e}")
-    client = None # Set to None if initialization fails
+except Exception:
+    client = None 
 
 try:
     with open("system_instruction.txt", "r") as f:
@@ -323,7 +370,6 @@ except FileNotFoundError:
     SYSTEM_INSTRUCTION = "You are a helpful and detailed assistant."
 
 
-# --- CORE AI GENERATION FUNCTION (Mocked/Live Integration) ---
 def run_ai_generation(prompt_text: str, uploaded_file: BytesIO = None, max_tokens=1500, temp=0.5):
     """Mocks AI generation if client fails, otherwise runs Gemini."""
     if not client:
@@ -346,8 +392,7 @@ def run_ai_generation(prompt_text: str, uploaded_file: BytesIO = None, max_token
         try:
             img = Image.open(uploaded_file)
             contents.insert(0, img)
-        except Exception as e:
-            st.error(f"Error processing image: {e}")
+        except Exception:
             return "Error: Could not process the uploaded image."
             
     try:
@@ -358,19 +403,69 @@ def run_ai_generation(prompt_text: str, uploaded_file: BytesIO = None, max_token
         )
         return response.text
     except APIError as e:
-        st.error(f"Gemini API Error: {e}")
-        return "Error: The AI model failed to generate a response."
+        return f"Gemini API Error: {e}"
     except Exception as e:
-        st.error(f"An unexpected error occurred: {e}")
-        return "Error: An unexpected error occurred during generation."
+        return f"Error: An unexpected error occurred during generation: {e}"
 
 
 def calculate_mock_save_size(content: str) -> float:
     """Calculates a save size based on content length, with a minimum base cost."""
-    # Size in MB: Base cost + (Text length / 5000 chars per MB)
     size = NEW_SAVE_COST_BASE_MB + (len(content) / 5000.0)
     return round(size, 2)
 
+
+# --- NAVIGATION RENDERER (New Left Column Menu) ---
+
+def render_main_navigation():
+    """Renders the fixed left column navigation for the main application modes."""
+    
+    # Use HTML/CSS to create the fixed-position navigation column
+    st.markdown('<div class="st-main-nav">', unsafe_allow_html=True)
+    
+    # Logo and Title
+    col_logo, col_title = st.columns([0.25, 0.75])
+    with col_logo:
+        st.image(ICON_SETTING, width=40)
+    with col_title:
+        st.markdown(f"## {WEBSITE_TITLE}")
+    
+    st.markdown("---")
+    st.markdown(f"**Plan:** {st.session_state.storage['tier']}")
+    st.markdown("---")
+
+    menu_options = [
+        {"label": "📊 Usage Dashboard", "mode": "Usage Dashboard"},
+        {"label": "🖥️ Dashboard", "mode": "Dashboard"}, # This is the main 28/1 and Teacher Aid selector
+        {"label": "💳 Plan Manager", "mode": "Plan Manager"},
+        {"label": "🧹 Data Clean Up", "mode": "Data Clean Up"}
+    ]
+    
+    for item in menu_options:
+        mode = item["mode"]
+        active_class = " active" if st.session_state['app_mode'] == mode else ""
+        
+        # Streamlit button to handle click, styled with CSS
+        if st.markdown(
+            f'<button class="nav-button{active_class}" onclick="document.getElementById(\'nav_button_{mode.replace(" ", "_")}\').click();">{item["label"]}</button>',
+            unsafe_allow_html=True
+        ):
+            pass # Keep this block empty for the HTML markdown
+
+        # Hidden Streamlit button that triggers the action via JavaScript hack
+        if st.button(item["label"], key=f"nav_button_{mode.replace(' ', '_')}", help="Hidden Button", disabled=True): 
+             # The actual logic is below the button definitions, this button is just a JS target
+             pass 
+
+        # Check if the hidden button was clicked (via JS in the markdown button)
+        # This is a hack, but necessary for complex fixed navigation outside the sidebar
+        if st.session_state.get(f"nav_button_{mode.replace(' ', '_')}"):
+            st.session_state['app_mode'] = mode
+            st.session_state.pop('utility_view', None)
+            st.session_state.pop('utility_active_category', None)
+            st.rerun()
+
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # --- APPLICATION PAGE RENDERERS ---
 
@@ -385,14 +480,14 @@ def render_usage_dashboard():
     current_tier = storage['tier']
     
     # Check the universal limit for the current tier
-    universal_limit = TIER_LIMITS[current_tier]
+    can_proceed, _, universal_limit = check_storage_limit('universal')
     
     # --- Prepare Data for Charts ---
     total_used = storage['total_used_mb']
     
     # 1. Doughnut Chart Data (Storage Used vs. Left)
     if universal_limit == float('inf'):
-        used_percent = 0 # Cannot calculate percentage for unlimited, show 0% used
+        used_percent = 0 
         remaining_mb_display = "Unlimited"
         used_mb_display = f"{total_used:.2f}"
     else:
@@ -490,8 +585,6 @@ def render_usage_dashboard():
                             save_db_file(st.session_state.utility_db, UTILITY_DATA_FILE)
                             st.session_state.storage['utility_used_mb'] = max(0, st.session_state.storage['utility_used_mb'] - deleted_size)
                         else: # Teacher DB
-                            # Need to find the correct item based on its original index in the specific category list
-                            # The 'item['index']' here refers to its index in the *original* list for its category
                             if item['index'] < len(st.session_state.teacher_db[item['db_key']]):
                                 st.session_state.teacher_db[item['db_key']].pop(item['index'])
                                 save_db_file(st.session_state.teacher_db, TEACHER_DATA_FILE)
@@ -676,7 +769,7 @@ def render_utility_hub_navigated(can_interact, universal_error_msg):
                 value="",
                 placeholder=example_prompt,
                 key="hub_text_input",
-                disabled=is_fully_blocked_for_generation_save # Block typing if over limit
+                disabled=is_fully_blocked_for_generation_save 
             )
 
             if st.button(f"EXECUTE: {selected_feature}", key="hub_execute_btn", disabled=is_fully_blocked_for_generation_save):
@@ -735,12 +828,14 @@ def render_teacher_aid_navigated(can_interact, universal_error_msg):
     
     st.markdown("---")
     
-    # Internal sidebar for Teacher Aid (as requested)
-    teacher_mode = st.sidebar.radio(
-        "Teacher Aid Menu:",
-        options=["Resource Dashboard", "Saved Data", "Data Management"],
-        key="teacher_nav_radio"
-    )
+    # Internal sidebar for Teacher Aid (now correctly in the Streamlit sidebar)
+    with st.sidebar:
+        st.header("Teacher Aid Menu")
+        teacher_mode = st.radio(
+            "Select View:",
+            options=["Resource Dashboard", "Saved Data", "Data Management"],
+            key="teacher_nav_radio"
+        )
 
     # Determine if *any* interaction within this section (generation/saving) is blocked
     is_fully_blocked_for_generation_save = not can_interact or not can_save_dedicated
@@ -774,7 +869,7 @@ def render_teacher_aid_navigated(can_interact, universal_error_msg):
                     placeholder=ai_instruction_placeholder,
                     key=f"{db_key}_prompt",
                     height=150,
-                    disabled=is_blocked_for_gen_save # Block typing if over limit
+                    disabled=is_blocked_for_gen_save 
                 )
                 if st.button(f"Generate {tab_name}", key=f"generate_{db_key}_btn", disabled=is_blocked_for_gen_save):
                     if prompt:
@@ -870,7 +965,7 @@ def render_teacher_aid_navigated(can_interact, universal_error_msg):
                         "name": resource.get('name', f"{db_key.title()} #{i+1}"),
                         "size_mb": resource.get('size_mb', 0),
                         "category": db_key,
-                        "index": i # Store original index for direct deletion
+                        "index": i 
                     })
             
             teacher_data_list_sorted = sorted(teacher_data_list, key=lambda x: x['size_mb'], reverse=True)
@@ -886,7 +981,6 @@ def render_teacher_aid_navigated(can_interact, universal_error_msg):
                     col_size.write(f"{item['size_mb']:.1f} MB")
 
                     if col_delete.button("Delete", key=f"clean_teacher_{item['category']}_{item['index']}_{i}"):
-                        # Use the stored original index to pop from the correct list
                         if item['index'] < len(st.session_state['teacher_db'][item['category']]):
                             deleted_size = item['size_mb']
                             st.session_state.storage['teacher_used_mb'] = max(0, st.session_state.storage['teacher_used_mb'] - deleted_size)
@@ -956,11 +1050,11 @@ def render_data_cleanup():
     st.markdown("---")
     
     # Simple check for universal access
-    can_proceed, error_msg, _ = check_storage_limit('universal')
+    can_proceed, error_msg, limit = check_storage_limit('universal')
     
     st.subheader("Storage Utilization")
     total_used = st.session_state.storage['total_used_mb']
-    limit = TIER_LIMITS[st.session_state.storage['tier']]
+    
     used_percent = min(100, (total_used / limit) * 100) if limit != float('inf') and limit > 0 else 0
     st.metric(label="Total Storage Used", value=f"{total_used:.2f} MB", delta=f"{limit if limit != float('inf') else 'Unlimited'} MB Total")
     if limit != float('inf'):
@@ -985,7 +1079,7 @@ def render_data_cleanup():
     
     if st.button("Simulate Bulk Delete of Suggested Items", key="review_cleanup_btn", use_container_width=True, disabled=total_mb_from_saves < NEW_SAVE_COST_BASE_MB):
         if total_mb_from_saves > NEW_SAVE_COST_BASE_MB:
-            mock_deleted_size = total_mb_from_saves * 0.25 # Delete 25% of current saved data
+            mock_deleted_size = total_mb_from_saves * 0.25 
             
             # Reduce actual saved items (simplistic, just removes from end)
             num_to_delete_util = int(len(st.session_state.utility_db['saved_items']) * 0.25)
@@ -1013,39 +1107,12 @@ def render_data_cleanup():
 
 # --- MAIN APP LOGIC AND NAVIGATION CONTROL ---
 
-# --- SIDEBAR NAVIGATION (Main Menu) ---
-with st.sidebar:
-    col_logo, col_title = st.columns([0.25, 0.75])
-    with col_logo:
-        st.image(ICON_SETTING, width=40)
-    with col_title:
-        st.markdown(f"## {WEBSITE_TITLE}")
-    
-    st.markdown("---")
-    st.markdown(f"Current Plan: **{st.session_state.storage['tier']}**")
-    st.markdown("---")
+# 1. RENDER MAIN FIXED NAVIGATION
+render_main_navigation()
 
-    menu_options = ["Usage Dashboard", "Dashboard", "Plan Manager", "Data Clean Up"]
-    
-    try:
-        current_index = menu_options.index(st.session_state.get('app_mode', 'Usage Dashboard'))
-    except ValueError:
-        current_index = 0
-
-    mode_selection = st.radio(
-        "Application Menu:",
-        options=menu_options,
-        index=current_index,
-        key="main_mode_select"
-    )
-    
-    if mode_selection != st.session_state.get('app_mode', 'Usage Dashboard'):
-        st.session_state['app_mode'] = mode_selection
-        # Reset internal views when switching main app mode
-        st.session_state.pop('utility_view', None)
-        st.session_state.pop('utility_active_category', None)
-        st.rerun()
-
+# 2. RENDER MAIN CONTENT WRAPPER
+# This div ensures the content starts 250px to the right, avoiding the fixed nav.
+st.markdown('<div class="app-main-content-container">', unsafe_allow_html=True) 
 
 # --- GLOBAL TIER RESTRICTION CHECK (Runs on every page load) ---
 universal_limit_reached, universal_error_msg, _ = check_storage_limit('universal')
@@ -1069,7 +1136,6 @@ elif st.session_state['app_mode'] == "Data Clean Up":
     render_data_cleanup()
     
 elif st.session_state['app_mode'] == "28/1 Utilities":
-    # If universal limit is reached, access is blocked immediately for all interaction
     if not can_interact_universally:
         st.title("💡 28/1 Utilities")
         st.error(f"🛑 **ACCESS BLOCKED:** {universal_error_msg}. Cannot interact with the application while over your universal limit.")
@@ -1080,7 +1146,6 @@ elif st.session_state['app_mode'] == "28/1 Utilities":
         render_utility_hub_navigated(can_interact_universally, universal_error_msg)
     
 elif st.session_state['app_mode'] == "Teacher Aid":
-    # If universal limit is reached, access is blocked immediately for all interaction
     if not can_interact_universally:
         st.title("🎓 Teacher Aid")
         st.error(f"🛑 **ACCESS BLOCKED:** {universal_error_msg}. Cannot interact with the application while over your universal limit.")
@@ -1089,3 +1154,6 @@ elif st.session_state['app_mode'] == "Teacher Aid":
             st.rerun()
     else:
         render_teacher_aid_navigated(can_interact_universally, universal_error_msg)
+
+# 3. CLOSE MAIN CONTENT WRAPPER
+st.markdown('</div>', unsafe_allow_html=True)
