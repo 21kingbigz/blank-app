@@ -1,141 +1,189 @@
+import streamlit as st
 import json
-import os
-from typing import Dict, Tuple, Optional
+import os  # <-- MUST BE ADDED
+import pandas as pd
 
-# --- CONSTANTS ---
-STORAGE_TRACKER_FILE = "storage_tracker.json"
-BASE_DIR = "user_data"
-NEW_SAVE_COST_BASE_MB = 0.5 
-
+# --- Configuration for storage limits ---
+# ... (rest of TIER_LIMITS) ...
 TIER_LIMITS = {
-    'Free Tier': 500.0,      # 0.5 GB universal for general usage and default for specific areas
-    '28/1 Pro': 3000.0,      # 3 GB dedicated to utility; universal limit for app navigation is Free Tier's 500MB
-    'Teacher Pro': 3000.0,   # 3 GB dedicated to teacher; universal limit for app navigation is Free Tier's 500MB
-    'Universal Pro': 5000.0, # 5 GB total for all tools combined
-    'Unlimited': 100000000.0 # Effectively unlimited
-}
-
-UTILITY_DB_INITIAL = {"saved_items": []}
-TEACHER_DB_INITIAL = {
-    "lessons": [],
-    "units": [],
-    "worksheets": [],
-    "quizzes": [],
-    "vocab": [],
-    "tests": []
-}
-
-def get_file_path(base_name: str, user_email: str) -> str:
-    """Returns the full path for a user-specific file."""
-    if not os.path.exists(BASE_DIR):
-        os.makedirs(BASE_DIR)
-    safe_email = user_email.replace('@', '_at_').replace('.', '_dot_')
-    return os.path.join(BASE_DIR, f"{base_name}{safe_email}.json")
-
-
-def load_db_file(file_path: str, initial_data: Dict) -> Dict:
-    """Loads a user's data file or returns initial data if not found."""
-    if os.path.exists(file_path):
-        with open(file_path, "r") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return initial_data
-    return initial_data
-
-def save_db_file(data: Dict, file_path: str):
-    """Saves a user's data file."""
-    with open(file_path, "w") as f:
-        json.dump(data, f, indent=4)
-
-
-def load_storage_tracker(user_email: str) -> Dict:
-    """Loads the user's storage tracker or creates a default one.
-    Ensures all keys are present and initialized to 0.0 for new or incomplete trackers.
-    """
-    file_path = get_file_path(STORAGE_TRACKER_FILE.replace(".json", "_"), user_email)
-    
-    default_tracker = {
-        'tier': 'Free Tier', # Default tier for new users
-        'total_used_mb': 0.0,
-        'utility_used_mb': 0.0,
-        'teacher_used_mb': 0.0,
-        'general_used_mb': 0.0 # Added general_used_mb for 28-in-1 hub tracking
+    "Free Tier": {
+        "max_utility_saves": 5, "utility_storage_limit_bytes": 10 * 1024,
+        "max_teacher_saves": 2, "teacher_storage_limit_bytes": 5 * 1024,
+        "universal_storage_limit_bytes": 15 * 1024
+    },
+    # ... (other tiers) ...
+    "28/1 Pro": {
+        "max_utility_saves": 500, "utility_storage_limit_bytes": 500 * 1024,
+        "max_teacher_saves": 0, "teacher_storage_limit_bytes": 0, 
+        "universal_storage_limit_bytes": 500 * 1024
+    },
+    "Teacher Pro": {
+        "max_utility_saves": 0, "utility_storage_limit_bytes": 0,
+        "max_teacher_saves": 500, "teacher_storage_limit_bytes": 500 * 1024,
+        "universal_storage_limit_bytes": 500 * 1024
+    },
+    "Universal Pro": {
+        "max_utility_saves": 2000, "utility_storage_limit_bytes": 2000 * 1024,
+        "max_teacher_saves": 2000, "teacher_storage_limit_bytes": 2000 * 1024,
+        "universal_storage_limit_bytes": 4000 * 1024
+    },
+    "Unlimited": {
+        "max_utility_saves": float('inf'), "utility_storage_limit_bytes": float('inf'),
+        "max_teacher_saves": float('inf'), "teacher_storage_limit_bytes": float('inf'),
+        "universal_storage_limit_bytes": float('inf')
     }
+}
+
+# Initial empty database structures
+UTILITY_DB_INITIAL = {"history": []}
+TEACHER_DB_INITIAL = {"history": []}
+
+# --- File Path Management (FIXED) ---
+def get_file_path(prefix: str, user_email: str) -> str:
+    """
+    Generates a unique file path for a user's data file.
+    FIX: Uses the /tmp directory for write access in Streamlit Cloud.
+    """
+    safe_email = user_email.replace('@', '_at_').replace('.', '_dot_')
+    file_name = f"{prefix}{safe_email}.json"
     
-    loaded_data = {}
-    if os.path.exists(file_path):
+    # CRITICAL FIX: Directs saving to the writable /tmp directory
+    file_path = os.path.join("/tmp", file_name) 
+    
+    return file_path
+
+# --- Database Loading and Saving ---
+def load_db_file(file_path: str, initial_data: dict) -> dict:
+    """Loads a user's database file, or initializes it if not found."""
+    try:
         with open(file_path, "r") as f:
-            try:
-                loaded_data = json.load(f)
-            except json.JSONDecodeError:
-                pass # If file is corrupted, it acts as if it's a new file, using default_tracker
-    
-    # Merge loaded data with default to ensure all keys exist and default values are set for new keys.
-    tracker = {**default_tracker, **loaded_data} 
-    
-    return tracker
+            data = json.load(f)
+            # Ensure the loaded data has the 'history' key and it's a list
+            if 'history' not in data or not isinstance(data['history'], list):
+                data['history'] = initial_data.get('history', [])
+            return data
+    except (FileNotFoundError, json.JSONDecodeError):
+        # If file not found or corrupted, return initial structure
+        return initial_data
 
-def save_storage_tracker(storage: Dict, user_email: str):
-    """Saves the user's storage tracker."""
-    file_path = get_file_path(STORAGE_TRACKER_FILE.replace(".json", "_"), user_email)
-    with open(file_path, "w") as f:
-        json.dump(storage, f, indent=4)
+def save_db_file(file_path: str, data: dict):
+    """Saves a user's database file."""
+    try:
+        with open(file_path, "w") as f:
+            json.dump(data, f, indent=4)
+    except IOError as e:
+        # Note: In production, this error might indicate a file system issue, 
+        # but in Streamlit Cloud, the /tmp fix should resolve the PermissionError.
+        st.error(f"Error saving file {file_path}: {e}")
 
-def calculate_mock_save_size(data_content: str) -> float:
-    """Calculates a mock size for saved data based on length.
-    Using a fixed multiplier for predictability.
+# --- Storage Tracker Management ---
+STORAGE_TRACKER_INITIAL = {
+    "user_email": "",
+    "tier": "Free Tier",
+    "current_utility_storage": 0,
+    "current_teacher_storage": 0,
+    "current_universal_storage": 0
+}
+
+def load_storage_tracker(user_email: str) -> dict:
+    """Loads a user's storage tracker, or initializes a new one."""
+    file_path = get_file_path("storage_tracker_", user_email)
+    try:
+        with open(file_path, "r") as f:
+            data = json.load(f)
+            # Ensure all keys from initial are present in loaded data
+            for key, value in STORAGE_TRACKER_INITIAL.items():
+                if key not in data:
+                    data[key] = value
+            data['user_email'] = user_email # Ensure correct user email
+            return data
+    except (FileNotFoundError, json.JSONDecodeError):
+        # Initialize a new tracker if not found or corrupted
+        initial_tracker = STORAGE_TRACKER_INITIAL.copy()
+        initial_tracker['user_email'] = user_email
+        return initial_tracker
+
+def save_storage_tracker(tracker_data: dict, user_email: str):
+    """Saves the current storage tracker data for a user."""
+    file_path = get_file_path("storage_tracker_", user_email)
+    try:
+        with open(file_path, "w") as f:
+            json.dump(tracker_data, f, indent=4)
+    except IOError as e:
+        st.error(f"Error saving storage tracker for {user_email}: {e}")
+
+# --- Storage Limit Checks ---
+def calculate_mock_save_size(content: str) -> int:
+    """Calculates a mock size for saved content based on string length."""
+    return len(content.encode('utf-8')) + 100 # Add a small overhead
+
+def check_storage_limit(storage_data: dict, check_type: str) -> tuple[bool, str, int]:
     """
-    # A base cost plus a variable cost based on content length
-    return NEW_SAVE_COST_BASE_MB + (len(data_content) / 1000000) * 0.3 # 0.3MB per 1MB of text
-
-def check_storage_limit(storage: Dict, action_area: str) -> Tuple[bool, Optional[str], float]:
-    """Checks if the user can perform an action based on their tier and usage.
-    Returns (can_proceed: bool, error_message: str, effective_limit_mb: float).
+    Checks if a user is within their storage limits for a given type.
+    check_type can be 'utility_save', 'teacher_save', or 'universal_storage'.
+    Returns (can_save: bool, error_message: str, limit: int).
     """
-    current_tier = storage.get('tier', 'Free Tier') # Default to Free Tier if not found
+    # NOTE: This function assumes st.session_state.utility_db and st.session_state.teacher_db 
+    # are already initialized and validated (which is handled in streamlit_app.py)
     
-    if current_tier == "Unlimited":
-        return True, None, TIER_LIMITS['Unlimited'] # Unlimited access
+    user_tier = storage_data.get('tier', 'Free Tier')
+    tier_limits = TIER_LIMITS.get(user_tier, TIER_LIMITS['Free Tier'])
 
-    total_used_mb = storage.get('total_used_mb', 0.0)
+    can_save = True
+    error_msg = ""
+    limit_value = 0 # Default limit_value
 
-    # Determine the universal limit for the current tier for overall app access
-    universal_limit_for_tier = TIER_LIMITS['Free Tier'] # Default universal limit for Free, 28/1, Teacher
-    if current_tier == 'Universal Pro' or current_tier == 'Unlimited':
-        universal_limit_for_tier = TIER_LIMITS.get(current_tier, TIER_LIMITS['Universal Pro'])
-    
-    # --- Universal Access Check (for overall app interaction and general usage) ---
-    # This applies to 'universal' (login) and 'general_usage' (28-in-1 hub, etc.)
-    if action_area in ['universal', 'general_usage']:
-        if total_used_mb >= universal_limit_for_tier:
-            return False, f"Total storage limit reached ({total_used_mb:.2f}MB / {universal_limit_for_tier:.0f}MB). Please upgrade or clean up data.", universal_limit_for_tier
+    if check_type == 'utility_save':
+        # Safely access history length
+        current_saves = len(st.session_state.get('utility_db', {}).get('history', []))
+        max_saves = tier_limits.get('max_utility_saves', 0)
+        current_storage = storage_data.get('current_utility_storage', 0)
+        storage_limit = tier_limits.get('utility_storage_limit_bytes', 0)
+
+        if max_saves != float('inf') and current_saves >= max_saves:
+            can_save = False
+            error_msg = f"Utility history limit ({max_saves} items) reached for your '{user_tier}' plan."
+        elif storage_limit != float('inf') and current_storage >= storage_limit:
+            can_save = False
+            error_msg = f"Utility storage limit ({storage_limit / 1024:.1f}KB) reached for your '{user_tier}' plan."
         
-        return True, None, universal_limit_for_tier # Allow interaction if within universal limit
+        limit_value = storage_limit # Set relevant limit for display
+            
+    elif check_type == 'teacher_save':
+        # Safely access history length
+        current_saves = len(st.session_state.get('teacher_db', {}).get('history', []))
+        max_saves = tier_limits.get('max_teacher_saves', 0)
+        current_storage = storage_data.get('current_teacher_storage', 0)
+        storage_limit = tier_limits.get('teacher_storage_limit_bytes', 0)
 
-
-    # --- Specific Action Area Checks (for saving data in dedicated tools) ---
-    used_mb_for_area = 0.0
-    area_limit = 0.0
-    
-    # Determine the specific area's used MB and its limit based on tier
-    if action_area == 'utility_save':
-        used_mb_for_area = storage.get('utility_used_mb', 0.0)
-        if current_tier == '28/1 Pro' or current_tier == 'Universal Pro': 
-            area_limit = TIER_LIMITS['28/1 Pro'] # 28/1 Pro and Universal Pro get this dedicated limit for utility
-        else:
-            area_limit = TIER_LIMITS['Free Tier'] # Free tier limit for others
+        if max_saves != float('inf') and current_saves >= max_saves:
+            can_save = False
+            error_msg = f"Teacher history limit ({max_saves} items) reached for your '{user_tier}' plan."
+        elif storage_limit != float('inf') and current_storage >= storage_limit:
+            can_save = False
+            error_msg = f"Teacher storage limit ({storage_limit / 1024:.1f}KB) reached for your '{user_tier}' plan."
         
-    elif action_area == 'teacher_save':
-        used_mb_for_area = storage.get('teacher_used_mb', 0.0)
-        if current_tier == 'Teacher Pro' or current_tier == 'Universal Pro':
-            area_limit = TIER_LIMITS['Teacher Pro'] # Teacher Pro and Universal Pro get this dedicated limit for teacher
-        else:
-            area_limit = TIER_LIMITS['Free Tier'] # Free tier limit for others
-    
-    # Calculate potential new size and check if it would exceed the area limit
-    mock_next_save_size = calculate_mock_save_size("MOCK_CONTENT_FOR_SIZE_ESTIMATION")
-    if (used_mb_for_area + mock_next_save_size) > area_limit:
-        return False, f"Storage limit reached ({used_mb_for_area:.2f}MB / {area_limit:.0f}MB) for your current plan's {action_area.replace('_save', '').title()} section. Next save would exceed limit.", area_limit
-    
-    return True, None, area_limit
+        limit_value = storage_limit
+
+    elif check_type == 'universal_storage':
+        current_storage = storage_data.get('current_universal_storage', 0)
+        storage_limit = tier_limits.get('universal_storage_limit_bytes', 0)
+        
+        if storage_limit != float('inf') and current_storage >= storage_limit:
+            can_save = False
+            error_msg = f"Universal storage limit ({storage_limit / 1024:.1f}KB) reached for your '{user_tier}' plan."
+        
+        limit_value = storage_limit
+
+    # Special case: If a feature type has 0 max saves or 0 storage limit, it means no access
+    if (check_type == 'utility_save' and tier_limits.get('max_utility_saves', 1) == 0) or \
+       (check_type == 'teacher_save' and tier_limits.get('max_teacher_saves', 1) == 0):
+        if tier_limits.get('max_utility_saves', 1) == 0:
+            can_save = False
+            error_msg = f"Your '{user_tier}' plan does not include access to 28-in-1 Utilities."
+        if tier_limits.get('max_teacher_saves', 1) == 0:
+            can_save = False
+            error_msg = f"Your '{user_tier}' plan does not include access to Teacher Aid."
+
+
+    return can_save, error_msg, int(limit_value)
