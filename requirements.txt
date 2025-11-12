@@ -5,3 +5,4 @@ sift-stack-py
 passlib
 pandas
 genai
+google-generativeai
