@@ -4,3 +4,4 @@ streamlit
 sift-stack-py
 passlib
 pandas
+genai
